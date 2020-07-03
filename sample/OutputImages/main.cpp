@@ -29,66 +29,72 @@
 
 using namespace std;
 
+struct Capture {
+	bool flg;
+	basler cam;
+	cv::Mat in_img;
+};
+
 //プロトタイプ宣言
-void TakePicture(basler *cam, cv::Mat *img, bool *flg);
+void TakePicture(Capture* cap, bool* flg);
 
 int main() {
 	//カメラのセットアップ
-	basler cam;
+	Capture cap;
 	int width = 640;
 	int height = 480;
 	float fps = 750.0f;
-	float gain = 12.0f;
+	float gain = 1.0f;
 
 
-	cam.connect(0);
+	cap.cam.connect(0);
 	//カメラ共通パラメータ設定
-	cam.setParam(paramTypeCamera::paramInt::HEIGHT, height);
-	cam.setParam(paramTypeCamera::paramInt::WIDTH, width);
-	cam.setParam(paramTypeCamera::paramFloat::FPS, fps);
-	cam.setParam(paramTypeCamera::paramFloat::GAIN, gain);
+	cap.cam.setParam(paramTypeCamera::paramInt::HEIGHT, height);
+	cap.cam.setParam(paramTypeCamera::paramInt::WIDTH, width);
+	cap.cam.setParam(paramTypeCamera::paramFloat::FPS, fps);
+	cap.cam.setParam(paramTypeCamera::paramFloat::GAIN, gain);
 
 	//Baslerのカメラパラメータ設定
-	cam.setParam(paramTypeBasler::Param::ExposureTime, 2000.0f);
-	cam.setParam(paramTypeBasler::AcquisitionMode::EnableAcquisitionFrameRate);
-	cam.setParam(paramTypeBasler::FastMode::SensorReadoutModeFast);
-	cam.setParam(paramTypeCamera::paramFloat::FPS, fps);
-	cam.setParam(paramTypeCamera::paramFloat::GAIN, gain);
-	cam.setParam(paramTypeBasler::AcquisitionMode::EnableAcquisitionFrameRate);
-	cam.setParam(paramTypeBasler::GrabStrategy::LatestOnlyFrame); //常にバッファを更新
-	cam.setParam(paramTypeBasler::CaptureType::ColorGrab);
+	cap.cam.setParam(paramTypeBasler::Param::ExposureTime, 1280.0f);
+	cap.cam.setParam(paramTypeBasler::AcquisitionMode::EnableAcquisitionFrameRate);
+	cap.cam.setParam(paramTypeBasler::FastMode::SensorReadoutModeFast);
+	cap.cam.setParam(paramTypeCamera::paramFloat::FPS, fps);
+	cap.cam.setParam(paramTypeCamera::paramFloat::GAIN, gain);
+	cap.cam.setParam(paramTypeBasler::AcquisitionMode::EnableAcquisitionFrameRate);
+	cap.cam.setParam(paramTypeBasler::GrabStrategy::LatestOnlyFrame); //常にバッファを更新
+	cap.cam.setParam(paramTypeBasler::CaptureType::ColorGrab);
 
-	cam.parameter_all_print();
+	cap.cam.parameter_all_print();
 
 	//変数定義
-	cv::Mat in_img = cv::Mat(height, width, CV_8UC1, cv::Scalar::all(255));
+	cap.in_img = cv::Mat(height, width, CV_8UC3, cv::Scalar::all(255));
 	bool flg = true;
 
 	//カメラ起動
-	cam.start();
+	cap.cam.start();
 
 	//画像を更新し続けるスレッド
-	thread thr(TakePicture, &cam, &in_img, &flg);
+	thread thr(TakePicture, &cap, &flg);
 
 	while (1)
 	{
-		cv::imshow("img", in_img);
+		cv::imshow("img", cap.in_img);
 		int key = cv::waitKey(1);
 		if (key == 'q')break;
 	}
 	flg = false;
 	if (thr.joinable())thr.join();
 
-	cam.stop();
-	cam.disconnect();
+	cap.cam.stop();
+	cap.cam.disconnect();
 
 	return 0;
 }
 
 //スレッド関数
-void TakePicture(basler *cam, cv::Mat *img, bool *flg) {
-	while (flg)
+void TakePicture(Capture *cap, bool* flg) {
+	while (*flg)
 	{
-		cam->captureFrame(img->data);
+		cap->cam.captureFrame(cap->in_img.data);
 	}
 }

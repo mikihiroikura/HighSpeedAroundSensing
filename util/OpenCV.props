@@ -4,8 +4,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <IncludePath>C:\opencv341\install\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\opencv341\install\x64\vc15\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\opencv341\install\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
-  <ItemDefinitionGroup />
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemGroup />
 </Project>
