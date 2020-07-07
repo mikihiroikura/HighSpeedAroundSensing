@@ -3,8 +3,8 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>C:\opencv341\install\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\opencv341\install\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\opencv341\install\include;D:\opencv341\install\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\opencv341\install\lib;D:\opencv341\install\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
