@@ -12,14 +12,23 @@ int main(int argc, char* argv[]) {
 
 	ddmotor.Connect("COM3", 38400, 8,NOPARITY, 0, 0, 0, 20000, 20000);
 	if (!QueryPerformanceFrequency(&freq)) return 0;
-
 	//ŠJŽn
 	if (!QueryPerformanceCounter(&start)) return 0;
+	ddmotor.Send("$O\r");
+	if (!QueryPerformanceCounter(&end)) return 0;
+	double logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+	while (logtime < 1.0)
+	{
+		if (!QueryPerformanceCounter(&end)) return 0;
+		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+	}
+	cout << "SERVO ON" << endl;
+
 	//ddmotor“ü—Í
 	ddmotor.Send("$J+10\r");
 	if (!QueryPerformanceCounter(&end)) return 0;
-	double logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
-	while (logtime<10.0)
+	logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+	while (logtime<11.0)
 	{
 		if (!QueryPerformanceCounter(&end)) return 0;
 		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
@@ -28,5 +37,12 @@ int main(int argc, char* argv[]) {
 
 	//’âŽ~
 	ddmotor.Send("$Q\r");
+	while (logtime < 12.0)
+	{
+		if (!QueryPerformanceCounter(&end)) return 0;
+		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+	}
+	ddmotor.Send("$F\r");
+	cout << "SERVO OFF" << endl;
 	system("pause");
 }
