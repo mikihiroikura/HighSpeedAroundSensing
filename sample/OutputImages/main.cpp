@@ -62,12 +62,12 @@ int main() {
 	cap.cam.setParam(paramTypeCamera::paramFloat::GAIN, gain);
 	cap.cam.setParam(paramTypeBasler::AcquisitionMode::EnableAcquisitionFrameRate);
 	cap.cam.setParam(paramTypeBasler::GrabStrategy::LatestOnlyFrame); //常にバッファを更新
-	cap.cam.setParam(paramTypeBasler::CaptureType::ColorGrab);
+	cap.cam.setParam(paramTypeBasler::CaptureType::MonocroGrab);
 
 	cap.cam.parameter_all_print();
 
 	//変数定義
-	cap.in_img = cv::Mat(height, width, CV_8UC3, cv::Scalar::all(255));
+	cap.in_img = cv::Mat(height, width, CV_8UC1, cv::Scalar::all(255));
 	bool flg = true;
 
 	//カメラ起動

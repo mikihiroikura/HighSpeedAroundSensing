@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.705
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30225.117
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "library", "library", "{4E154F0D-7515-4B35-950A-B749E68F8440}"
 EndProject
@@ -19,7 +19,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HighSpeedCamera", "HighSpee
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OutputImages", "sample\OutputImages\OutputImages.vcxproj", "{AF1A1693-F633-4A78-A0CC-555D4C78D81E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ShowImg", "sample\ShowImg\ShowImg.vcxproj", "{A15CDBA3-6A37-44E5-98A7-A5D711F701A5}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DDmotorMove", "sample\DDMotorMove\DDMotorMove.vcxproj", "{A15CDBA3-6A37-44E5-98A7-A5D711F701A5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

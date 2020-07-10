@@ -23,6 +23,7 @@
     <ProjectGuid>{A15CDBA3-6A37-44E5-98A7-A5D711F701A5}</ProjectGuid>
     <RootNamespace>ShowImg</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>DDmotorMove</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -121,7 +122,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="sample.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="RS232c.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="RS232c.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
