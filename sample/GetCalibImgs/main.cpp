@@ -1,9 +1,13 @@
 #define _CRT_SECURE_NO_WARNINGS
+#include "RS232c.h"
 #include <thread>
 #include <opencv2/opencv.hpp>
 #include <conio.h>
 #include <vector>
 #include <cstring>
+#include <Windows.h>
+#include <cstdint>
+#include <iostream>
 
 
 //#define USE_EOSENS
@@ -38,12 +42,12 @@ struct Capture {
 };
 
 //プロトタイプ宣言
-void TakePicture(Capture* cap, bool* flg);
+void TakePicture(Capture* cap);
 
 //画像保存先のディレクトリ
 string save_dir = "D:\save_img";
 
-int main() {
+int main(int argc, char* argv[]) {
 	//カメラのセットアップ
 	Capture cap;
 	int width = 640;
@@ -75,24 +79,40 @@ int main() {
 	cap.in_img = cv::Mat(height, width, CV_8UC1, cv::Scalar::all(255));
 	bool flg = true;
 
+	//DDmotorセットアップ
+	RS232c ddmotor;
+	char ddmotor_buff[256];
+
 	//カメラ起動
 	cap.cam.start();
 
+	//DDmotor起動
+	ddmotor.Connect("COM3", 38400, 8, NOPARITY, 0, 0, 0, 20000, 20000);
+
 	//画像を更新し続けるスレッド
-	thread thr(TakePicture, &cap, &flg);
+	thread thr(TakePicture, &cap);
+
+	//DDmotorのサーボ起動
+	//Task：ここにDDMotorのサーボがONになっているか確認するコード
+	ddmotor.Send("$O\r");
 
 	while (1)
 	{
 		cv::imshow("img", cap.in_img);
 		int key = cv::waitKey(1);
 		if (key == 'q')break;
-		else if (key == 'p') { save_imgs.push_back(cap.in_img.clone()); }
+		else if (key == 'p') { save_imgs.push_back(cap.in_img.clone()); } //撮像し，データを格納
+		else if (key == 'r') { ddmotor.Send("$I4500,10\r"); }//DDMotorを回転
 	}
 	flg = false;
 	if (thr.joinable())thr.join();
 
+	//カメラ切断
 	cap.cam.stop();
 	cap.cam.disconnect();
+
+	//DDmotorのサーボOFF
+	ddmotor.Send("$F\r");
 
 	//取得した画像の一括保存
 	for (size_t i = 0; i < save_imgs.size(); i++)
@@ -104,8 +124,8 @@ int main() {
 }
 
 //スレッド関数
-void TakePicture(Capture *cap, bool* flg) {
-	while (*flg)
+void TakePicture(Capture* cap) {
+	while (cap->flg)
 	{
 		cap->cam.captureFrame(cap->in_img.data);
 	}
