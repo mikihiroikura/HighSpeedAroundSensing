@@ -19,7 +19,7 @@
 using namespace std;
 
 int main() {
-	string imgdir = "fisheyeimg2.png";
+	string imgdir = "202008282011img004.png";
 	cv::Mat fisheye,fishgrey, fisheyecpy;
 	fisheye = cv::imread(imgdir);
 
@@ -55,7 +55,7 @@ int main() {
     if (optimal_circle[2] > fisheyecpy.rows / 3) cout << "OK!" << endl;
 
     cv::Scalar lower(0, 0, 200);
-    cv::Scalar upper(100, 100, 255);
+    cv::Scalar upper(255, 255, 255);
 
     cv::Mat red_mask, output_mask;
 
