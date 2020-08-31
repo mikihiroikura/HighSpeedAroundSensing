@@ -3,8 +3,8 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>$(SolutionDir)util\include;$(SolutionDir)util\include\Basler;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)util\lib\IdpExpress;$(SolutionDir)util\lib\Basler;$(SolutionDir)util\lib\Ximea;$(SolutionDir)util\lib\Eosens;$(SolutionDir)util\lib\HSC;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)util\include;$(SolutionDir)util\include\Basler;$(SolutionDir)util\include\KAYACoaXpress;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)util\lib\IdpExpress;$(SolutionDir)util\lib\Basler;$(SolutionDir)util\lib\Ximea;$(SolutionDir)util\lib\Eosens;$(SolutionDir)util\lib\HSC;$(SolutionDir)util\lib\KAYACoaXpress;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup />
   <ItemGroup />

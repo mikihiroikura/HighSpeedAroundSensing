@@ -122,6 +122,29 @@ namespace paramTypeEosens
 	};
 };
 
+namespace paramTypeKAYACoaXpress
+{
+	enum class Gain
+	{
+		x1 = 0,
+		x2 = 1,
+		x4 = 2,
+		x8 = 3
+	};
+
+	enum class paramInt
+	{
+		OffsetX = 4,
+		OffsetY = 5,
+		CycleBufferSize = 6
+	};
+
+	enum class paramFloat
+	{
+		ExposureTime = 7
+	};
+};
+
 
 class Camera
 {
