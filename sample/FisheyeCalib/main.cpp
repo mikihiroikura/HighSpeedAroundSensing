@@ -17,7 +17,7 @@
 using namespace std;
 
 int main() {
-	//calibration用動画の読み取り
+	//内部パラメータcalibration用動画の読み取り
 	string video_dir = "202009012005_video.mp4";
 	cv::VideoCapture video;
 	video.open(video_dir);
