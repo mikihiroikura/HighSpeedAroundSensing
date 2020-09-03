@@ -62,24 +62,28 @@
     <Import Project="..\..\util\HSC.props" />
     <Import Project="..\..\util\KAYA.props" />
     <Import Project="..\..\util\OpenCV.props" />
+    <Import Project="..\..\util\MATLAB.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\util\HSC.props" />
     <Import Project="..\..\util\KAYA.props" />
     <Import Project="..\..\util\OpenCV.props" />
+    <Import Project="..\..\util\MATLAB.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\util\HSC.props" />
     <Import Project="..\..\util\KAYA.props" />
     <Import Project="..\..\util\OpenCV.props" />
+    <Import Project="..\..\util\MATLAB.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\util\HSC.props" />
     <Import Project="..\..\util\KAYA.props" />
     <Import Project="..\..\util\OpenCV.props" />
+    <Import Project="..\..\util\MATLAB.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

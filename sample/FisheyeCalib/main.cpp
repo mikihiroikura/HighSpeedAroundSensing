@@ -4,6 +4,7 @@
 #include <time.h>
 #include <thread>
 #include <opencv2/ccalib/omnidir.hpp>
+#include <opencv2/calib3d.hpp>
 
 #ifdef _DEBUG
 #define LIB_EXT "d.lib"
@@ -15,6 +16,8 @@
 #pragma comment(lib,"KAYACoaXpressLib" LIB_EXT)
 #pragma warning(disable:4996)
 using namespace std;
+
+//#define _OMNIDIR_CAM
 
 int main() {
 	//内部パラメータcalibration用動画の読み取り
@@ -73,6 +76,7 @@ int main() {
 		objPoints.push_back(obj);
 	}
 
+#ifdef _OMNIDIR_CAM
 	//Omnidirキャリブレーション
 	cout << "Omnidir Calibration" << endl;
 	cv::Mat K, Xi, D, R, T, idx;
@@ -93,6 +97,30 @@ int main() {
 	/*cv::omnidir::undistortImage(calib_imgs[300], cylindrical, K, D, Xi, cv::omnidir::RECTIFY_CYLINDRICAL);
 	cv::omnidir::undistortImage(calib_imgs[300], stereographic, K, D, Xi, cv::omnidir::RECTIFY_STEREOGRAPHIC);
 	cv::omnidir::undistortImage(calib_imgs[300], longlati, K, D, Xi, cv::omnidir::RECTIFY_LONGLATI);*/
+#else
+	cout << "Fisheye Calibration" << endl;
+	cv::Mat	K, D, R, T;
+	string fisheyecalibfile = "./FisheyeCamCalibParams.xml";
+	cv::TermCriteria critia(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 200, 0.0001);
+	double fishRMS = cv::fisheye::calibrate(objPoints, imgPoints, imgsize, K, D, R, T, 0, critia);
+	cv::FileStorage fishxml(fisheyecalibfile, cv::FileStorage::WRITE);
+	cv::write(fishxml, "RMS", fishRMS);
+	cv::write(fishxml, "K", K);
+	cv::write(fishxml, "D", D);
+	fishxml.release();
+
+	//確認のUndistort
+	cout << "Undistort" << endl;
+	cv::Mat perspective, cylindrical, stereographic, longlati;
+	cv::fisheye::undistortImage(calib_imgs[300], perspective, K, D);
+	/*cv::omnidir::undistortImage(calib_imgs[300], cylindrical, K, D, Xi, cv::omnidir::RECTIFY_CYLINDRICAL);
+	cv::omnidir::undistortImage(calib_imgs[300], stereographic, K, D, Xi, cv::omnidir::RECTIFY_STEREOGRAPHIC);
+	cv::omnidir::undistortImage(calib_imgs[300], longlati, K, D, Xi, cv::omnidir::RECTIFY_LONGLATI);*/
+#endif // _OMNIDIR_CAM
+
+	
+
+	
 
 	return 0;
 }

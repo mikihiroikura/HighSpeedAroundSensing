@@ -5,6 +5,7 @@
 #include <thread>
 #include <opencv2/ccalib/omnidir.hpp>
 
+
 #ifdef _DEBUG
 #define LIB_EXT "d.lib"
 #else
@@ -23,6 +24,7 @@ int main() {
 	if (!calibxml.isOpened())
 	{
 		cout << "calib xml cannot be opened..." << endl;
+		return 0;
 	}
 	cv::Mat K, Xi, D;
 	calibxml["K"] >> K;
