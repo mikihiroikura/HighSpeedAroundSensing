@@ -5,16 +5,17 @@ function make_setup()
     video_folder = './videos/fisheye/';
     video_name = '202009012005_video.mp4';
     video_dir = strcat(video_folder, video_name);
-    step = 10;
+    fish_step = 10;
     squareSize = 32;
     form = 'yyyymmddHHMM';
     fishparamfile = strcat('./calib_result/',strcat(datestr(now,form),'_fisheyeparam.csv'));
     
     %LinelaseのCalibration用変数
     linelaser_folder = './videos/linelaser/';
-    linelaser_name = '202009041825_video.mp4';
+    linelaser_name = '202009041828_video.mp4';
     linelaser_dir = strcat(linelaser_folder, linelaser_name);
+    laser_step = 10;
     
-    save setup.mat video_dir step squareSize fishparamfile linelaser_dir
+    save setup.mat video_dir fish_step squareSize fishparamfile linelaser_dir laser_step
 end
 
