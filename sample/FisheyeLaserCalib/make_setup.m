@@ -10,6 +10,11 @@ function make_setup()
     form = 'yyyymmddHHMM';
     fishparamfile = strcat('./calib_result/',strcat(datestr(now,form),'_fisheyeparam.csv'));
     
-    save setup.mat video_dir step squareSize fishparamfile
+    %LinelaseのCalibration用変数
+    linelaser_folder = './videos/linelaser/';
+    linelaser_name = '202009041825_video.mp4';
+    linelaser_dir = strcat(linelaser_folder, linelaser_name);
+    
+    save setup.mat video_dir step squareSize fishparamfile linelaser_dir
 end
 

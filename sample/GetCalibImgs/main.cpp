@@ -62,6 +62,7 @@ int main() {
 	//ThreadƒZƒbƒg
 	bool flg = true;
 	thread thr(TakePicture, &cam, &flg);
+	bool videocapflg = false;
 
 
 	while (true)
@@ -73,7 +74,10 @@ int main() {
 		int key = cv::waitKey(33);
 		if (key == 'q') break;
 
-		video.write(in_img.clone());
+		//VideoCapture
+		if (key == 's') videocapflg = true;
+		if (key == 'f') videocapflg = false;
+		if (videocapflg) video.write(in_img.clone());
 	}
 	flg = false;
 	if (thr.joinable()) thr.join();
