@@ -22,9 +22,29 @@ function linelaser_calibration()
     end
     
     %レーザの輝点の画像座標を計算
+    All_cameraPoints = [];    
+    detectedimgs = laserimg(:,:,:,imagesUsed);
+    for i=1:size(detectedimgs, 4)
+       J = detectedimgs(:,:,:,i);
+       BW = imbinarize(J, 0.8);
+       BW = uint8(BW);
+       J = J.*BW;
+       %ここでどのように輝度重心を取得するか
+       BrightPoints = [0,0];
+       
+       %レーザの輝点の画像座標->World座標系に変換
+       worldPoints = pointsToWorld(fisheyeParams.Intrinsics, RotMatrix(:,:,i),TransVec(i,:),BrightPoints);
+       newworldPoints = [worldPoints, zeros(size(worldPoints,1),1)];
+       %World->Camera座標系に変換
+       cameraPoints = newworldPoints * RotMatrix(:,:,i);
+       All_cameraPoints = [All_cameraPoints;cameraPoints];
+       
+       %中央のレーザ映る場所の輝点抽出
+    end
+    
+    %レーザ輝点群を最小二乗法で一つの平面を出力
     
     
-    %レーザの輝点の画像座標->カメラ座標系に変換
     
     
     disp(fisheyeParams.Intrinsics);
