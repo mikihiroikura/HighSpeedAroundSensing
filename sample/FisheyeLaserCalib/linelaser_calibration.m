@@ -3,7 +3,7 @@ function linelaser_calibration()
 %   
     %動画からFrameを保存する   
     load fishparams.mat fisheyeParams
-    load setup.mat linelaser_dir laser_step squareSize laser_time margin bright_thr
+    load setup.mat linelaser_dir laser_step squareSize laser_time margin bright_thr ref_rect ref_thr
     vidObj = VideoReader(linelaser_dir);
     allFrame = read(vidObj);
     
@@ -33,7 +33,7 @@ function linelaser_calibration()
        %レーザ点群取得
        rect =int16([min(imagePoints(:,:,i))-margin, max(imagePoints(:,:,i))-min(imagePoints(:,:,i))+2*margin]); % チェッカーボード周辺の矩形
        Jtrim = imcrop(J, rect); % Trimming
-       [Yd, Xd] = find(Jtrim > bright_thr);  
+       [Yd, Xd] = find(Jtrim(:,:,1) > bright_thr);  
        BrightPoints = [Xd, Yd] + double([rect(1), rect(2)]);% 閾値以上の輝点の画像座標
        
        %レーザの輝点の画像座標->World座標系に変換
@@ -53,7 +53,7 @@ function linelaser_calibration()
     while flg
         x0 = -rand(1,3)*0.01*false_cnt;
         options = optimset('Display','iter','PlotFcns',@optimplotfval,'MaxFunEvals',1000);
-        [Sol,fval,exitflag,output] = fminsearch(func,x0,options);
+        [planeparams,fval,exitflag,output] = fminsearch(func,x0,options);
         if exitflag==1&&fval<3000
             flg = 0;
             false_cnt = 1;
@@ -65,8 +65,20 @@ function linelaser_calibration()
         end  
     end
     
-    
-    
+    %参照面の輝点出力
+    All_refPoints = [];
+    for i=1:size(detectedimgs, 4)
+       J = detectedimgs(:,:,:,i);
+       BW = imbinarize(J, 0.8);
+       BW = uint8(BW);
+       J = J.*BW;
+       
+       Jref = imcrop(J, ref_rect);
+       [Yr, Xr] = find(Jref(:,:,1) > ref_thr);
+       RefPoints = [Xr, Yr] + double([ref_rect(1), ref_rect(2)]);
+       All_refPoints = [All_refPoints;RefPoints];
+    end
+    refPoint = mean(All_refPoints);
     
     disp(fisheyeParams.Intrinsics);
 end

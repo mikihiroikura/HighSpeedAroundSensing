@@ -20,7 +20,9 @@ function make_setup()
     laser_time = [3,18]; % レーザがチェッカーボードに映っている時間
     margin = 30; % チェッカーボード周辺を抽出する際のマージン
     bright_thr = 200;%レーザ輝度の閾値
+    ref_rect = [908, 467, 54, 53];
+    ref_thr = 200;%参照面の輝点閾値
     
-    save setup.mat video_dir fish_step squareSize fishparamfile linelaser_dir laser_step laser_time margin bright_thr
+    save setup.mat video_dir fish_step squareSize fishparamfile linelaser_dir laser_step laser_time margin bright_thr ref_rect ref_thr
 end
 
