@@ -31,6 +31,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LaserCalib", "sample\LaserC
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ARmarker_example", "sample\ARmarker_example\ARmarker_example.vcxproj", "{A81D727F-BE88-4973-A249-88662B5328D6}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AR_PoseEstimation", "sample\AR_PoseEstimation\AR_PoseEstimation.vcxproj", "{24E75D0D-7CC8-4928-8BC5-86E02C3719AB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -135,6 +137,14 @@ Global
 		{A81D727F-BE88-4973-A249-88662B5328D6}.Release|x64.Build.0 = Release|x64
 		{A81D727F-BE88-4973-A249-88662B5328D6}.Release|x86.ActiveCfg = Release|Win32
 		{A81D727F-BE88-4973-A249-88662B5328D6}.Release|x86.Build.0 = Release|Win32
+		{24E75D0D-7CC8-4928-8BC5-86E02C3719AB}.Debug|x64.ActiveCfg = Debug|x64
+		{24E75D0D-7CC8-4928-8BC5-86E02C3719AB}.Debug|x64.Build.0 = Debug|x64
+		{24E75D0D-7CC8-4928-8BC5-86E02C3719AB}.Debug|x86.ActiveCfg = Debug|Win32
+		{24E75D0D-7CC8-4928-8BC5-86E02C3719AB}.Debug|x86.Build.0 = Debug|Win32
+		{24E75D0D-7CC8-4928-8BC5-86E02C3719AB}.Release|x64.ActiveCfg = Release|x64
+		{24E75D0D-7CC8-4928-8BC5-86E02C3719AB}.Release|x64.Build.0 = Release|x64
+		{24E75D0D-7CC8-4928-8BC5-86E02C3719AB}.Release|x86.ActiveCfg = Release|Win32
+		{24E75D0D-7CC8-4928-8BC5-86E02C3719AB}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -151,6 +161,7 @@ Global
 		{E9114EB0-3EF3-46FD-A1C4-EA0FE07835DC} = {F2F07877-339B-43EB-8939-1D7D4DF5A3A0}
 		{59A01BB2-62FE-4156-8F58-33524CFD4709} = {F2F07877-339B-43EB-8939-1D7D4DF5A3A0}
 		{A81D727F-BE88-4973-A249-88662B5328D6} = {F2F07877-339B-43EB-8939-1D7D4DF5A3A0}
+		{24E75D0D-7CC8-4928-8BC5-86E02C3719AB} = {F2F07877-339B-43EB-8939-1D7D4DF5A3A0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {91B788E1-C0F7-4A9E-840B-E36FFAC765EC}

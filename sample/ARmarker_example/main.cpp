@@ -10,13 +10,14 @@ int main(int argc, const char* argv[])
 
     // マーカー画像生成
     const int marker_id = 0;
-    const int side_pixels = 200;
+    const int side_pixels = 1000;
     cv::Mat marker_image;
     cv::aruco::drawMarker(dictionary, marker_id, side_pixels, marker_image);
 
     // 生成したマーカー画像を表示
     cv::imshow("marker_image", marker_image);
     cv::waitKey(0);
+    cv::imwrite("./ar_marker.png", marker_image);
 
     return 0;
 }

@@ -18,6 +18,7 @@
 using namespace std;
 
 //#define _OMNIDIR_CAM
+//#define _FISHEYE_CAM
 
 int main() {
 	//内部パラメータcalibration用動画の読み取り
@@ -97,7 +98,8 @@ int main() {
 	/*cv::omnidir::undistortImage(calib_imgs[300], cylindrical, K, D, Xi, cv::omnidir::RECTIFY_CYLINDRICAL);
 	cv::omnidir::undistortImage(calib_imgs[300], stereographic, K, D, Xi, cv::omnidir::RECTIFY_STEREOGRAPHIC);
 	cv::omnidir::undistortImage(calib_imgs[300], longlati, K, D, Xi, cv::omnidir::RECTIFY_LONGLATI);*/
-#else
+
+#elif defined(_FISHEYE_CAM)
 	cout << "Fisheye Calibration" << endl;
 	cv::Mat	K, D, R, T;
 	string fisheyecalibfile = "./FisheyeCamCalibParams.xml";
@@ -116,11 +118,17 @@ int main() {
 	/*cv::omnidir::undistortImage(calib_imgs[300], cylindrical, K, D, Xi, cv::omnidir::RECTIFY_CYLINDRICAL);
 	cv::omnidir::undistortImage(calib_imgs[300], stereographic, K, D, Xi, cv::omnidir::RECTIFY_STEREOGRAPHIC);
 	cv::omnidir::undistortImage(calib_imgs[300], longlati, K, D, Xi, cv::omnidir::RECTIFY_LONGLATI);*/
+#else
+	cout << "Perspective Calibration" << endl;
+	cv::Mat K, D, R, T;
+	string perscalibfile = "./PerspectiveCamCalibParams.xml";
+	double persRMS = cv::calibrateCamera(objPoints, imgPoints, imgsize, K, D, R, T);
+	cv::FileStorage persxml(perscalibfile, cv::FileStorage::WRITE);
+	cv::write(persxml, "RMS", persRMS);
+	cv::write(persxml, "K", K);
+	cv::write(persxml, "D", D);
+	persxml.release();
+
 #endif // _OMNIDIR_CAM
-
-	
-
-	
-
 	return 0;
 }
