@@ -11,6 +11,7 @@
 #include <iostream>
 #include <vector>
 #include <Windows.h>
+#include "RS232c.h"
 
 
 #ifdef _DEBUG
@@ -42,6 +43,7 @@ vector< cv::Vec3d > Rvecs, Tvecs;
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg);
 void ShowLogs(bool* flg);
+void DetectAR(bool* flg);
 
 int main() {
 	//パラメータ
@@ -87,6 +89,7 @@ int main() {
 	/// 現在の画像をPCに出力して見えるようするスレッド
 	thread thr2(ShowLogs, &flg);
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
+	thread thr3(DetectAR, &flg);
 	
 
 	//計測開始
@@ -111,6 +114,7 @@ int main() {
 	//スレッドの停止
 	if (thr1.joinable())thr1.join();
 	if (thr2.joinable())thr2.join();
+	if (thr3.joinable())thr3.join();
 
 	//計算した座標，取得画像の保存
 

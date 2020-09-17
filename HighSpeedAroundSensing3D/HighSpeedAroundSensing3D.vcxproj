@@ -50,7 +50,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -153,9 +153,11 @@
   <ItemGroup>
     <ClCompile Include="..\util\src\KAYACoaXpress\KAYACoaXpressClass.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="RS232c.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\util\include\HSC\KAYACoaXpressClass.hpp" />
+    <ClInclude Include="RS232c.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
