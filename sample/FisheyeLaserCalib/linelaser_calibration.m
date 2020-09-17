@@ -59,21 +59,20 @@ function linelaser_calibration()
 
         %レーザ輝点群を最小二乗法で一つの平面を出力
         func = @(param)calcplane_func(param, OnePlane_cameraPoints);
-        flg = 1;
-        false_cnt = 1;
-        while flg
-            x0 = -rand(1,3)*0.01*false_cnt;
-            options = optimset('Display','iter','PlotFcns',@optimplotfval,'MaxFunEvals',1000);
+        min_fval = 1e+20;
+        for cnt = 1:10
+            x0 = -rand(1,3)*0.01*cnt;
+            options = optimset('Display','iter','PlotFcns',@optimplotx,'MaxFunEvals',1000);
             [planeparams,fval,exitflag,output] = fminsearch(func,x0,options);
             if exitflag==1&&fval<3000
-                flg = 0;
-                false_cnt = 1;
-            else
-                false_cnt = false_cnt +1;
-            end
-            if false_cnt >10
+                opt_planeparams = planeparams;
                 break;
-            end  
+            elseif exitflag==1
+                if min_fval > fval
+                    min_fval = fval;
+                    opt_planeparams = planeparams;
+                end
+            end
         end
 
         %参照面の輝点出力
@@ -92,7 +91,7 @@ function linelaser_calibration()
         refPoint = mean(OnePlane_refPoints);
         
         %一つの動画から得られる情報の保存
-        All_planeparams = [All_planeparams;planeparams];
+        All_planeparams = [All_planeparams;opt_planeparams];
         All_refPoints = [All_refPoints;refPoint];
         All_cameraPoints = [All_cameraPoints;OnePlane_cameraPoints];
         PointsCnts = [PointsCnts;size(OnePlane_cameraPoints,1)];
