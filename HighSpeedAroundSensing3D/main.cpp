@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <iostream>
 #include <vector>
+#include <Windows.h>
 
 
 #ifdef _DEBUG
@@ -24,11 +25,28 @@
 using namespace std;
 
 //グローバル変数
-cv::Mat in_img;
+/// 画像に関する変数
+cv::Mat in_img_now;
+vector<cv::Mat> in_imgs;
+int in_imgs_saveid = 0;
+/// 時間に関する変数
+int timeout = 60;
+LARGE_INTEGER freq, start;
+double logtime = 0;
+/// ARマーカに関する変数
+unsigned int marker_num = 1;
+vector<cv::Mat> Rs;
+vector< cv::Vec3d > Rvecs, Tvecs;
+
+
+//プロトタイプ宣言
+void TakePicture(kayacoaxpress* cam, bool* flg);
+void ShowLogs(bool* flg);
 
 int main() {
 	//パラメータ
 	bool flg = true;
+	LARGE_INTEGER end;
 
 	//カメラパラメータ
 	int width = 1920;
@@ -53,22 +71,46 @@ int main() {
 	//レーザCalibrationの結果の呼び出し
 
 
+	//取得画像を格納するVectorの作成
+	for (size_t i = 0; i < (int)(timeout)*fps+10; i++)
+	{
+		in_imgs.push_back(cv::Mat(height, width, CV_8UC1, cv::Scalar::all(255)));
+	}
+
+
 	//カメラ起動
 	cam.start();
 
 	//Threadの作成
 	/// 1000fpsで画像を格納し続けるスレッド
+	thread thr1(TakePicture, &cam, &flg);
 	/// 現在の画像をPCに出力して見えるようするスレッド
+	thread thr2(ShowLogs, &flg);
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
 	
+
+	//計測開始
+	if (!QueryPerformanceCounter(&start)) { return 0; }
+
+
 	//メインループ
 	/// 取得された画像から光切断法で三次元位置を計算する
 	while (flg)
 	{
+		//光切断の高度の更新
 
+		//時刻の更新
+		if (!QueryPerformanceCounter(&end)) { return 0; }
+		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+		if (logtime > timeout)
+		{
+			flg = false;
+		}
 	}
 
 	//スレッドの停止
+	if (thr1.joinable())thr1.join();
+	if (thr2.joinable())thr2.join();
 
 	//計算した座標，取得画像の保存
 
@@ -76,12 +118,54 @@ int main() {
 }
 
 void TakePicture(kayacoaxpress* cam, bool* flg) {
+	cv::Mat temp;
 	while (*flg)
 	{
-		cam->captureFrame(in_img.data);
+		cam->captureFrame(temp.data);
+		in_imgs[in_imgs_saveid] = temp.clone();
+		in_imgs_saveid++;
+		in_img_now = temp.clone();
 	}
 }
 
-void ShowLogs() {
+//現在の画像を30fps程度で出力する
+void ShowLogs(bool* flg) {
+	while (*flg)
+	{
+		cv::imshow("img", in_img_now);
+		int key = cv::waitKey(33);
+		if (key == 'q') *flg = false;
+		printf("Time: %lf [s]", logtime);
+	}
+}
 
+//ARマーカの検出と位置姿勢推定
+void DetectAR(bool* flg) {
+	//パラメータの設定
+	cv::Mat R;
+	for (size_t i = 0; i < marker_num; i++) Rs.push_back(R);
+	//辞書の指定
+	cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
+	//Perspectiveカメラの内部パラメータを取得
+	string calib_dir = "PerspectiveCamCalibParams.xml";
+	cv::FileStorage calibxml(calib_dir, cv::FileStorage::READ);
+	if (!calibxml.isOpened()) cout << "calib xml cannot be opened..." << endl;
+	cv::Mat K, D;
+	calibxml["K"] >> K;
+	calibxml["D"] >> D;
+	while (*flg)
+	{
+		//マーカ検出
+		std::vector<int> ids;
+		std::vector<std::vector<cv::Point2f> > corners;
+		cv::aruco::detectMarkers(in_img_now, dictionary, corners, ids);
+		//マーカ検出時，位置姿勢を計算する
+		if (ids.size() > 0) {
+			cv::aruco::estimatePoseSingleMarkers(corners, 0.2, K, D, Rvecs, Tvecs);
+			for (size_t i = 0; i < ids.size(); i++)
+			{
+				cv::Rodrigues(Rvecs[i], Rs[i]);
+			}
+		}
+	}
 }
