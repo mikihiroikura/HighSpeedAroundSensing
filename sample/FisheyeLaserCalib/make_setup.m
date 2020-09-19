@@ -14,9 +14,9 @@ function make_setup()
     %LinelaseのCalibration用変数
     %linelaser_calibration()
     linelaser_folder = './videos/linelaser/';
-    linelaser_file_cnt = 2;
+    linelaser_file_cnt = 10;
     laser_step = 2;
-    laser_time = [3,18]; % レーザがチェッカーボードに映っている時間
+    laser_time = [5,13]; % レーザがチェッカーボードに映っている時間
     margin = 30; % チェッカーボード周辺を抽出する際のマージン
     bright_thr = 200;%レーザ輝度の閾値
     ref_rect = [908, 467, 54, 53];

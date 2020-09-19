@@ -62,7 +62,7 @@ function linelaser_calibration()
         min_fval = 1e+20;
         for cnt = 1:10
             x0 = -rand(1,3)*0.01*cnt;
-            options = optimset('Display','iter','PlotFcns',@optimplotx,'MaxFunEvals',1000);
+            options = optimset('Display','iter','PlotFcns',@optimplotfval,'MaxFunEvals',1000);
             [planeparams,fval,exitflag,output] = fminsearch(func,x0,options);
             if exitflag==1&&fval<3000
                 opt_planeparams = planeparams;
@@ -99,4 +99,22 @@ function linelaser_calibration()
     
     %matファイルの全ての結果の保存
     save linelaserparams.mat All_planeparams All_refPoints All_cameraPoints PointsCnts
+    
+    %デバッグ：Calibration結果を図で出力
+%     f = figure;
+%     cnt = 0;
+%     for i = 1:10
+%         X = All_cameraPoints(1+cnt:cnt+PointsCnts(i),1);
+%         Y = All_cameraPoints(1+cnt:cnt+PointsCnts(i),2);
+%         Z = All_cameraPoints(1+cnt:cnt+PointsCnts(i),3);
+%         scatter3(X,Y,Z);
+%         hold on
+%         graphX = linspace(min(X),max(X),500);
+%         graphY = linspace(min(Y),max(Y),500);
+%         [gX,gY] = meshgrid(graphX,graphY);
+%         gZ = -All_planeparams(i,1)/All_planeparams(i,3)*gX-All_planeparams(i,2)/All_planeparams(i,3)*gY+1/All_planeparams(i,3);
+%         mesh(gX,gY,gZ);
+%         cnt = cnt + PointsCnts(i);
+%     end
+    
 end

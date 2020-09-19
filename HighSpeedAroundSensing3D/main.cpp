@@ -31,7 +31,7 @@ cv::Mat in_img_now;
 vector<cv::Mat> in_imgs;
 int in_imgs_saveid = 0;
 /// 時間に関する変数
-int timeout = 60;
+int timeout = 10;
 LARGE_INTEGER freq, start;
 double logtime = 0;
 /// ARマーカに関する変数
@@ -49,6 +49,7 @@ int main() {
 	//パラメータ
 	bool flg = true;
 	LARGE_INTEGER end;
+	if (!QueryPerformanceFrequency(&freq)) { return 0; }// 単位習得
 
 	//カメラパラメータ
 	int width = 1920;
@@ -63,6 +64,7 @@ int main() {
 	cam.connect(0);
 
 	//パラメータの設定
+	cout << "Set Camera Params..." << endl;
 	cam.setParam(paramTypeCamera::paramInt::WIDTH, width);
 	cam.setParam(paramTypeCamera::paramInt::HEIGHT, height);
 	cam.setParam(paramTypeCamera::paramFloat::FPS, fps);
@@ -74,13 +76,19 @@ int main() {
 
 
 	//取得画像を格納するVectorの作成
+	cout << "Set Mat Vector..." << endl;
 	for (size_t i = 0; i < (int)(timeout)*fps+10; i++)
 	{
 		in_imgs.push_back(cv::Mat(height, width, CV_8UC1, cv::Scalar::all(255)));
 	}
 
+	//画像出力用Mat
+	in_img_now = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(255));
+
+
 
 	//カメラ起動
+	cout << "Aroud 3D Sensing Start!" << endl;
 	cam.start();
 
 	//Threadの作成
@@ -89,7 +97,7 @@ int main() {
 	/// 現在の画像をPCに出力して見えるようするスレッド
 	thread thr2(ShowLogs, &flg);
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
-	thread thr3(DetectAR, &flg);
+	//thread thr3(DetectAR, &flg);
 	
 
 	//計測開始
@@ -114,7 +122,7 @@ int main() {
 	//スレッドの停止
 	if (thr1.joinable())thr1.join();
 	if (thr2.joinable())thr2.join();
-	if (thr3.joinable())thr3.join();
+	//if (thr3.joinable())thr3.join();
 
 	//計算した座標，取得画像の保存
 
@@ -122,7 +130,7 @@ int main() {
 }
 
 void TakePicture(kayacoaxpress* cam, bool* flg) {
-	cv::Mat temp;
+	cv::Mat temp = cv::Mat(1080, 1920, CV_8UC1, cv::Scalar::all(255));
 	while (*flg)
 	{
 		cam->captureFrame(temp.data);
