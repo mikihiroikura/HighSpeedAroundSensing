@@ -9,7 +9,7 @@ function make_setup()
     fish_step = 10;
     squareSize = 32;
     form = 'yyyymmddHHMM';
-    fishparamfile = strcat('./calib_result/',strcat(datestr(now,form),'_fisheyeparam.csv'));
+    fishparamfile = strcat('./calib_result/fisheye/',strcat(datestr(now,form),'_fisheyeparam.csv'));
     
     %LinelaseのCalibration用変数
     %linelaser_calibration()
@@ -22,8 +22,12 @@ function make_setup()
     ref_rect = [908, 467, 54, 53];
     ref_thr = 200;%参照面の輝点閾値
     
+    %ラインレーザの補間用変数
+    %laserparams_interpolate()
+    interpolate_outputfile = strcat('./calib_result/linelaser/',strcat(datestr(now,form),'_laserinterpolparam.csv'));
+    
     save setup.mat video_dir fish_step squareSize fishparamfile ...
 linelaser_folder laser_step laser_time margin bright_thr ref_rect ref_thr ...
-linelaser_file_cnt
+linelaser_file_cnt interpolate_outputfile
 end
 

@@ -10,7 +10,9 @@ function linelaser_calibration()
     All_planeparams = [];
     All_refPoints = [];
     All_cameraPoints = [];
+    All_fvals = [];
     PointsCnts = [];
+    
     
     %レーザ動画の個数だけ行う
     for i=1:linelaser_file_cnt
@@ -74,6 +76,30 @@ function linelaser_calibration()
                 end
             end
         end
+        
+        %外れている輝点を取り除く 閾値10
+        dist = abs(1-(opt_planeparams(1).*OnePlane_cameraPoints(:,1)+opt_planeparams(2) ...
+                .*OnePlane_cameraPoints(:,2)+opt_planeparams(3).*OnePlane_cameraPoints(:,3))) ...
+                ./(opt_planeparams(1)^2+opt_planeparams(2)^2+opt_planeparams(3)^2)^0.5;
+        Opt_OnePlane_cameraPoints = OnePlane_cameraPoints(dist<10,:);
+        
+        %閾値以下のレーザ輝点群を最小二乗法で一つの平面を再出力
+        func = @(param)calcplane_func(param, Opt_OnePlane_cameraPoints);
+        min_fval = 1e+20;
+        for cnt = 1:10
+            x0 = -rand(1,3)*0.01*cnt;
+            options = optimset('Display','iter','PlotFcns',@optimplotfval,'MaxFunEvals',1000);
+            [planeparams,fval,exitflag,output] = fminsearch(func,x0,options);
+            if exitflag==1&&fval<3000
+                opt_planeparams = planeparams;
+                break;
+            elseif exitflag==1
+                if min_fval > fval
+                    min_fval = fval;
+                    opt_planeparams = planeparams;
+                end
+            end
+        end
 
         %参照面の輝点出力
         OnePlane_refPoints = [];
@@ -94,11 +120,12 @@ function linelaser_calibration()
         All_planeparams = [All_planeparams;opt_planeparams];
         All_refPoints = [All_refPoints;refPoint];
         All_cameraPoints = [All_cameraPoints;OnePlane_cameraPoints];
+        All_fvals = [All_fvals; min_fval];
         PointsCnts = [PointsCnts;size(OnePlane_cameraPoints,1)];
     end
     
     %matファイルの全ての結果の保存
-    save linelaserparams.mat All_planeparams All_refPoints All_cameraPoints PointsCnts
+    save linelaserparams.mat All_planeparams All_refPoints All_cameraPoints All_fvals PointsCnts
     
     %デバッグ：Calibration結果を図で出力
 %     f = figure;
