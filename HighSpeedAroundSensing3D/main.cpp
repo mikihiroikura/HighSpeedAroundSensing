@@ -12,6 +12,7 @@
 #include <vector>
 #include <Windows.h>
 #include "RS232c.h"
+#include <opencv2/core.hpp>
 
 
 #ifdef _DEBUG
@@ -38,6 +39,8 @@ double logtime = 0;
 unsigned int marker_num = 1;
 vector<cv::Mat> Rs;
 vector< cv::Vec3d > Rvecs, Tvecs;
+/// 排他制御用のMutex
+cv::Mutex mutex;
 
 
 //プロトタイプ宣言
@@ -134,9 +137,13 @@ void TakePicture(kayacoaxpress* cam, bool* flg) {
 	while (*flg)
 	{
 		cam->captureFrame(temp.data);
-		in_imgs[in_imgs_saveid] = temp.clone();
-		in_imgs_saveid++;
-		in_img_now = temp.clone();
+		{
+			//cv::AutoLock lock(mutex);
+			in_imgs[in_imgs_saveid] = temp.clone();
+			in_imgs_saveid++;
+			in_img_now = temp.clone();
+		}
+		
 	}
 }
 
@@ -144,8 +151,12 @@ void TakePicture(kayacoaxpress* cam, bool* flg) {
 void ShowLogs(bool* flg) {
 	while (*flg)
 	{
-		cv::imshow("img", in_img_now);
-		int key = cv::waitKey(33);
+		if (in_imgs_saveid>3)
+		{
+			//cv::AutoLock lock(mutex);
+			cv::imshow("img", in_imgs[in_imgs_saveid-3]);
+		}		
+		int key = cv::waitKey(1);
 		if (key == 'q') *flg = false;
 		printf("Time: %lf [s]", logtime);
 	}
