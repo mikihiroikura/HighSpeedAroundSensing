@@ -3,7 +3,7 @@ function linelaser_calibration()
 %   
     %動画からFrameを保存する   
     load fishparams.mat fisheyeParams
-    load setup.mat linelaser_folder laser_step squareSize laser_time ...
+    load setup.mat linelaser_folder laser_step squareSize laser_time_margin ...
     margin bright_thr ref_rect ref_thr linelaser_file_cnt
 
     %保存用の行列
@@ -15,13 +15,13 @@ function linelaser_calibration()
     
     
     %レーザ動画の個数だけ行う
-    for i=1:linelaser_file_cnt
+    for i=11:linelaser_file_cnt*2
         linelaser_dir = strcat(strcat(linelaser_folder, int2str(i)),'.mp4');
         vidObj = VideoReader(linelaser_dir);
         allFrame = read(vidObj);
 
         %チェッカーボード検出
-        laserimg = allFrame(:,:,:,int16(laser_time(1)*vidObj.FrameRate):laser_step:int16(laser_time(2)*vidObj.FrameRate));
+        laserimg = allFrame(:,:,:,int16(laser_time_margin*vidObj.FrameRate):laser_step:int16((vidObj.Duration-laser_time_margin)*vidObj.FrameRate));
         [imagePoints,boardSize,imagesUsed] = detectCheckerboardPoints(laserimg);
         worldPoints = generateCheckerboardPoints(boardSize, squareSize);
 
