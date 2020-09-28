@@ -11,12 +11,15 @@ function linelaser_calibration()
     All_refPoints = [];
     All_cameraPoints = [];
     All_fvals = [];
-    PointsCnts = [];
+    All_PointsCnts = [];
+    All_Opt_cameraPoints = [];
+    All_Opt_fvals = [];
+    All_Opt_PointsCnts = [];
     
     
     %レーザ動画の個数だけ行う
-    for i=11:linelaser_file_cnt*2
-        linelaser_dir = strcat(strcat(linelaser_folder, int2str(i)),'.mp4');
+    for k=11:linelaser_file_cnt*2
+        linelaser_dir = strcat(strcat(linelaser_folder, int2str(k)),'.mp4');
         vidObj = VideoReader(linelaser_dir);
         allFrame = read(vidObj);
 
@@ -85,7 +88,7 @@ function linelaser_calibration()
         
         %閾値以下のレーザ輝点群を最小二乗法で一つの平面を再出力
         func = @(param)calcplane_func(param, Opt_OnePlane_cameraPoints);
-        min_fval = 1e+20;
+        opt_min_fval = 1e+20;
         for cnt = 1:10
             x0 = -rand(1,3)*0.01*cnt;
             options = optimset('Display','iter','PlotFcns',@optimplotfval,'MaxFunEvals',1000);
@@ -94,8 +97,8 @@ function linelaser_calibration()
                 opt_planeparams = planeparams;
                 break;
             elseif exitflag==1
-                if min_fval > fval
-                    min_fval = fval;
+                if opt_min_fval > fval
+                    opt_min_fval = fval;
                     opt_planeparams = planeparams;
                 end
             end
@@ -121,19 +124,25 @@ function linelaser_calibration()
         All_refPoints = [All_refPoints;refPoint];
         All_cameraPoints = [All_cameraPoints;OnePlane_cameraPoints];
         All_fvals = [All_fvals; min_fval];
-        PointsCnts = [PointsCnts;size(OnePlane_cameraPoints,1)];
+        All_PointsCnts = [All_PointsCnts;size(OnePlane_cameraPoints,1)];
+        All_Opt_cameraPoints = [All_Opt_cameraPoints;Opt_OnePlane_cameraPoints];
+        All_Opt_fvals = [All_Opt_fvals; opt_min_fval];
+        All_Opt_PointsCnts = [All_Opt_PointsCnts;size(Opt_OnePlane_cameraPoints,1)];
     end
     
     %matファイルの全ての結果の保存
-    save linelaserparams.mat All_planeparams All_refPoints All_cameraPoints All_fvals PointsCnts
+    save linelaserparams.mat All_planeparams All_refPoints All_cameraPoints All_fvals All_PointsCnts
     
     %デバッグ：Calibration結果を図で出力
+%     All_PointsID = [0;All_PointsCnts(1)];
+%     for i = 2:10
+%         All_PointsID = [All_PointsID;All_PointsCnts(i)+All_PointsID(i)];
+%     end
 %     f = figure;
-%     cnt = 0;
 %     for i = 1:10
-%         X = All_cameraPoints(1+cnt:cnt+PointsCnts(i),1);
-%         Y = All_cameraPoints(1+cnt:cnt+PointsCnts(i),2);
-%         Z = All_cameraPoints(1+cnt:cnt+PointsCnts(i),3);
+%         X = All_cameraPoints(1+All_PointsID(i):All_PointsID(i+1),1);
+%         Y = All_cameraPoints(1+All_PointsID(i):All_PointsID(i+1),2);
+%         Z = All_cameraPoints(1+All_PointsID(i):All_PointsID(i+1),3);
 %         scatter3(X,Y,Z);
 %         hold on
 %         graphX = linspace(min(X),max(X),500);
@@ -141,7 +150,6 @@ function linelaser_calibration()
 %         [gX,gY] = meshgrid(graphX,graphY);
 %         gZ = -All_planeparams(i,1)/All_planeparams(i,3)*gX-All_planeparams(i,2)/All_planeparams(i,3)*gY+1/All_planeparams(i,3);
 %         mesh(gX,gY,gZ);
-%         cnt = cnt + PointsCnts(i);
 %     end
     
 end
