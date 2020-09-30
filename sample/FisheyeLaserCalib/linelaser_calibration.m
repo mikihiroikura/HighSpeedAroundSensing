@@ -4,7 +4,7 @@ function linelaser_calibration()
     %動画からFrameを保存する   
     load fishparams.mat fisheyeParams
     load setup.mat linelaser_folder laser_step squareSize laser_time_margin ...
-    margin bright_thr ref_rect ref_thr linelaser_file_cnt
+    margin bright_thr ref_circle_radi ref_thr ref_arcwidth linelaser_file_num
 
     %保存用の行列
     All_planeparams = [];
@@ -16,15 +16,41 @@ function linelaser_calibration()
     All_Opt_fvals = [];
     All_Opt_PointsCnts = [];
     
+    %全パターンの動画から1枚づつ取ってきてそこから参照面の円を検出
+    All_centers = [];
+    All_radii = [];
+    for k = linelaser_file_num
+        %動画から全てのFrameを出力する
+        linelaser_dir = strcat(strcat(linelaser_folder, int2str(k)),'.mp4');
+        vidObj = VideoReader(linelaser_dir);
+        img = read(vidObj,1);
+        %一つ画像を持ってきて，ハフ変換で最も有力の参照面の円を検出
+        [centers, radii, metric] = imfindcircles(img,ref_circle_radi);
+        if size(centers,1)~=0
+            center = centers(1,:);
+            radi = radii(1,:);
+            All_centers = [All_centers;center];
+            All_radii = [All_radii;radi];
+        end
+    end
+    %全てのパターンから参照面の円の中心と半径の平均を取る
+    ref_center = mean(All_centers,1);
+    ref_radi = mean(All_radii,1);
+    %円弧上のMask画像を作成する
+    mask = zeros(size(img));
+    mask = insertShape(mask,'circle',[ref_center ref_radi-(ref_arcwidth/2)],'LineWidth',ref_arcwidth,'Color','white');
+    mask = imbinarize(mask);
+    mask = uint8(mask);
     
     %レーザ動画の個数だけ行う
-    for k=23
+    for k=linelaser_file_num
+        %画像群呼び出し
         linelaser_dir = strcat(strcat(linelaser_folder, int2str(k)),'.mp4');
         vidObj = VideoReader(linelaser_dir);
         allFrame = read(vidObj);
+        laserimg = allFrame(:,:,:,int16(laser_time_margin*vidObj.FrameRate):laser_step:int16((vidObj.Duration-laser_time_margin)*vidObj.FrameRate));
 
         %チェッカーボード検出
-        laserimg = allFrame(:,:,:,int16(laser_time_margin*vidObj.FrameRate):laser_step:int16((vidObj.Duration-laser_time_margin)*vidObj.FrameRate));
         [imagePoints,boardSize,imagesUsed] = detectCheckerboardPoints(laserimg);
         worldPoints = generateCheckerboardPoints(boardSize, squareSize);
 
@@ -115,13 +141,9 @@ function linelaser_calibration()
         OnePlane_refPoints = [];
         for i=1:size(detectedimgs, 4)
            J = detectedimgs(:,:,:,i);
-           BW = imbinarize(J, 0.8);
-           BW = uint8(BW);
-           J = J.*BW;
-
-           Jref = imcrop(J, ref_rect);
+           Jref = J.* mask;
            [Yr, Xr] = find(Jref(:,:,1) > ref_thr);
-           RefPoints = [Xr, Yr] + double([ref_rect(1), ref_rect(2)]);
+           RefPoints = [Xr, Yr];
            OnePlane_refPoints = [OnePlane_refPoints;RefPoints];
         end
         refPoint = mean(OnePlane_refPoints);
