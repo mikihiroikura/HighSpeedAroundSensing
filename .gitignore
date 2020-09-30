@@ -9,6 +9,7 @@
 *.asv
 *.jpg
 *.fig
+*.mat
 
 # User-specific files
 *.suo

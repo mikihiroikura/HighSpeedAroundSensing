@@ -14,4 +14,4 @@ disp('Linelaser Calibration finished.');
 
 % 平面パラメータと参照面輝点画像座標の関連付け
 laserparams_imterpolate();
-disp('LaserPlane parameters Imterpolated.');
+disp('LaserPlane parameters ImterpAllolated.');

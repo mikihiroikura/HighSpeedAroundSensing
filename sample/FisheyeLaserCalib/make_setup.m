@@ -4,7 +4,7 @@ function make_setup()
     %魚眼カメラのCalibration用変数
     %fisheye_calibration()
     video_folder = './videos/fisheye/';
-    video_name = '202009281714_video.mp4';
+    video_name = '202009301647_video.mp4';
     video_dir = strcat(video_folder, video_name);
     fish_step = 10;
     squareSize = 32;
@@ -14,11 +14,11 @@ function make_setup()
     %LinelaseのCalibration用変数
     %linelaser_calibration()
     linelaser_folder = './videos/linelaser/';
-    linelaser_file_cnt = 10;
+    linelaser_file_cnt = 23;
     laser_step = 2;
     laser_time_margin = 4; % レーザがチェッカーボードに映っている時間
     margin = 30; % チェッカーボード周辺を抽出する際のマージン
-    bright_thr = 200;%レーザ輝度の閾値
+    bright_thr = 240;%レーザ輝度の閾値
     ref_rect = [908, 467, 54, 53];
     ref_thr = 200;%参照面の輝点閾値
     

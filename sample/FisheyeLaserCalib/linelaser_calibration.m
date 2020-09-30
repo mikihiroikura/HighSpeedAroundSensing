@@ -18,7 +18,7 @@ function linelaser_calibration()
     
     
     %レーザ動画の個数だけ行う
-    for k=11:linelaser_file_cnt*2
+    for k=23
         linelaser_dir = strcat(strcat(linelaser_folder, int2str(k)),'.mp4');
         vidObj = VideoReader(linelaser_dir);
         allFrame = read(vidObj);
@@ -63,10 +63,17 @@ function linelaser_calibration()
         end
 
         %レーザ輝点群を最小二乗法で一つの平面を出力
+        if k<7 || k>=22
+            norm = 0;
+            maxcnt = 3;
+        else
+            norm = 0.001;
+            maxcnt = 10;
+        end
         func = @(param)calcplane_func(param, OnePlane_cameraPoints);
         min_fval = 1e+20;
-        for cnt = 1:10
-            x0 = -rand(1,3)*0.01*cnt;
+        for cnt = 1:maxcnt
+            x0 = -rand(1,3)*norm;%0.001
             options = optimset('Display','iter','PlotFcns',@optimplotfval,'MaxFunEvals',1000);
             [planeparams,fval,exitflag,output] = fminsearch(func,x0,options);
             if exitflag==1&&fval<3000
@@ -89,8 +96,8 @@ function linelaser_calibration()
         %閾値以下のレーザ輝点群を最小二乗法で一つの平面を再出力
         func = @(param)calcplane_func(param, Opt_OnePlane_cameraPoints);
         opt_min_fval = 1e+20;
-        for cnt = 1:10
-            x0 = -rand(1,3)*0.01*cnt;
+        for cnt = 1:maxcnt
+            x0 = -rand(1,3)*norm;%0.001
             options = optimset('Display','iter','PlotFcns',@optimplotfval,'MaxFunEvals',1000);
             [planeparams,fval,exitflag,output] = fminsearch(func,x0,options);
             if exitflag==1&&fval<3000
