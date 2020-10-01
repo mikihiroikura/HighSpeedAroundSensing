@@ -1,7 +1,7 @@
 function linelaser_calibration()
 %linelaser_calibration ラインレーザのCalibration
 %   
-    %動画からFrameを保存する   
+    %.matファイルから変数群の呼び出し  
     load fishparams.mat fisheyeParams
     load setup.mat linelaser_folder laser_step squareSize laser_time_margin ...
     margin bright_thr ref_circle_radi ref_thr ref_arcwidth linelaser_file_num
@@ -160,7 +160,7 @@ function linelaser_calibration()
     end
     
     %matファイルの全ての結果の保存
-    save linelaserparams.mat All_planeparams All_refPoints All_cameraPoints All_fvals All_PointsCnts
+    save linelaserparams.mat All_planeparams All_refPoints ref_center ref_radi All_cameraPoints All_fvals All_PointsCnts
     
     %デバッグ：Calibration結果を図で出力
 %     All_PointsID = [0;All_PointsCnts(1)];

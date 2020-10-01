@@ -9,7 +9,7 @@
 *.asv
 *.jpg
 *.fig
-*.mat
+sample/FisheyeLaserCalib/debug/
 
 # User-specific files
 *.suo

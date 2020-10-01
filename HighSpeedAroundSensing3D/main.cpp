@@ -41,12 +41,20 @@ vector<cv::Mat> Rs;
 vector< cv::Vec3d > Rvecs, Tvecs;
 /// 排他制御用のMutex
 cv::Mutex mutex;
+/// DDMotor制御に関する変数
+RS232c mbed;
+char command[256] = "";
+int rpm = 10;
+char mode = 'R';
+int initpulse = 100;
+int movepulse = 100;
 
 
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg);
 void ShowLogs(bool* flg);
 void DetectAR(bool* flg);
+void SendDDMotorCommand(bool* flg);
 
 int main() {
 	//パラメータ
@@ -77,6 +85,9 @@ int main() {
 
 	//レーザCalibrationの結果の呼び出し
 
+
+	//MBEDのRS232接続
+	mbed.Connect("COM4", 115200, 8, NOPARITY, 0, 0, 0, 5000, 20000);
 
 	//取得画像を格納するVectorの作成
 	cout << "Set Mat Vector..." << endl;
@@ -190,5 +201,13 @@ void DetectAR(bool* flg) {
 				cv::Rodrigues(Rvecs[i], Rs[i]);
 			}
 		}
+	}
+}
+
+//DDMotorへのコマンド送信
+void SendDDMotorCommand(bool* flg) {
+	while (*flg)
+	{
+
 	}
 }
