@@ -164,11 +164,11 @@ function linelaser_calibration()
     
     %デバッグ：Calibration結果を図で出力
 %     All_PointsID = [0;All_PointsCnts(1)];
-%     for i = 2:10
+%     for i = 2:23
 %         All_PointsID = [All_PointsID;All_PointsCnts(i)+All_PointsID(i)];
 %     end
 %     f = figure;
-%     for i = 1:10
+%     for i = 1:23
 %         X = All_cameraPoints(1+All_PointsID(i):All_PointsID(i+1),1);
 %         Y = All_cameraPoints(1+All_PointsID(i):All_PointsID(i+1),2);
 %         Z = All_cameraPoints(1+All_PointsID(i):All_PointsID(i+1),3);
