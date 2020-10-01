@@ -89,7 +89,7 @@ function linelaser_calibration()
         end
 
         %レーザ輝点群を最小二乗法で一つの平面を出力
-        if k<7 || k>=22
+        if k<=7 || k>=21
             norm = 0;
             maxcnt = 3;
         else
