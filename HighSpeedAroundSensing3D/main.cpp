@@ -13,6 +13,7 @@
 #include <Windows.h>
 #include "RS232c.h"
 #include <opencv2/core.hpp>
+#include "params.h"
 
 
 #ifdef _DEBUG
@@ -55,6 +56,7 @@ void TakePicture(kayacoaxpress* cam, bool* flg);
 void ShowLogs(bool* flg);
 void DetectAR(bool* flg);
 void SendDDMotorCommand(bool* flg);
+int CalcLSM(LSM* lsm);
 
 int main() {
 	//パラメータ
@@ -70,6 +72,10 @@ int main() {
 	int offsetx = 0;
 	int offsety = 0;
 
+	//光切断法に関する構造体のインスタンス
+	LSM lsm;
+	lsm.processcnt = 0;
+
 	//カメラクラスのインスタンスの生成
 	kayacoaxpress cam;
 	cam.connect(0);
@@ -84,10 +90,32 @@ int main() {
 	cam.parameter_all_print();
 
 	//レーザCalibrationの結果の呼び出し
-
+	FILE* fcam, * flaser;
+	fcam = fopen("202009301655_fisheyeparam.csv", "r");
+	for (size_t i = 0; i < 4; i++){ fscanf(fcam, "%lf,", &lsm.map_coefficient[i]); }
+	for (size_t i = 0; i < 4; i++) { fscanf(fcam, "%lf,", &lsm.stretch_mat[i]); }
+	for (size_t i = 0; i < 2; i++) { fscanf(fcam, "%lf,", &lsm.distortion[i]); }
+	fclose(fcam);
+	flaser = fopen("202010010508_laserinterpolparam.csv", "r");
+	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pa[i]); }
+	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pb[i]); }
+	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pc[i]); }
+	for (size_t i = 0; i < 2; i++) { fscanf(flaser, "%lf,", &lsm.ref_center[i]); }
+	fscanf(flaser, "%lf,", &lsm.ref_radius);
+	fscanf(flaser, "%lf,", &lsm.ref_arcwidth);
+	fclose(flaser);
 
 	//MBEDのRS232接続
 	mbed.Connect("COM4", 115200, 8, NOPARITY, 0, 0, 0, 5000, 20000);
+
+	//画像出力用Mat
+	in_img_now = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(255));
+
+	//マスク画像の生成
+	lsm.mask_refarc = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(0));
+	cv::circle(lsm.mask_refarc, cv::Point((int)lsm.ref_center[0], (int)lsm.ref_center[1]), (int)(lsm.ref_radius - lsm.ref_arcwidth / 2), cv::Scalar::all(255), (int)lsm.ref_arcwidth);
+	lsm.mask_lsm = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(255));
+	cv::circle(lsm.mask_lsm, cv::Point((int)lsm.ref_center[0], (int)lsm.ref_center[1]), (int)(lsm.ref_radius), cv::Scalar::all(0), -1);
 
 	//取得画像を格納するVectorの作成
 	cout << "Set Mat Vector..." << endl;
@@ -95,11 +123,6 @@ int main() {
 	{
 		in_imgs.push_back(cv::Mat(height, width, CV_8UC1, cv::Scalar::all(255)));
 	}
-
-	//画像出力用Mat
-	in_img_now = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(255));
-
-
 
 	//カメラ起動
 	cout << "Aroud 3D Sensing Start!" << endl;
@@ -109,7 +132,7 @@ int main() {
 	/// 1000fpsで画像を格納し続けるスレッド
 	thread thr1(TakePicture, &cam, &flg);
 	/// 現在の画像をPCに出力して見えるようするスレッド
-	thread thr2(ShowLogs, &flg);
+	//thread thr2(ShowLogs, &flg);
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
 	//thread thr3(DetectAR, &flg);
 	
@@ -123,6 +146,7 @@ int main() {
 	while (flg)
 	{
 		//光切断の高度の更新
+		CalcLSM(&lsm);
 
 		//時刻の更新
 		if (!QueryPerformanceCounter(&end)) { return 0; }
@@ -135,7 +159,7 @@ int main() {
 
 	//スレッドの停止
 	if (thr1.joinable())thr1.join();
-	if (thr2.joinable())thr2.join();
+	//if (thr2.joinable())thr2.join();
 	//if (thr3.joinable())thr3.join();
 
 	//計算した座標，取得画像の保存
@@ -210,4 +234,39 @@ void SendDDMotorCommand(bool* flg) {
 	{
 
 	}
+}
+
+//Mainループでの光切断法による形状計測
+int CalcLSM(LSM *lsm) {
+	lsm->in_img = in_imgs[lsm->processcnt].clone();
+	lsm->processcnt++;
+	if (lsm->in_img.data!=NULL)
+	{
+		//参照面の輝度重心の検出
+		lsm->in_img.copyTo(lsm->ref_arc, lsm->mask_refarc);
+		cv::threshold(lsm->ref_arc, lsm->ref_arc, 240.0, 255.0, cv::THRESH_BINARY);
+		cv::Moments mu = cv::moments(lsm->ref_arc);
+		lsm->rp[0] = mu.m10 / mu.m00;
+		lsm->rp[1] = mu.m01 / mu.m00;
+		//ラインレーザの輝点座標を検出
+		lsm->in_img.copyTo(lsm->lsm_laser, lsm->mask_lsm);
+		cv::threshold(lsm->lsm_laser, lsm->lsm_laser, 240, 255, cv::THRESH_BINARY);
+		/// ここで輝点群の座標を計算する
+		
+		//レーザ平面の法線ベクトルの計算
+		lsm->plane_nml[0] = lsm->pa[0] + lsm->pa[1] * lsm->rp[0] + lsm->pa[2] * lsm->rp[1] + lsm->pa[3] * pow(lsm->rp[0], 2)
+			+ lsm->pa[4] * lsm->rp[0] * lsm->rp[1] + lsm->pa[5] * pow(lsm->rp[1], 2) + lsm->pa[6] * pow(lsm->rp[0], 3)
+			+ lsm->pa[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pa[8] * lsm->rp[0] * pow(lsm->rp[0], 2)
+			+ lsm->pa[9] * pow(lsm->rp[1], 3);
+		lsm->plane_nml[1] = lsm->pb[0] + lsm->pb[1] * lsm->rp[0] + lsm->pb[2] * lsm->rp[1] + lsm->pb[3] * pow(lsm->rp[0], 2)
+			+ lsm->pb[4] * lsm->rp[0] * lsm->rp[1] + lsm->pb[5] * pow(lsm->rp[1], 2) + lsm->pb[6] * pow(lsm->rp[0], 3)
+			+ lsm->pb[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pb[8] * lsm->rp[0] * pow(lsm->rp[0], 2)
+			+ lsm->pb[9] * pow(lsm->rp[1], 3);
+		lsm->plane_nml[2] = lsm->pc[0] + lsm->pc[1] * lsm->rp[0] + lsm->pc[2] * lsm->rp[1] + lsm->pc[3] * pow(lsm->rp[0], 2)
+			+ lsm->pc[4] * lsm->rp[0] * lsm->rp[1] + lsm->pc[5] * pow(lsm->rp[1], 2) + lsm->pc[6] * pow(lsm->rp[0], 3)
+			+ lsm->pc[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pc[8] * lsm->rp[0] * pow(lsm->rp[0], 2)
+			+ lsm->pc[9] * pow(lsm->rp[1], 3);
+	}
+
+	return 0;
 }
