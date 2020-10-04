@@ -17,17 +17,24 @@ int main() {
 		return 0;
 	}
 
+	cv::Point2f bias(10.0, 1000.2);
+
 	while (video.grab())
 	{
 		cv::Mat  image, imageCopy, mask ,nonzero;
+		cv::Point2f out;
+		
 		vector<cv::Point> bps;
 		video.retrieve(image);
 		image.copyTo(imageCopy);
 
-		mask = imageCopy > 240;
+		cv::threshold(imageCopy, mask, 240, 255, cv::THRESH_BINARY);
 
 		cv::cvtColor(mask, mask, CV_RGB2GRAY);
 		cv::findNonZero(mask,bps);
+
+		out.x = bps[0].x + bias.x;
+		out.y = bps[0].y - bias.y;
 
 		cv::imshow("out", image);
 		cv::imshow("masked", mask);

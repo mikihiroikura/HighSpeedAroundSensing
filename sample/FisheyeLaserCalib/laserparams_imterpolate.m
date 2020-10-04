@@ -6,8 +6,8 @@ function laserparams_imterpolate()
     load setup.mat interpolate_outputfile ref_arcwidth
     
     %All_planeparamsをそれぞれの成分ごとに補完する
-    xr = All_refPoints(:,1);
-    yr = All_refPoints(:,2);
+    xr = All_refPoints(:,1)-1;
+    yr = All_refPoints(:,2)-1;
     sfs = {};
     for i=1:size(All_planeparams,2)
         sf = fit([xr,yr],All_planeparams(:,i),'poly33','Normalize','on');

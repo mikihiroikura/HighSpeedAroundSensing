@@ -31,7 +31,7 @@ struct LSM
 	//ƒpƒ‰ƒ[ƒ^
 	int processcnt;
 	double rp[2];
-	vector<cv::Point2f> bps;
+	vector<cv::Point> bps;
 	vector<cv::Point2f> idpixs;
 	vector<cv::Mat> campts;
 };

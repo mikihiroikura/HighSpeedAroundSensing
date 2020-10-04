@@ -304,7 +304,7 @@ int CalcLSM(LSM *lsm) {
 		//ラインレーザの輝点座標を検出
 		lsm->in_img.copyTo(lsm->lsm_laser, lsm->mask_lsm);
 		cv::threshold(lsm->lsm_laser, lsm->lsm_laser, 240, 255, cv::THRESH_BINARY);
-		/// ここで輝点群の座標を計算する
+		cv::findNonZero(lsm->lsm_laser, lsm->bps);
 		
 		//レーザ平面の法線ベクトルの計算
 		lsm->plane_nml[0] = lsm->pa[0] + lsm->pa[1] * lsm->rp[0] + lsm->pa[2] * lsm->rp[1] + lsm->pa[3] * pow(lsm->rp[0], 2)
