@@ -49,6 +49,9 @@ int rpm = 10;
 char mode = 'R';
 int initpulse = 100;
 int movepulse = 100;
+/// 光切断法計算用変数
+double phi, lambda, u, v, w;
+cv::Mat campt;
 
 
 //プロトタイプ宣言
@@ -94,6 +97,7 @@ int main() {
 	fcam = fopen("202009301655_fisheyeparam.csv", "r");
 	for (size_t i = 0; i < 4; i++){ fscanf(fcam, "%lf,", &lsm.map_coefficient[i]); }
 	for (size_t i = 0; i < 4; i++) { fscanf(fcam, "%lf,", &lsm.stretch_mat[i]); }
+	swap(lsm.stretch_mat[1], lsm.stretch_mat[2]);
 	for (size_t i = 0; i < 2; i++) { fscanf(fcam, "%lf,", &lsm.distortion[i]); }
 	fclose(fcam);
 	flaser = fopen("202010010508_laserinterpolparam.csv", "r");
@@ -104,6 +108,7 @@ int main() {
 	fscanf(flaser, "%lf,", &lsm.ref_radius);
 	fscanf(flaser, "%lf,", &lsm.ref_arcwidth);
 	fclose(flaser);
+	lsm.det = 1 / (lsm.stretch_mat[0] - lsm.stretch_mat[1] * lsm.stretch_mat[2]);
 
 	//MBEDのRS232接続
 	mbed.Connect("COM4", 115200, 8, NOPARITY, 0, 0, 0, 5000, 20000);
@@ -238,6 +243,11 @@ void SendDDMotorCommand(bool* flg) {
 
 //Mainループでの光切断法による形状計測
 int CalcLSM(LSM *lsm) {
+	//変数のリセット
+	lsm->bps.clear();
+	lsm->idpixs.clear();
+	lsm->campts.clear();
+
 	lsm->in_img = in_imgs[lsm->processcnt].clone();
 	lsm->processcnt++;
 	if (lsm->in_img.data!=NULL)
@@ -266,6 +276,28 @@ int CalcLSM(LSM *lsm) {
 			+ lsm->pc[4] * lsm->rp[0] * lsm->rp[1] + lsm->pc[5] * pow(lsm->rp[1], 2) + lsm->pc[6] * pow(lsm->rp[0], 3)
 			+ lsm->pc[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pc[8] * lsm->rp[0] * pow(lsm->rp[0], 2)
 			+ lsm->pc[9] * pow(lsm->rp[1], 3);
+
+		//理想ピクセル座標系に変換
+		for (size_t i = 0; i < lsm->bps.size(); i++)
+		{
+			cv::Point2f idpix;
+			idpix.x = lsm->det * ((lsm->bps[i].x - lsm->distortion[0]) - lsm->stretch_mat[1] * (lsm->bps[i].y- lsm->distortion[1]));
+			idpix.y = lsm->det * (-lsm->stretch_mat[2] * (lsm->bps[i].x - lsm->distortion[0]) + lsm->stretch_mat[0] * (lsm->bps[i].y - lsm->distortion[1]));
+			lsm->idpixs.push_back(idpix);
+		}
+
+		//理想ピクセル座標->直線の式とレーザ平面から輝点三次元座標の計算
+		for (size_t i = 0; i < lsm->idpixs.size(); i++)
+		{
+			u = lsm->idpixs[i].x;
+			v = lsm->idpixs[i].y;
+			phi = hypot(u, v);
+			w = lsm->map_coefficient[0] + lsm->map_coefficient[1] * pow(phi, 2) +
+				lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
+			lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
+			campt = (cv::Mat_<double>(1, 3) << lambda * u, lambda * v, lambda * w);
+			lsm->campts.push_back(campt);
+		}
 	}
 
 	return 0;
