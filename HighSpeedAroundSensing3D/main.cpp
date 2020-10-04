@@ -14,6 +14,9 @@
 #include "RS232c.h"
 #include <opencv2/core.hpp>
 #include "params.h"
+#define _USE_MATH_DEFINES
+#include <math.h>
+#include <stdlib.h>
 
 
 #ifdef _DEBUG
@@ -40,6 +43,9 @@ double logtime = 0;
 unsigned int marker_num = 1;
 vector<cv::Mat> Rs;
 vector< cv::Vec3d > Rvecs, Tvecs;
+bool detectar_id0 = false;
+cv::Vec3d Tvec_id0;
+double dir_arid0_rad;
 /// 排他制御用のMutex
 cv::Mutex mutex;
 /// DDMotor制御に関する変数
@@ -48,7 +54,10 @@ char command[256] = "";
 int rpm = 10;
 char mode = 'R';
 int initpulse = 100;
-int movepulse = 100;
+int movepulse = 50;
+const int gearratio = 1000;
+const int rotpulse = 432000 / gearratio;
+#define READBUFFERSIZE 256
 /// 光切断法計算用変数
 double phi, lambda, u, v, w;
 cv::Mat campt;
@@ -172,6 +181,7 @@ int main() {
 	return 0;
 }
 
+//画像を格納する
 void TakePicture(kayacoaxpress* cam, bool* flg) {
 	cv::Mat temp = cv::Mat(1080, 1920, CV_8UC1, cv::Scalar::all(255));
 	while (*flg)
@@ -228,6 +238,12 @@ void DetectAR(bool* flg) {
 			for (size_t i = 0; i < ids.size(); i++)
 			{
 				cv::Rodrigues(Rvecs[i], Rs[i]);
+				//ID=0のマーカ検出されると方向ベクトル保存
+				if (ids[i] == 0) {
+					detectar_id0 = true;
+					Tvec_id0 = Tvecs[i];
+				}
+				else detectar_id0 = false;
 			}
 		}
 	}
@@ -235,9 +251,35 @@ void DetectAR(bool* flg) {
 
 //DDMotorへのコマンド送信
 void SendDDMotorCommand(bool* flg) {
+	//動作開始のコマンド
+	snprintf(command, READBUFFERSIZE, "%c,%d,%d,%d,\r", mode, rpm, initpulse, movepulse);
+	mbed.Send(command);
+	memset(command, '\0', READBUFFERSIZE);
 	while (*flg)
 	{
-
+		//ARマーカ検出したとき，局所計測
+		if (detectar_id0)
+		{
+			//ARマーカの方向計算
+			dir_arid0_rad = atan2(Tvec_id0[1], Tvec_id0[1]) + M_PI / 2;
+			initpulse = ((int)(dir_arid0_rad * 180 / M_PI / 360 * rotpulse)+rotpulse-movepulse/2)%(rotpulse);
+			if (initpulse < 0) initpulse += rotpulse;
+			//コマンド送信
+			mode = 'L';
+			/// rpm, movepulseの変更
+			snprintf(command, READBUFFERSIZE, "%c,%d,%d,%d,\r", mode, rpm, initpulse, movepulse);
+			mbed.Send(command);
+			memset(command, '\0', READBUFFERSIZE);
+		}
+		//ARマーカないとき，全周計測
+		else
+		{
+			mode = 'R';
+			/// rpm, movepulseの変更
+			snprintf(command, READBUFFERSIZE, "%c,%d,%d,%d,\r", mode, rpm, initpulse, movepulse);
+			mbed.Send(command);
+			memset(command, '\0', READBUFFERSIZE);
+		}
 	}
 }
 
@@ -248,6 +290,7 @@ int CalcLSM(LSM *lsm) {
 	lsm->idpixs.clear();
 	lsm->campts.clear();
 
+	//画像の格納
 	lsm->in_img = in_imgs[lsm->processcnt].clone();
 	lsm->processcnt++;
 	if (lsm->in_img.data!=NULL)
