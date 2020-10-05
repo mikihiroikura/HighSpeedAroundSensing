@@ -11,6 +11,11 @@ function make_setup()
     form = 'yyyymmddHHMM';
     fishparamfile = strcat('./calib_result/fisheye/',strcat(datestr(now,form),'_fisheyeparam.csv'));
     
+    %魚眼カメラの円検出用変数
+%     fishbright_name = '202009012005_video.mp4';
+%     fishbright_dir = strcat(video_folder, fishbright_name);
+%     fish_circle_radi = [300 550];
+    
     %LinelaseのCalibration用変数
     %linelaser_calibration()
     linelaser_folder = './videos/linelaser/';
@@ -29,6 +34,6 @@ function make_setup()
     
     save setup.mat video_dir fish_step squareSize fishparamfile ...
 linelaser_folder laser_step laser_time_margin margin bright_thr ref_circle_radi ref_thr ref_arcwidth...
-linelaser_file_num interpolate_outputfile
+linelaser_file_num interpolate_outputfile %fishbright_dir fish_circle_radi
 end
 

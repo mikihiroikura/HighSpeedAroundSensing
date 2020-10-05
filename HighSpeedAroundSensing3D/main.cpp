@@ -61,6 +61,8 @@ const int rotpulse = 432000 / gearratio;
 /// 光切断法計算用変数
 double phi, lambda, u, v, w;
 cv::Mat campt;
+cv::Rect roi_lsm(960 - 430, 540 - 430, 430 * 2, 430 * 2);
+cv::Rect roi_ref;
 //デバッグ用変数
 LARGE_INTEGER lsmstart, lsmend, takestart, takeend;
 double taketime = 0;
@@ -131,7 +133,9 @@ int main() {
 	//マスク画像の生成
 	lsm.mask_refarc = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(0));
 	cv::circle(lsm.mask_refarc, cv::Point((int)lsm.ref_center[0], (int)lsm.ref_center[1]), (int)(lsm.ref_radius - lsm.ref_arcwidth / 2), cv::Scalar::all(255), (int)lsm.ref_arcwidth);
-	lsm.mask_lsm = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(255));
+	roi_ref = cv::Rect((int)(lsm.ref_center[0] - lsm.ref_radius), (int)(lsm.ref_center[1] - lsm.ref_radius), (int)(2 * lsm.ref_radius), (int)(2 * lsm.ref_radius));
+	lsm.mask_lsm = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(0));
+	cv::circle(lsm.mask_lsm, cv::Point(960, 540), 430, cv::Scalar::all(255), -1);
 	cv::circle(lsm.mask_lsm, cv::Point((int)lsm.ref_center[0], (int)lsm.ref_center[1]), (int)(lsm.ref_radius), cv::Scalar::all(0), -1);
 
 	//取得画像を格納するVectorの作成
@@ -313,13 +317,14 @@ int CalcLSM(LSM *lsm) {
 		//参照面の輝度重心の検出
 		lsm->in_img.copyTo(lsm->ref_arc, lsm->mask_refarc);
 		cv::threshold(lsm->ref_arc, lsm->ref_arc, 240.0, 255.0, cv::THRESH_BINARY);
-		cv::Moments mu = cv::moments(lsm->ref_arc);
-		lsm->rp[0] = mu.m10 / mu.m00;
-		lsm->rp[1] = mu.m01 / mu.m00;
+		cv::Moments mu = cv::moments(lsm->ref_arc(roi_ref));
+		lsm->rp[0] = mu.m10 / mu.m00 + roi_ref.x;
+		lsm->rp[1] = mu.m01 / mu.m00 + roi_ref.y;
 		//ラインレーザの輝点座標を検出
 		lsm->in_img.copyTo(lsm->lsm_laser, lsm->mask_lsm);
 		cv::threshold(lsm->lsm_laser, lsm->lsm_laser, 240, 255, cv::THRESH_BINARY);
-		cv::findNonZero(lsm->lsm_laser, lsm->bps);
+		cv::findNonZero(lsm->lsm_laser(roi_lsm), lsm->bps);
+		for (size_t i = 0; i < lsm->bps.size(); i++) { lsm->bps[i] += cv::Point(roi_lsm.x, roi_lsm.y); }
 		
 		//レーザ平面の法線ベクトルの計算
 		lsm->plane_nml[0] = lsm->pa[0] + lsm->pa[1] * lsm->rp[0] + lsm->pa[2] * lsm->rp[1] + lsm->pa[3] * pow(lsm->rp[0], 2)
