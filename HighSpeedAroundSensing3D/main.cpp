@@ -61,10 +61,13 @@ const int rotpulse = 432000 / gearratio;
 /// 光切断法計算用変数
 double phi, lambda, u, v, w;
 cv::Mat campt;
-
+//デバッグ用変数
+LARGE_INTEGER lsmstart, lsmend, takestart, takeend;
+double taketime = 0;
+double lsmtime = 0;
 
 //プロトタイプ宣言
-void TakePicture(kayacoaxpress* cam, bool* flg);
+void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
 void ShowLogs(bool* flg);
 void DetectAR(bool* flg);
 void SendDDMotorCommand(bool* flg);
@@ -87,7 +90,7 @@ int main() {
 	//光切断法に関する構造体のインスタンス
 	LSM lsm;
 	lsm.processcnt = 0;
-
+	
 	//カメラクラスのインスタンスの生成
 	kayacoaxpress cam;
 	cam.connect(0);
@@ -135,7 +138,8 @@ int main() {
 	cout << "Set Mat Vector..." << endl;
 	for (size_t i = 0; i < (int)(timeout)*fps+10; i++)
 	{
-		in_imgs.push_back(cv::Mat(height, width, CV_8UC1, cv::Scalar::all(255)));
+		in_imgs.push_back(cv::Mat(height, width, CV_8UC1, cv::Scalar::all(0)));
+		lsm.processflgs.push_back(false);
 	}
 
 	//カメラ起動
@@ -144,7 +148,7 @@ int main() {
 
 	//Threadの作成
 	/// 1000fpsで画像を格納し続けるスレッド
-	thread thr1(TakePicture, &cam, &flg);
+	thread thr1(TakePicture, &cam, &flg, &lsm);
 	/// 現在の画像をPCに出力して見えるようするスレッド
 	//thread thr2(ShowLogs, &flg);
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
@@ -160,8 +164,11 @@ int main() {
 	while (flg)
 	{
 		//光切断の高度の更新
-		CalcLSM(&lsm);
-
+		if (lsm.processflgs[lsm.processcnt])
+		{
+			CalcLSM(&lsm);
+		}
+		
 		//時刻の更新
 		if (!QueryPerformanceCounter(&end)) { return 0; }
 		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
@@ -182,18 +189,22 @@ int main() {
 }
 
 //画像を格納する
-void TakePicture(kayacoaxpress* cam, bool* flg) {
-	cv::Mat temp = cv::Mat(1080, 1920, CV_8UC1, cv::Scalar::all(255));
+void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
+	cv::Mat temp = cv::Mat(1080, 1920, CV_8UC1, cv::Scalar::all(0));
 	while (*flg)
 	{
+		/*QueryPerformanceCounter(&takestart);*/
 		cam->captureFrame(temp.data);
 		{
-			cv::AutoLock lock(mutex);
+			//cv::AutoLock lock(mutex);
 			in_imgs[in_imgs_saveid] = temp.clone();
-			in_imgs_saveid++;
 			//in_img_now = temp.clone();
 		}
-		
+		lsm->processflgs[in_imgs_saveid] = true;
+		in_imgs_saveid++;
+		/*QueryPerformanceCounter(&takeend);
+		taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;*/
+		//cout << taketime << endl;
 	}
 }
 
@@ -285,6 +296,7 @@ void SendDDMotorCommand(bool* flg) {
 
 //Mainループでの光切断法による形状計測
 int CalcLSM(LSM *lsm) {
+	/*QueryPerformanceCounter(&lsmstart);*/
 	//変数のリセット
 	lsm->bps.clear();
 	lsm->idpixs.clear();
@@ -292,7 +304,7 @@ int CalcLSM(LSM *lsm) {
 
 	//画像の格納
 	{
-		cv::AutoLock lock(mutex);
+		//cv::AutoLock lock(mutex);
 		lsm->in_img = in_imgs[lsm->processcnt].clone();
 	}
 	lsm->processcnt++;
@@ -345,6 +357,9 @@ int CalcLSM(LSM *lsm) {
 			lsm->campts.push_back(campt);
 		}
 	}
+	/*QueryPerformanceCounter(&lsmend);
+	lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+	cout << lsmtime << endl;*/
 
 	return 0;
 }

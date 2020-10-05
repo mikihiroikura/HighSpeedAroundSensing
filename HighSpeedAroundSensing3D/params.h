@@ -34,6 +34,7 @@ struct LSM
 	vector<cv::Point> bps;
 	vector<cv::Point2f> idpixs;
 	vector<cv::Mat> campts;
+	vector<bool> processflgs;
 };
 
 #endif // !PARAMETER_H_
