@@ -12,7 +12,7 @@ using namespace std;
 int main(int argc, const char* argv[])
 {
 	//内部パラメータcalibration用動画の読み取り
-	string video_dir = "202009161914_video.mp4";
+	string video_dir = "202010051647_video.mp4";
 	cv::VideoCapture video;
 	video.open(video_dir);
 	if (!video.isOpened()) {

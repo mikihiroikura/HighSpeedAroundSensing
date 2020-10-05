@@ -10,7 +10,7 @@ function laserparams_imterpolate()
     yr = All_refPoints(:,2)-1;
     sfs = {};
     for i=1:size(All_planeparams,2)
-        sf = fit([xr,yr],All_planeparams(:,i),'poly33','Normalize','on');
+        sf = fit([xr,yr],All_planeparams(:,i),'poly33','Normalize','off');
         sfs{i} = sf;
     end
     
@@ -24,7 +24,7 @@ function laserparams_imterpolate()
     %Camera parameterのCSVへの保存(C++のプログラム用)
     fid = fopen(interpolate_outputfile,'w');
     for i = 1:size(sfs,2)
-        fprintf(fid,'%f,',coeffvalues(sfs{i}));
+        fprintf(fid,'%.15f,',coeffvalues(sfs{i}));
         fprintf(fid,'\n');
     end
     fprintf(fid,'%f,',ref_center-1);

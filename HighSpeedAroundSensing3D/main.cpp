@@ -109,7 +109,7 @@ int main() {
 	swap(lsm.stretch_mat[1], lsm.stretch_mat[2]);
 	for (size_t i = 0; i < 2; i++) { fscanf(fcam, "%lf,", &lsm.distortion[i]); }
 	fclose(fcam);
-	flaser = fopen("202010010508_laserinterpolparam.csv", "r");
+	flaser = fopen("202010051818_laserinterpolparam.csv", "r");
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pa[i]); }
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pb[i]); }
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pc[i]); }
@@ -188,10 +188,10 @@ void TakePicture(kayacoaxpress* cam, bool* flg) {
 	{
 		cam->captureFrame(temp.data);
 		{
-			//cv::AutoLock lock(mutex);
+			cv::AutoLock lock(mutex);
 			in_imgs[in_imgs_saveid] = temp.clone();
 			in_imgs_saveid++;
-			in_img_now = temp.clone();
+			//in_img_now = temp.clone();
 		}
 		
 	}
@@ -291,7 +291,10 @@ int CalcLSM(LSM *lsm) {
 	lsm->campts.clear();
 
 	//画像の格納
-	lsm->in_img = in_imgs[lsm->processcnt].clone();
+	{
+		cv::AutoLock lock(mutex);
+		lsm->in_img = in_imgs[lsm->processcnt].clone();
+	}
 	lsm->processcnt++;
 	if (lsm->in_img.data!=NULL)
 	{
@@ -309,15 +312,15 @@ int CalcLSM(LSM *lsm) {
 		//レーザ平面の法線ベクトルの計算
 		lsm->plane_nml[0] = lsm->pa[0] + lsm->pa[1] * lsm->rp[0] + lsm->pa[2] * lsm->rp[1] + lsm->pa[3] * pow(lsm->rp[0], 2)
 			+ lsm->pa[4] * lsm->rp[0] * lsm->rp[1] + lsm->pa[5] * pow(lsm->rp[1], 2) + lsm->pa[6] * pow(lsm->rp[0], 3)
-			+ lsm->pa[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pa[8] * lsm->rp[0] * pow(lsm->rp[0], 2)
+			+ lsm->pa[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pa[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
 			+ lsm->pa[9] * pow(lsm->rp[1], 3);
 		lsm->plane_nml[1] = lsm->pb[0] + lsm->pb[1] * lsm->rp[0] + lsm->pb[2] * lsm->rp[1] + lsm->pb[3] * pow(lsm->rp[0], 2)
 			+ lsm->pb[4] * lsm->rp[0] * lsm->rp[1] + lsm->pb[5] * pow(lsm->rp[1], 2) + lsm->pb[6] * pow(lsm->rp[0], 3)
-			+ lsm->pb[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pb[8] * lsm->rp[0] * pow(lsm->rp[0], 2)
+			+ lsm->pb[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pb[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
 			+ lsm->pb[9] * pow(lsm->rp[1], 3);
 		lsm->plane_nml[2] = lsm->pc[0] + lsm->pc[1] * lsm->rp[0] + lsm->pc[2] * lsm->rp[1] + lsm->pc[3] * pow(lsm->rp[0], 2)
 			+ lsm->pc[4] * lsm->rp[0] * lsm->rp[1] + lsm->pc[5] * pow(lsm->rp[1], 2) + lsm->pc[6] * pow(lsm->rp[0], 3)
-			+ lsm->pc[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pc[8] * lsm->rp[0] * pow(lsm->rp[0], 2)
+			+ lsm->pc[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pc[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
 			+ lsm->pc[9] * pow(lsm->rp[1], 3);
 
 		//理想ピクセル座標系に変換
