@@ -29,12 +29,18 @@ struct LSM
 	cv::Mat lsm_laser;
 
 	//ÉpÉâÉÅÅ[É^
-	int processcnt;
+	long long processcnt;
 	double rp[2];
 	vector<cv::Point> bps;
 	vector<cv::Point2f> idpixs;
 	vector<cv::Mat> campts;
 	vector<bool> processflgs;
+};
+
+struct Logs
+{
+	vector<double> LSM_times;
+	vector<vector<cv::Mat>> LSM_pts;
 };
 
 #endif // !PARAMETER_H_

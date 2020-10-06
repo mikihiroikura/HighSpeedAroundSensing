@@ -17,6 +17,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <stdlib.h>
+#include <filesystem>
 
 
 #ifdef _DEBUG
@@ -29,12 +30,17 @@
 #pragma comment(lib,"KAYACoaXpressLib" LIB_EXT)
 #pragma warning(disable:4996)
 using namespace std;
+namespace fs = std::filesystem;
+
+//DEFINE群
+#define SAVE_LOGS_
+#define SAVE_IMGS_
 
 //グローバル変数
 /// 画像に関する変数
 cv::Mat in_img_now;
 vector<cv::Mat> in_imgs;
-int in_imgs_saveid = 0;
+long long in_imgs_saveid = 0;
 /// 時間に関する変数
 int timeout = 10;
 LARGE_INTEGER freq, start;
@@ -73,7 +79,7 @@ void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
 void ShowLogs(bool* flg);
 void DetectAR(bool* flg);
 void SendDDMotorCommand(bool* flg);
-int CalcLSM(LSM* lsm);
+int CalcLSM(LSM* lsm, Logs* logs);
 
 int main() {
 	//パラメータ
@@ -92,6 +98,9 @@ int main() {
 	//光切断法に関する構造体のインスタンス
 	LSM lsm;
 	lsm.processcnt = 0;
+
+	//ログ保存に関する構造体のインスタンス
+	Logs logs;
 	
 	//カメラクラスのインスタンスの生成
 	kayacoaxpress cam;
@@ -140,7 +149,7 @@ int main() {
 
 	//取得画像を格納するVectorの作成
 	cout << "Set Mat Vector..." << endl;
-	for (size_t i = 0; i < (int)(timeout)*fps+2160; i++)
+	for (size_t i = 0; i < (int)(timeout)*fps+100; i++)
 	{
 		in_imgs.push_back(cv::Mat(height, width, CV_8UC1, cv::Scalar::all(0)));
 		lsm.processflgs.push_back(false);
@@ -171,7 +180,10 @@ int main() {
 		{
 			if (lsm.processflgs[in_imgs_saveid - 1])
 			{
-				CalcLSM(&lsm);
+				CalcLSM(&lsm, &logs);
+				if (!QueryPerformanceCounter(&end)) { return 0; }
+				logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+				logs.LSM_times.push_back(logtime);
 			}
 		}
 		
@@ -190,7 +202,63 @@ int main() {
 	//if (thr2.joinable())thr2.join();
 	//if (thr3.joinable())thr3.join();
 
+	//カメラの停止，RS232Cの切断
+	cam.stop();
+	cam.disconnect();
+	mbed.~RS232c();
+
 	//計算した座標，取得画像の保存
+	/// Logファイルの作成
+#ifdef SAVE_LOGS_
+	FILE* fr;
+	time_t timer;
+	struct tm now;
+	timer = time(NULL);
+	localtime_s(&now, &timer);
+	char dir[256];
+	strftime(dir, 256, "D:/Github_output/HighSpeedAroundSensing/HighSpeedAroundSensing3D/results/%y%m%d/%H%M%S", &now);
+	if (!fs::create_directories(dir)) { return 0; }
+	char logfile[256];
+	strftime(logfile, 256, "D:/Github_output/HighSpeedAroundSensing/HighSpeedAroundSensing3D/results/%y%m%d/%H%M%S/LSM_result.csv", &now);
+	fr = fopen(logfile, "w");
+
+	/// Logの保存
+	cout << "Saving logs..." << endl;
+	for (size_t i = 0; i < logs.LSM_times.size(); i++)
+	{
+		fprintf(fr, "%lf,", logs.LSM_times[i]);
+		fprintf(fr, "\n");
+
+		for (size_t j = 0; j < logs.LSM_pts.size(); j++) { fprintf(fr, "%lf,", logs.LSM_pts[i][j].at<double>(0, 0)); }
+		if (logs.LSM_pts.size() == 0) { fprintf(fr, "%lf,", 0.0); }
+		fprintf(fr, "\n");
+
+		for (size_t j = 0; j < logs.LSM_pts.size(); j++) { fprintf(fr, "%lf,", logs.LSM_pts[i][j].at<double>(0, 1)); }
+		if (logs.LSM_pts.size() == 0) { fprintf(fr, "%lf,", 0.0); }
+		fprintf(fr, "\n");
+
+		for (size_t j = 0; j < logs.LSM_pts.size(); j++) { fprintf(fr, "%lf,", logs.LSM_pts[i][j].at<double>(0, 2)); }
+		if (logs.LSM_pts.size() == 0) { fprintf(fr, "%lf,", 0.0); }
+		fprintf(fr, "\n");
+	}
+	cout << "Logs finish!" << endl;
+
+	/// 画像を保存
+#ifdef SAVE_IMGS_
+	cout << "Saving imgs..." << endl;
+	char picturename[256];
+	char picsubname[256];
+	strftime(picsubname, 256, "D:/Github_output/HighSpeedAroundSensing/HighSpeedAroundSensing3D/results/%y%m%d/%H%M%S//Pictures/frame", &now);
+	for (int i = 0; i < in_imgs_saveid; i++)
+	{
+		sprintf(picturename, "%s%05d.png", picsubname, i);//png可逆圧縮
+		cv::imwrite(picturename, in_imgs[i]);
+	}
+	cout << "Imgs finished!" << endl;
+#endif // SAVE_IMGS_
+
+#endif // SAVE_LOGS_
+
 
 	return 0;
 }
@@ -308,7 +376,7 @@ void SendDDMotorCommand(bool* flg) {
 }
 
 //Mainループでの光切断法による形状計測
-int CalcLSM(LSM *lsm) {
+int CalcLSM(LSM *lsm, Logs *logs) {
 	//QueryPerformanceCounter(&lsmstart);
 	//変数のリセット
 	lsm->bps.clear();
@@ -374,6 +442,6 @@ int CalcLSM(LSM *lsm) {
 	//QueryPerformanceCounter(&lsmend);
 	//lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 	//cout << lsmtime << endl;
-
+	logs->LSM_pts.push_back(lsm->campts);
 	return 0;
 }

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <cstdio>
+#include <filesystem>
 
 using namespace std;
 
@@ -16,6 +17,10 @@ int main() {
 		cout << "video cannot ne opened..." << endl;
 		return 0;
 	}
+
+	//char dir[] = "E:/Github_output/HighSpeedAroundSensing/HighSpeedAroundSensing3D/results/100/100";
+	//namespace fs = std::filesystem;
+	//if (!fs::create_directories(dir)) { return 0; }
 
 	cv::Point2f bias(10.0, 1000.2);
 
