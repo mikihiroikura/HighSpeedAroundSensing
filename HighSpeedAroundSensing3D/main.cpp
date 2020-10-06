@@ -140,7 +140,7 @@ int main() {
 
 	//取得画像を格納するVectorの作成
 	cout << "Set Mat Vector..." << endl;
-	for (size_t i = 0; i < (int)(timeout)*fps+10; i++)
+	for (size_t i = 0; i < (int)(timeout)*fps+2160; i++)
 	{
 		in_imgs.push_back(cv::Mat(height, width, CV_8UC1, cv::Scalar::all(0)));
 		lsm.processflgs.push_back(false);
@@ -149,6 +149,9 @@ int main() {
 	//カメラ起動
 	cout << "Aroud 3D Sensing Start!" << endl;
 	cam.start();
+
+	//計測開始
+	if (!QueryPerformanceCounter(&start)) { return 0; }
 
 	//Threadの作成
 	/// 1000fpsで画像を格納し続けるスレッド
@@ -159,19 +162,19 @@ int main() {
 	//thread thr3(DetectAR, &flg);
 	
 
-	//計測開始
-	if (!QueryPerformanceCounter(&start)) { return 0; }
-
-
 	//メインループ
 	/// 取得された画像から光切断法で三次元位置を計算する
 	while (flg)
 	{
 		//光切断の高度の更新
-		if (lsm.processflgs[lsm.processcnt])
+		if (in_imgs_saveid > 3)
 		{
-			CalcLSM(&lsm);
+			if (lsm.processflgs[in_imgs_saveid - 1])
+			{
+				CalcLSM(&lsm);
+			}
 		}
+		
 		
 		//時刻の更新
 		if (!QueryPerformanceCounter(&end)) { return 0; }
@@ -197,7 +200,7 @@ void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
 	cv::Mat temp = cv::Mat(1080, 1920, CV_8UC1, cv::Scalar::all(0));
 	while (*flg)
 	{
-		/*QueryPerformanceCounter(&takestart);*/
+		QueryPerformanceCounter(&takestart);
 		cam->captureFrame(temp.data);
 		{
 			//cv::AutoLock lock(mutex);
@@ -206,8 +209,14 @@ void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
 		}
 		lsm->processflgs[in_imgs_saveid] = true;
 		in_imgs_saveid++;
-		/*QueryPerformanceCounter(&takeend);
-		taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;*/
+		QueryPerformanceCounter(&takeend);
+		taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
+		while (taketime<0.001)
+		{
+			QueryPerformanceCounter(&takeend);
+			taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
+		}
+		
 		//cout << taketime << endl;
 	}
 }
@@ -300,7 +309,7 @@ void SendDDMotorCommand(bool* flg) {
 
 //Mainループでの光切断法による形状計測
 int CalcLSM(LSM *lsm) {
-	/*QueryPerformanceCounter(&lsmstart);*/
+	//QueryPerformanceCounter(&lsmstart);
 	//変数のリセット
 	lsm->bps.clear();
 	lsm->idpixs.clear();
@@ -309,7 +318,7 @@ int CalcLSM(LSM *lsm) {
 	//画像の格納
 	{
 		//cv::AutoLock lock(mutex);
-		lsm->in_img = in_imgs[lsm->processcnt].clone();
+		lsm->in_img = in_imgs[in_imgs_saveid-1].clone();
 	}
 	lsm->processcnt++;
 	if (lsm->in_img.data!=NULL)
@@ -362,9 +371,9 @@ int CalcLSM(LSM *lsm) {
 			lsm->campts.push_back(campt);
 		}
 	}
-	/*QueryPerformanceCounter(&lsmend);
-	lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-	cout << lsmtime << endl;*/
+	//QueryPerformanceCounter(&lsmend);
+	//lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+	//cout << lsmtime << endl;
 
 	return 0;
 }
