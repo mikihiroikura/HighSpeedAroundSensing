@@ -33,8 +33,8 @@ using namespace std;
 namespace fs = std::filesystem;
 
 //DEFINE群
-#define SAVE_LOGS_
-#define SAVE_IMGS_
+//#define SAVE_LOGS_
+//#define SAVE_IMGS_
 
 //グローバル変数
 /// 画像に関する変数
@@ -70,9 +70,10 @@ cv::Mat campt;
 cv::Rect roi_lsm(960 - 430, 540 - 430, 430 * 2, 430 * 2);
 cv::Rect roi_ref;
 //デバッグ用変数
-LARGE_INTEGER lsmstart, lsmend, takestart, takeend;
+LARGE_INTEGER lsmstart, lsmend, takestart, takeend, arstart, arend;
 double taketime = 0;
 double lsmtime = 0;
+double artime = 0;
 
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
@@ -166,9 +167,11 @@ int main() {
 	/// 1000fpsで画像を格納し続けるスレッド
 	thread thr1(TakePicture, &cam, &flg, &lsm);
 	/// 現在の画像をPCに出力して見えるようするスレッド
-	//thread thr2(ShowLogs, &flg);
+	thread thr2(ShowLogs, &flg);
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
-	//thread thr3(DetectAR, &flg);
+	thread thr3(DetectAR, &flg);
+	/// DDMotorにコマンドを送信するスレッド
+	thread thr4(SendDDMotorCommand, & flg);
 	
 
 	//メインループ
@@ -199,8 +202,9 @@ int main() {
 
 	//スレッドの停止
 	if (thr1.joinable())thr1.join();
-	//if (thr2.joinable())thr2.join();
-	//if (thr3.joinable())thr3.join();
+	if (thr2.joinable())thr2.join();
+	if (thr3.joinable())thr3.join();
+	if (thr4.joinable())thr4.join();
 
 	//カメラの停止，RS232Cの切断
 	cam.stop();
@@ -320,10 +324,11 @@ void DetectAR(bool* flg) {
 	calibxml["D"] >> D;
 	while (*flg)
 	{
+		QueryPerformanceCounter(&arstart);
 		//マーカ検出
 		std::vector<int> ids;
 		std::vector<std::vector<cv::Point2f> > corners;
-		cv::aruco::detectMarkers(in_img_now, dictionary, corners, ids);
+		if (in_imgs_saveid>2){ cv::aruco::detectMarkers(in_imgs[in_imgs_saveid - 2], dictionary, corners, ids); }
 		//マーカ検出時，位置姿勢を計算する
 		if (ids.size() > 0) {
 			cv::aruco::estimatePoseSingleMarkers(corners, 0.2, K, D, Rvecs, Tvecs);
@@ -332,12 +337,15 @@ void DetectAR(bool* flg) {
 				cv::Rodrigues(Rvecs[i], Rs[i]);
 				//ID=0のマーカ検出されると方向ベクトル保存
 				if (ids[i] == 0) {
-					detectar_id0 = true;
 					Tvec_id0 = Tvecs[i];
+					detectar_id0 = true;
 				}
 				else detectar_id0 = false;
 			}
 		}
+		QueryPerformanceCounter(&arend);
+		artime = (double)(arend.QuadPart - arstart.QuadPart) / freq.QuadPart;
+		cout << "AR time:" << artime << endl;
 	}
 }
 
@@ -353,7 +361,7 @@ void SendDDMotorCommand(bool* flg) {
 		if (detectar_id0)
 		{
 			//ARマーカの方向計算
-			dir_arid0_rad = atan2(Tvec_id0[1], Tvec_id0[1]) + M_PI / 2;
+			dir_arid0_rad = atan2(Tvec_id0[1], Tvec_id0[0]) + M_PI / 2;
 			initpulse = ((int)(dir_arid0_rad * 180 / M_PI / 360 * rotpulse)+rotpulse-movepulse/2)%(rotpulse);
 			if (initpulse < 0) initpulse += rotpulse;
 			//コマンド送信

@@ -21,6 +21,7 @@ int main() {
 	//char dir[] = "E:/Github_output/HighSpeedAroundSensing/HighSpeedAroundSensing3D/results/100/100";
 	//namespace fs = std::filesystem;
 	//if (!fs::create_directories(dir)) { return 0; }
+	//double ref = atan2(-0.36, -0.09) + 3.159265 / 2;
 
 	cv::Point2f bias(10.0, 1000.2);
 
