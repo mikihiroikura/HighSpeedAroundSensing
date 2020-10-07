@@ -33,7 +33,7 @@ using namespace std;
 namespace fs = std::filesystem;
 
 //DEFINE群
-//#define SAVE_LOGS_
+#define SAVE_LOGS_
 //#define SAVE_IMGS_
 
 //グローバル変数
@@ -49,15 +49,17 @@ double logtime = 0;
 unsigned int marker_num = 1;
 vector<cv::Mat> Rs;
 vector< cv::Vec3d > Rvecs, Tvecs;
-bool detectar_id0 = false;
 cv::Vec3d Tvec_id0;
 double dir_arid0_rad;
+vector<bool> detect_arid0_flgs;
+long long detectarcnt = 0;
 /// 排他制御用のMutex
 cv::Mutex mutex;
 /// DDMotor制御に関する変数
+long long processarcnt = 1;
 RS232c mbed;
 char command[256] = "";
-int rpm = 10;
+int rpm = 100;
 char mode = 'R';
 int initpulse = 100;
 int movepulse = 50;
@@ -209,7 +211,6 @@ int main() {
 	//カメラの停止，RS232Cの切断
 	cam.stop();
 	cam.disconnect();
-	mbed.~RS232c();
 
 	//計算した座標，取得画像の保存
 	/// Logファイルの作成
@@ -230,22 +231,24 @@ int main() {
 	cout << "Saving logs..." << endl;
 	for (size_t i = 0; i < logs.LSM_times.size(); i++)
 	{
+		if (logs.LSM_pts[i].size() > 10000) { continue; }//バグ取り
 		fprintf(fr, "%lf,", logs.LSM_times[i]);
 		fprintf(fr, "\n");
 
-		for (size_t j = 0; j < logs.LSM_pts.size(); j++) { fprintf(fr, "%lf,", logs.LSM_pts[i][j].at<double>(0, 0)); }
+		for (size_t j = 0; j < logs.LSM_pts[i].size(); j++) { fprintf(fr, "%lf,", logs.LSM_pts[i][j].at<double>(0, 0)); }
 		if (logs.LSM_pts.size() == 0) { fprintf(fr, "%lf,", 0.0); }
 		fprintf(fr, "\n");
 
-		for (size_t j = 0; j < logs.LSM_pts.size(); j++) { fprintf(fr, "%lf,", logs.LSM_pts[i][j].at<double>(0, 1)); }
+		for (size_t j = 0; j < logs.LSM_pts[i].size(); j++) { fprintf(fr, "%lf,", logs.LSM_pts[i][j].at<double>(0, 1)); }
 		if (logs.LSM_pts.size() == 0) { fprintf(fr, "%lf,", 0.0); }
 		fprintf(fr, "\n");
 
-		for (size_t j = 0; j < logs.LSM_pts.size(); j++) { fprintf(fr, "%lf,", logs.LSM_pts[i][j].at<double>(0, 2)); }
+		for (size_t j = 0; j < logs.LSM_pts[i].size(); j++) { fprintf(fr, "%lf,", logs.LSM_pts[i][j].at<double>(0, 2)); }
 		if (logs.LSM_pts.size() == 0) { fprintf(fr, "%lf,", 0.0); }
 		fprintf(fr, "\n");
 	}
 	cout << "Logs finish!" << endl;
+	fclose(fr);
 
 	/// 画像を保存
 #ifdef SAVE_IMGS_
@@ -304,7 +307,7 @@ void ShowLogs(bool* flg) {
 		}		
 		int key = cv::waitKey(1);
 		if (key == 'q') *flg = false;
-		printf("Time: %lf [s]", logtime);
+		//printf("Time: %lf [s]", logtime);
 	}
 }
 
@@ -324,7 +327,7 @@ void DetectAR(bool* flg) {
 	calibxml["D"] >> D;
 	while (*flg)
 	{
-		QueryPerformanceCounter(&arstart);
+		//QueryPerformanceCounter(&arstart);
 		//マーカ検出
 		std::vector<int> ids;
 		std::vector<std::vector<cv::Point2f> > corners;
@@ -334,18 +337,22 @@ void DetectAR(bool* flg) {
 			cv::aruco::estimatePoseSingleMarkers(corners, 0.2, K, D, Rvecs, Tvecs);
 			for (size_t i = 0; i < ids.size(); i++)
 			{
-				cv::Rodrigues(Rvecs[i], Rs[i]);
 				//ID=0のマーカ検出されると方向ベクトル保存
 				if (ids[i] == 0) {
 					Tvec_id0 = Tvecs[i];
-					detectar_id0 = true;
+					detect_arid0_flgs.push_back(true);
 				}
-				else detectar_id0 = false;
 			}
 		}
-		QueryPerformanceCounter(&arend);
-		artime = (double)(arend.QuadPart - arstart.QuadPart) / freq.QuadPart;
-		cout << "AR time:" << artime << endl;
+		//マーカ検出されなかったとき
+		else
+		{
+			detect_arid0_flgs.push_back(false);
+			cout << "FALSE" << endl;
+		}
+		//QueryPerformanceCounter(&arend);
+		//artime = (double)(arend.QuadPart - arstart.QuadPart) / freq.QuadPart;
+		//cout << "AR time:" << artime << endl;
 	}
 }
 
@@ -357,30 +364,34 @@ void SendDDMotorCommand(bool* flg) {
 	memset(command, '\0', READBUFFERSIZE);
 	while (*flg)
 	{
-		//ARマーカ検出したとき，局所計測
-		if (detectar_id0)
+		if (detect_arid0_flgs.size()>processarcnt)
 		{
-			//ARマーカの方向計算
-			dir_arid0_rad = atan2(Tvec_id0[1], Tvec_id0[0]) + M_PI / 2;
-			initpulse = ((int)(dir_arid0_rad * 180 / M_PI / 360 * rotpulse)+rotpulse-movepulse/2)%(rotpulse);
-			if (initpulse < 0) initpulse += rotpulse;
-			//コマンド送信
-			mode = 'L';
-			/// rpm, movepulseの変更
+			//ARマーカ検出したとき，局所計測
+			if (detect_arid0_flgs[processarcnt-1])
+			{
+				//ARマーカの方向計算
+				dir_arid0_rad = atan2(Tvec_id0[1], Tvec_id0[0]) + M_PI / 2;
+				initpulse = ((int)(dir_arid0_rad * 180 / M_PI / 360 * rotpulse) + rotpulse - movepulse / 2) % (rotpulse);
+				if (initpulse < 0) initpulse += rotpulse;
+				//コマンド送信
+				mode = 'L';
+				/// rpm, movepulseの変更
+			}
+			else// if(!detect_arid0_flgs[processarcnt]&& !detect_arid0_flgs[processarcnt-1])
+			{//ARマーカが2回連続ないとき，全周計測
+				mode = 'R';
+			}
 			snprintf(command, READBUFFERSIZE, "%c,%d,%d,%d,\r", mode, rpm, initpulse, movepulse);
 			mbed.Send(command);
 			memset(command, '\0', READBUFFERSIZE);
-		}
-		//ARマーカないとき，全周計測
-		else
-		{
-			mode = 'R';
-			/// rpm, movepulseの変更
-			snprintf(command, READBUFFERSIZE, "%c,%d,%d,%d,\r", mode, rpm, initpulse, movepulse);
-			mbed.Send(command);
-			memset(command, '\0', READBUFFERSIZE);
+			processarcnt++;
 		}
 	}
+	//終了コマンド送信
+	mode = 'F';
+	snprintf(command, READBUFFERSIZE, "%c,%d,%d,%d,\r", mode, rpm, initpulse, movepulse);
+	mbed.Send(command);
+	memset(command, '\0', READBUFFERSIZE);
 }
 
 //Mainループでの光切断法による形状計測
