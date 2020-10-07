@@ -1,4 +1,4 @@
-M =csvread('LSM_result.csv');
+M =csvread('csvs/LSM_result.csv');
 Times = M(1:4:end,1);
 Xs = M(2:4:end,:);
 Ys = M(3:4:end,:);
