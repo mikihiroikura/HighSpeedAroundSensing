@@ -42,7 +42,7 @@ cv::Mat in_img_now;
 vector<cv::Mat> in_imgs;
 long long in_imgs_saveid = 0;
 /// 時間に関する変数
-int timeout = 10;
+int timeout = 20;
 LARGE_INTEGER freq, start;
 double logtime = 0;
 /// ARマーカに関する変数
@@ -52,7 +52,6 @@ vector< cv::Vec3d > Rvecs, Tvecs;
 cv::Vec3d Tvec_id0;
 double dir_arid0_rad;
 vector<bool> detect_arid0_flgs;
-long long detectarcnt = 0;
 /// 排他制御用のMutex
 cv::Mutex mutex;
 /// DDMotor制御に関する変数
@@ -66,6 +65,7 @@ int movepulse = 50;
 const int gearratio = 1000;
 const int rotpulse = 432000 / gearratio;
 #define READBUFFERSIZE 256
+long long detectfailcnt = 0;
 /// 光切断法計算用変数
 double phi, lambda, u, v, w;
 cv::Mat campt;
@@ -189,6 +189,7 @@ int main() {
 				if (!QueryPerformanceCounter(&end)) { return 0; }
 				logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
 				logs.LSM_times.push_back(logtime);
+				logs.LSM_modes.push_back(mode);
 			}
 		}
 		
@@ -233,18 +234,20 @@ int main() {
 	{
 		if (logs.LSM_pts[i].size() > 10000) { continue; }//バグ取り
 		fprintf(fr, "%lf,", logs.LSM_times[i]);
+		fprintf(fr, "%lf,%lf,", logs.LSM_rps[i][0], logs.LSM_rps[i][1]);
+		fprintf(fr, "%c,", logs.LSM_modes[i]);
 		fprintf(fr, "\n");
 
 		for (size_t j = 0; j < logs.LSM_pts[i].size(); j++) { fprintf(fr, "%lf,", logs.LSM_pts[i][j].at<double>(0, 0)); }
-		if (logs.LSM_pts.size() == 0) { fprintf(fr, "%lf,", 0.0); }
+		if (logs.LSM_pts[i].size() == 0) { fprintf(fr, "%lf,", 0.0); }
 		fprintf(fr, "\n");
 
 		for (size_t j = 0; j < logs.LSM_pts[i].size(); j++) { fprintf(fr, "%lf,", logs.LSM_pts[i][j].at<double>(0, 1)); }
-		if (logs.LSM_pts.size() == 0) { fprintf(fr, "%lf,", 0.0); }
+		if (logs.LSM_pts[i].size() == 0) { fprintf(fr, "%lf,", 0.0); }
 		fprintf(fr, "\n");
 
 		for (size_t j = 0; j < logs.LSM_pts[i].size(); j++) { fprintf(fr, "%lf,", logs.LSM_pts[i][j].at<double>(0, 2)); }
-		if (logs.LSM_pts.size() == 0) { fprintf(fr, "%lf,", 0.0); }
+		if (logs.LSM_pts[i].size() == 0) { fprintf(fr, "%lf,", 0.0); }
 		fprintf(fr, "\n");
 	}
 	cout << "Logs finish!" << endl;
@@ -327,14 +330,14 @@ void DetectAR(bool* flg) {
 	calibxml["D"] >> D;
 	while (*flg)
 	{
-		//QueryPerformanceCounter(&arstart);
+		QueryPerformanceCounter(&arstart);
 		//マーカ検出
 		std::vector<int> ids;
 		std::vector<std::vector<cv::Point2f> > corners;
 		if (in_imgs_saveid>2){ cv::aruco::detectMarkers(in_imgs[in_imgs_saveid - 2], dictionary, corners, ids); }
 		//マーカ検出時，位置姿勢を計算する
 		if (ids.size() > 0) {
-			cv::aruco::estimatePoseSingleMarkers(corners, 0.2, K, D, Rvecs, Tvecs);
+			cv::aruco::estimatePoseSingleMarkers(corners, 0.282, K, D, Rvecs, Tvecs);
 			for (size_t i = 0; i < ids.size(); i++)
 			{
 				//ID=0のマーカ検出されると方向ベクトル保存
@@ -350,9 +353,9 @@ void DetectAR(bool* flg) {
 			detect_arid0_flgs.push_back(false);
 			cout << "FALSE" << endl;
 		}
-		//QueryPerformanceCounter(&arend);
-		//artime = (double)(arend.QuadPart - arstart.QuadPart) / freq.QuadPart;
-		//cout << "AR time:" << artime << endl;
+		QueryPerformanceCounter(&arend);
+		artime = (double)(arend.QuadPart - arstart.QuadPart) / freq.QuadPart;
+		cout << "AR time:" << artime << endl;
 	}
 }
 
@@ -367,8 +370,9 @@ void SendDDMotorCommand(bool* flg) {
 		if (detect_arid0_flgs.size()>processarcnt)
 		{
 			//ARマーカ検出したとき，局所計測
-			if (detect_arid0_flgs[processarcnt-1])
+			if (detect_arid0_flgs[processarcnt])
 			{
+				detectfailcnt = 0;
 				//ARマーカの方向計算
 				dir_arid0_rad = atan2(Tvec_id0[1], Tvec_id0[0]) + M_PI / 2;
 				initpulse = ((int)(dir_arid0_rad * 180 / M_PI / 360 * rotpulse) + rotpulse - movepulse / 2) % (rotpulse);
@@ -379,7 +383,8 @@ void SendDDMotorCommand(bool* flg) {
 			}
 			else// if(!detect_arid0_flgs[processarcnt]&& !detect_arid0_flgs[processarcnt-1])
 			{//ARマーカが2回連続ないとき，全周計測
-				mode = 'R';
+				detectfailcnt++;
+				if (detectfailcnt>10){ mode = 'R'; }
 			}
 			snprintf(command, READBUFFERSIZE, "%c,%d,%d,%d,\r", mode, rpm, initpulse, movepulse);
 			mbed.Send(command);
@@ -462,5 +467,7 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 	//lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 	//cout << lsmtime << endl;
 	logs->LSM_pts.push_back(lsm->campts);
+	vector<double> rps{ lsm->rp[0],lsm->rp[1] };
+	logs->LSM_rps.push_back(rps);
 	return 0;
 }

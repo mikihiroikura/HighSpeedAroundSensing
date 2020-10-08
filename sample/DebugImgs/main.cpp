@@ -22,6 +22,11 @@ int main() {
 	//namespace fs = std::filesystem;
 	//if (!fs::create_directories(dir)) { return 0; }
 	//double ref = atan2(-0.36, -0.09) + 3.159265 / 2;
+	//vector<vector<double>> a;
+	//vector<double> b;
+
+	//a.push_back(b);
+	//cout << a.size() << endl;
 
 	cv::Point2f bias(10.0, 1000.2);
 

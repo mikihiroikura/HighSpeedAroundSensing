@@ -12,7 +12,7 @@ using namespace std;
 int main(int argc, const char* argv[])
 {
 	//内部パラメータcalibration用動画の読み取り
-	string video_dir = "202010071825_video.mp4";
+	string video_dir = "202010081837_video.mp4";
 	cv::VideoCapture video;
 	video.open(video_dir);
 	if (!video.isOpened()) {
@@ -50,7 +50,7 @@ int main(int argc, const char* argv[])
 		if (ids.size() > 0) {
 			cv::aruco::drawDetectedMarkers(imageCopy, corners, ids);
 			vector< cv::Vec3d > Rvec, Tvec;
-			cv::aruco::estimatePoseSingleMarkers(corners, 0.2, K, D, Rvec, Tvec);
+			cv::aruco::estimatePoseSingleMarkers(corners, 0.282, K, D, Rvec, Tvec);
 			for (size_t i = 0; i < ids.size(); i++)
 			{
 				cv::aruco::drawAxis(imageCopy, K, D, Rvec[i], Tvec[i], 0.1);

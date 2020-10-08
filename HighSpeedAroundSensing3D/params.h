@@ -41,6 +41,8 @@ struct Logs
 {
 	vector<double> LSM_times;
 	vector<vector<cv::Mat>> LSM_pts;
+	vector<vector<double>> LSM_rps;
+	vector<char> LSM_modes;
 };
 
 #endif // !PARAMETER_H_
