@@ -42,7 +42,7 @@ cv::Mat in_img_now;
 vector<cv::Mat> in_imgs;
 long long in_imgs_saveid = 0;
 /// 時間に関する変数
-int timeout = 20;
+int timeout = 10;
 LARGE_INTEGER freq, start;
 double logtime = 0;
 /// ARマーカに関する変数
@@ -235,7 +235,8 @@ int main() {
 		if (logs.LSM_pts[i].size() > 10000) { continue; }//バグ取り
 		fprintf(fr, "%lf,", logs.LSM_times[i]);
 		fprintf(fr, "%lf,%lf,", logs.LSM_rps[i][0], logs.LSM_rps[i][1]);
-		fprintf(fr, "%c,", logs.LSM_modes[i]);
+		if (logs.LSM_modes[i]=='L') { fprintf(fr, "%lf,", 1.0); }
+		else if (logs.LSM_modes[i] == 'R') { fprintf(fr, "%lf,", 0.0); }
 		fprintf(fr, "\n");
 
 		for (size_t j = 0; j < logs.LSM_pts[i].size(); j++) { fprintf(fr, "%lf,", logs.LSM_pts[i][j].at<double>(0, 0)); }
