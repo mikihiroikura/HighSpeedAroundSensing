@@ -1,5 +1,5 @@
 %CSVの読み取り
-M =csvread('csvs/LSM_result.csv');
+M =csvread('csvs/202010082240_LSM_result.csv');
 Times = M(1:4:end,1);
 Xs = M(2:4:end,:);
 Ys = M(3:4:end,:);
@@ -16,8 +16,11 @@ dcp = locs(w>10);
 dcm = mlocs(mw>10);
 dcm = dcm(modes(dcm)==1);
 dirchangeid = sort([dcp;dcm]);
-
-v = VideoWriter('LSM_result','MPEG-4');
+%動画と画像の保存先指定
+format = 'yyyymmddHHMM';
+imgfolder = strcat('D:/Github_output/HighSpeedAroundSensing/ShowLSMLogs/',datestr(now,format));
+mkdir(imgfolder);
+v = VideoWriter(strcat(imgfolder,'/LSM_result'),'MPEG-4');
 open(v)
 dirid = 1;
 hold off
@@ -35,7 +38,7 @@ for i=1:size(Times,1)
             title(['Time[s]: ',num2str(Times(i,1))]);
             frame =getframe(gcf);
             writeVideo(v,frame);
-            imgfile = strcat('rei',strcat(num2str(dirid),'_.png'));
+            imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid),'.png')));
             saveas(gcf,imgfile);
             dirid = dirid +1;
             hold off

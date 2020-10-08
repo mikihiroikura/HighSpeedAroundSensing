@@ -32,7 +32,7 @@ int main() {
 
 	while (video.grab())
 	{
-		cv::Mat  image, imageCopy, mask ,nonzero, imageCopy2;
+		cv::Mat  image, imageCopy, mask ,nonzero, imageCopy2, mask_lsm, rei;
 		cv::Point2f out;
 		
 		vector<cv::Point> bps, bps_roi;
@@ -43,13 +43,20 @@ int main() {
 		cv::Rect roi(960 - 430, 540 - 430 , 430*2, 430*2);
 		cv::Rect roi_ref(938 - 34, 492 - 34, 34 * 2, 34 * 2);
 
+		mask_lsm = cv::Mat(1080, 1920, CV_8UC1, cv::Scalar::all(0));
+		cv::circle(mask_lsm, cv::Point(960, 540), 430, cv::Scalar::all(255), -1);
+		cv::circle(mask_lsm, cv::Point(938, 492), 34+20, cv::Scalar::all(0), -1);
+
+		imageCopy2.copyTo(rei, mask_lsm);
+
 		cv::cvtColor(imageCopy2, imageCopy2, CV_BGR2GRAY);
 		cv::HoughCircles(imageCopy2, circles, CV_HOUGH_GRADIENT, 2, 100, 200, 100, 400, 530);
 		cv::threshold(imageCopy, mask, 240, 255, cv::THRESH_BINARY);
 
 		cv::cvtColor(mask, mask, CV_RGB2GRAY);
-		cv::findNonZero(mask(roi),bps_roi);
+		cv::findNonZero(mask(roi), bps_roi);
 		cv::findNonZero(mask, bps);
+		
 
 		out.x = bps[0].x + bias.x;
 		out.y = bps[0].y - bias.y;
