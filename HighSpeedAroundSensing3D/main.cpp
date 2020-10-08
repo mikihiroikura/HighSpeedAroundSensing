@@ -225,7 +225,7 @@ int main() {
 	strftime(dir, 256, "D:/Github_output/HighSpeedAroundSensing/HighSpeedAroundSensing3D/results/%y%m%d/%H%M%S", &now);
 	if (!fs::create_directories(dir)) { return 0; }
 	char logfile[256];
-	strftime(logfile, 256, "D:/Github_output/HighSpeedAroundSensing/HighSpeedAroundSensing3D/results/%y%m%d/%H%M%S/LSM_result.csv", &now);
+	strftime(logfile, 256, "D:/Github_output/HighSpeedAroundSensing/HighSpeedAroundSensing3D/results/%y%m%d/%H%M%S/%y%m%d%H%M%S_LSM_result.csv", &now);
 	fr = fopen(logfile, "w");
 
 	/// Log‚Ì•Û‘¶
