@@ -1,5 +1,5 @@
 %CSVの読み取り
-M =csvread('csvs/202010082240_LSM_result.csv');
+M =csvread('csvs/201009215024_LSM_result.csv');
 Times = M(1:4:end,1);
 Xs = M(2:4:end,:);
 Ys = M(3:4:end,:);
@@ -12,8 +12,8 @@ modes = M(1:4:end,4);
 %CSVから方向転換する場所の検出
 [pks,locs,w,p] = findpeaks(degs);
 [mpks,mlocs,mw,mp] = findpeaks(-degs);
-dcp = locs(w>10);
-dcm = mlocs(mw>10);
+dcp = locs;
+dcm = mlocs;
 dcm = dcm(modes(dcm)==1);
 dirchangeid = sort([dcp;dcm]);
 %動画と画像の保存先指定

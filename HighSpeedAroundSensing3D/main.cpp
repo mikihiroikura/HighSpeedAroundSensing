@@ -34,7 +34,7 @@ namespace fs = std::filesystem;
 
 //DEFINE群
 #define SAVE_LOGS_
-//#define SAVE_IMGS_
+#define SAVE_IMGS_
 
 //グローバル変数
 /// 画像に関する変数
@@ -71,6 +71,7 @@ double phi, lambda, u, v, w;
 cv::Mat campt;
 cv::Rect roi_lsm(960 - 430, 540 - 430, 430 * 2, 430 * 2);
 cv::Rect roi_ref;
+vector<double> rps;
 //デバッグ用変数
 LARGE_INTEGER lsmstart, lsmend, takestart, takeend, arstart, arend;
 double taketime = 0;
@@ -169,7 +170,7 @@ int main() {
 	/// 1000fpsで画像を格納し続けるスレッド
 	thread thr1(TakePicture, &cam, &flg, &lsm);
 	/// 現在の画像をPCに出力して見えるようするスレッド
-	thread thr2(ShowLogs, &flg);
+	//thread thr2(ShowLogs, &flg);
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
 	thread thr3(DetectAR, &flg);
 	/// DDMotorにコマンドを送信するスレッド
@@ -197,15 +198,12 @@ int main() {
 		//時刻の更新
 		if (!QueryPerformanceCounter(&end)) { return 0; }
 		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
-		if (logtime > timeout)
-		{
-			flg = false;
-		}
+		if (logtime > timeout){	flg = false;}
 	}
 
 	//スレッドの停止
 	if (thr1.joinable())thr1.join();
-	if (thr2.joinable())thr2.join();
+	//if (thr2.joinable())thr2.join();
 	if (thr3.joinable())thr3.join();
 	if (thr4.joinable())thr4.join();
 
@@ -257,9 +255,12 @@ int main() {
 	/// 画像を保存
 #ifdef SAVE_IMGS_
 	cout << "Saving imgs..." << endl;
+	char picdir[256];
+	strftime(picdir, 256, "D:/Github_output/HighSpeedAroundSensing/HighSpeedAroundSensing3D/results/%y%m%d/%H%M%S/Pictures", &now);
+	if (!fs::create_directories(picdir)) { return 0; }
 	char picturename[256];
 	char picsubname[256];
-	strftime(picsubname, 256, "D:/Github_output/HighSpeedAroundSensing/HighSpeedAroundSensing3D/results/%y%m%d/%H%M%S//Pictures/frame", &now);
+	strftime(picsubname, 256, "D:/Github_output/HighSpeedAroundSensing/HighSpeedAroundSensing3D/results/%y%m%d/%H%M%S/Pictures/frame", &now);
 	for (int i = 0; i < in_imgs_saveid; i++)
 	{
 		sprintf(picturename, "%s%05d.png", picsubname, i);//png可逆圧縮
@@ -356,7 +357,7 @@ void DetectAR(bool* flg) {
 		}
 		QueryPerformanceCounter(&arend);
 		artime = (double)(arend.QuadPart - arstart.QuadPart) / freq.QuadPart;
-		cout << "AR time:" << artime << endl;
+		//cout << "AR time:" << artime << endl;
 	}
 }
 
@@ -380,12 +381,15 @@ void SendDDMotorCommand(bool* flg) {
 				if (initpulse < 0) initpulse += rotpulse;
 				//コマンド送信
 				mode = 'L';
-				/// rpm, movepulseの変更
+				rpm = 200;
 			}
 			else// if(!detect_arid0_flgs[processarcnt]&& !detect_arid0_flgs[processarcnt-1])
 			{//ARマーカが2回連続ないとき，全周計測
 				detectfailcnt++;
-				if (detectfailcnt>10){ mode = 'R'; }
+				if (detectfailcnt>10){ 
+					mode = 'R';
+					rpm = 500;
+				}
 			}
 			snprintf(command, READBUFFERSIZE, "%c,%d,%d,%d,\r", mode, rpm, initpulse, movepulse);
 			mbed.Send(command);
@@ -468,7 +472,7 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 	//lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 	//cout << lsmtime << endl;
 	logs->LSM_pts.push_back(lsm->campts);
-	vector<double> rps{ lsm->rp[0],lsm->rp[1] };
+	rps = { lsm->rp[0],lsm->rp[1] };
 	logs->LSM_rps.push_back(rps);
 	return 0;
 }

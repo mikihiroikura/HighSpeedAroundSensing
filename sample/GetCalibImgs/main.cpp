@@ -21,12 +21,12 @@ cv::Mat in_img;
 
 int main() {
 	//カメラパラメータ
-	int width = 1920;
-	int height = 1080;
+	int width = 896;
+	int height = 896;
 	float fps = 1000.0;
 	float exposuretime = 912.0;
-	int offsetx = 0;
-	int offsety = 0;
+	int offsetx = 512;
+	int offsety = 92;
 
 	//カメラのインスタンス生成
 	kayacoaxpress cam;
@@ -50,7 +50,7 @@ int main() {
 	char buff[128];
 	sprintf(buff, "%04d%02d%02d%02d%02d_video.mp4", 1900 + pnow->tm_year, 1 + pnow->tm_mon, pnow->tm_mday, pnow->tm_hour, pnow->tm_min);
 	save_dir += buff;
-	cv::VideoWriter video(save_dir, cv::VideoWriter::fourcc('M', 'P', '4', 'V'), 30, cv::Size(1920, 1080),false);
+	cv::VideoWriter video(save_dir, cv::VideoWriter::fourcc('M', 'P', '4', 'V'), 30, cv::Size(cam.getParam(paramTypeCamera::paramInt::WIDTH), cam.getParam(paramTypeCamera::paramInt::HEIGHT)),false);
 	if (!video.isOpened()) {
 		cout << "Video cannot be opened..." << endl;
 		return 0;

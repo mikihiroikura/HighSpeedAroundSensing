@@ -10,7 +10,7 @@
 using namespace std;
 
 int main() {
-	string video_dir = "202009302029_video.mp4";
+	string video_dir = "202010092134_video.mp4";
 	cv::VideoCapture video;
 	video.open(video_dir);
 	if (!video.isOpened()) {
@@ -23,7 +23,10 @@ int main() {
 	//if (!fs::create_directories(dir)) { return 0; }
 	//double ref = atan2(-0.36, -0.09) + 3.159265 / 2;
 	//vector<vector<double>> a;
-	//vector<double> b;
+	vector<double> b;
+
+	b = { 100,200 };
+	b = { 300,400 };
 
 	//a.push_back(b);
 	//cout << a.size() << endl;
@@ -52,6 +55,7 @@ int main() {
 		cv::cvtColor(imageCopy2, imageCopy2, CV_BGR2GRAY);
 		cv::HoughCircles(imageCopy2, circles, CV_HOUGH_GRADIENT, 2, 100, 200, 100, 400, 530);
 		cv::threshold(imageCopy, mask, 240, 255, cv::THRESH_BINARY);
+		cv::threshold(rei, rei, 240, 255, cv::THRESH_BINARY);
 
 		cv::cvtColor(mask, mask, CV_RGB2GRAY);
 		cv::findNonZero(mask(roi), bps_roi);
@@ -83,8 +87,9 @@ int main() {
 		circle(image, cv::Point(960, 540), 430, cv::Scalar(0, 0, 255), 3, 8, 0);
 		circle(image, refp, 3, cv::Scalar(0, 255, 0), -1, 8, 0);
 
-		cv::imshow("out", image);
-		cv::imshow("masked", mask);
+		//cv::imshow("out", image);
+		//cv::imshow("masked", mask);
+		cv::imshow("lsmout", rei);
 		char key = (char)cv::waitKey(1);
 		if (key == 27)
 			break;
