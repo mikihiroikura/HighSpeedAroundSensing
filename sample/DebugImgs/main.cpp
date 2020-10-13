@@ -10,7 +10,7 @@
 using namespace std;
 
 int main() {
-	string video_dir = "202010092134_video.mp4";
+	string video_dir = "202010131041_video.mp4";
 	cv::VideoCapture video;
 	video.open(video_dir);
 	if (!video.isOpened()) {
@@ -23,10 +23,6 @@ int main() {
 	//if (!fs::create_directories(dir)) { return 0; }
 	//double ref = atan2(-0.36, -0.09) + 3.159265 / 2;
 	//vector<vector<double>> a;
-	vector<double> b;
-
-	b = { 100,200 };
-	b = { 300,400 };
 
 	//a.push_back(b);
 	//cout << a.size() << endl;

@@ -339,7 +339,7 @@ void DetectAR(bool* flg) {
 		if (in_imgs_saveid>2){ cv::aruco::detectMarkers(in_imgs[in_imgs_saveid - 2], dictionary, corners, ids); }
 		//マーカ検出時，位置姿勢を計算する
 		if (ids.size() > 0) {
-			cv::aruco::estimatePoseSingleMarkers(corners, 0.282, K, D, Rvecs, Tvecs);
+			cv::aruco::estimatePoseSingleMarkers(corners, 0.2, K, D, Rvecs, Tvecs);
 			for (size_t i = 0; i < ids.size(); i++)
 			{
 				//ID=0のマーカ検出されると方向ベクトル保存

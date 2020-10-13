@@ -21,12 +21,12 @@ cv::Mat in_img;
 
 int main() {
 	//カメラパラメータ
-	int width = 896;
-	int height = 896;
+	int width = 1920;
+	int height = 1080;
 	float fps = 1000.0;
 	float exposuretime = 912.0;
-	int offsetx = 512;
-	int offsety = 92;
+	int offsetx = 0;
+	int offsety = 0;
 
 	//カメラのインスタンス生成
 	kayacoaxpress cam;
