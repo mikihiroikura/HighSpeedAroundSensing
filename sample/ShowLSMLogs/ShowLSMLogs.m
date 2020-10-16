@@ -68,3 +68,7 @@ close(v);
 % normlo = (Xl.^2+Yl.^2).^0.5;
 % coslo = -Yl./normlo;
 % numlo = sum(sum(coslo>cos(deg2rad(deg))));
+% Tdif = Times(dirchangeid);
+% Tscan = Tdif(2:end)-Tdif(1:end-1);
+% hz_ar = 1/(sum(Tscan(6:14))/9);
+% hz_lo = 1/(sum(Tscan(16:65))/50);
