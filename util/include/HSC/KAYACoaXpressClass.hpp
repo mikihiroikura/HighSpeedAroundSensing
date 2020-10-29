@@ -36,6 +36,7 @@ private:
 	STREAM_HANDLE stream_handle;
 
 	const char* gain;
+	const char* format;
 	static int offsetx;
 	static int offsety;
 	static float exposuretime;
@@ -60,12 +61,15 @@ public:
 	void setParam(const paramTypeKAYACoaXpress::Gain& pT);
 	void setParam(const paramTypeKAYACoaXpress::paramInt& pT, const int param);
 	void setParam(const paramTypeKAYACoaXpress::paramFloat& pT, const float param);
+	void setParam(const paramTypeKAYACoaXpress::CaptureType& pt);
+	void setParam(const paramTypeKAYACoaXpress::OutputType& pt);
 
 	int getParam(const paramTypeCamera::paramInt& pT);
 	float getParam(const paramTypeCamera::paramFloat& pT);
 	const char* getParam(const paramTypeKAYACoaXpress::Gain& pT);
 	int getParam(const paramTypeKAYACoaXpress::paramInt& pT);
 	float getParam(const paramTypeKAYACoaXpress::paramFloat& pT);
+	const char* getParam(const paramTypeKAYACoaXpress::OutputType& pT);
 
 	void kayacoaxpressMessage(std::string str);
 

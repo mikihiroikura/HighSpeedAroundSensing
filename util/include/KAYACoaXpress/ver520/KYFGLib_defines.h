@@ -1,12 +1,12 @@
 #ifndef KYFG_LIB_DEFINES_H_
 #define KYFG_LIB_DEFINES_H_
 
+#include "ky_cxp_defines.h"
+#include "ky_lib_defines.h"
+
 #ifdef __linux__
     #include <stddef.h>
 #endif
-
-#include "ky_lib_defines.h"
-#include "ky_cxp_defines.h"
 
 #ifdef _MSC_VER
     #ifdef KYFG_EXPORTS
@@ -98,7 +98,7 @@ typedef struct _camera_info
 #pragma pack(push, 1)
 typedef struct _camera_info2
 {
-    uint32_t            version;  // Version of this structure definition, must be set to 0 by caller.
+    uint32_t        version;  // Version of this structure definition, must be set to 0 by caller.
 
     uint8_t             master_link;
     uint8_t             link_mask;
@@ -110,8 +110,8 @@ typedef struct _camera_info2
     char                deviceModelName[KY_MAX_CAMERA_INFO_STRING_SIZE + 1];
     char                deviceID[KY_MAX_CAMERA_INFO_STRING_SIZE + 1];
     char                deviceUserID[KY_MAX_CAMERA_INFO_STRING_SIZE + 1];
-    KYBOOL              outputCamera;
-    KYBOOL              virtualCamera; //This parameter can be KYTRUE only in case of custom firmware implementations.
+	KYBOOL              outputCamera;
+	KYBOOL              virtualCamera; //This parameter can be KYTRUE only in case of custom firmware implementations.
 }KYFGCAMERA_INFO2;
 #pragma pack(pop)
 
@@ -323,13 +323,10 @@ static const uint64_t KYDEVICE_ERROR_SODIMM_REQUIRED = 0x0002;
 #pragma pack(push, 1)
 typedef struct _KYDEVICE_STATUS
 {
-    uint32_t version;  // Version of this structure definition, must be set > 0 to get members filled.
+uint32_t version;  // Version of this structure definition, must be set > 0 to get members filled.
 
     // Since version 1:
     uint64_t error_mask;
-    
-    // Since version 2:
-    uint64_t warn_mask;
 }KYDEVICE_STATUS;
 #pragma pack(pop)
 

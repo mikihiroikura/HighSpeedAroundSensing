@@ -145,13 +145,13 @@ struct NodeDescriptor
 typedef void (KYFG_CALLCONV *ParameterCallback)(void* userContext, const NodeDescriptor* pNodeDescriptor, int grouppingLevel);
 
 // Grabber:
-KAYA_API FGSTATUS KYFG_SetGrabberConfigurationParameterCallback(FGHANDLE grabberHandle, ParameterCallback userFunc, void* userContext);
-KAYA_API FGSTATUS KYFG_GetGrabberConfigurationParameterDefinitions(FGHANDLE grabberHandle);
+KY_DEPRECATED(KAYA_API FGSTATUS	KYFG_SetGrabberConfigurationParameterCallback(FGHANDLE grabberHandle, ParameterCallback userFunc, void* userContext), "Function 'KYFG_SetGrabberConfigurationParameterCallback' is a deprecated, please use function 'KY_SetGrabberConfigurationParameterCallback()'.");
+KY_DEPRECATED(KAYA_API FGSTATUS KYFG_GetGrabberConfigurationParameterDefinitions(FGHANDLE grabberHandle), "Function 'KYFG_GetGrabberConfigurationParameterDefinitions' is a deprecated, please use function 'KY_GetGrabberConfigurationParameterDefinitions()'.");
 
 
 // Camera:
-KAYA_API FGSTATUS KYFG_SetCameraConfigurationParameterCallback(CAMHANDLE camHandle, ParameterCallback userFunc, void* userContext);
-KAYA_API FGSTATUS KYFG_GetCameraConfigurationParameterDefinitions(CAMHANDLE camHandle);
+KY_DEPRECATED(KAYA_API FGSTATUS	KYFG_SetCameraConfigurationParameterCallback(CAMHANDLE camHandle, ParameterCallback userFunc, void* userContext), "Function 'KYFG_SetCameraConfigurationParameterCallback' is a deprecated, please use function 'KY_SetCameraConfigurationParameterCallback()'.");
+KY_DEPRECATED(KAYA_API FGSTATUS KYFG_GetCameraConfigurationParameterDefinitions(CAMHANDLE camHandle), "Function 'KYFG_GetCameraConfigurationParameterDefinitions' is a deprecated, please use function 'KY_GetCameraConfigurationParameterDefinitions()'.");
 
 #ifdef _MSC_VER
 #pragma warning(pop)

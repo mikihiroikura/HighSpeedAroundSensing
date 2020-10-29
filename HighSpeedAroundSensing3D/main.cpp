@@ -33,14 +33,15 @@ using namespace std;
 namespace fs = std::filesystem;
 
 //DEFINE群
-#define SAVE_LOGS_
-#define SAVE_IMGS_
+//#define SAVE_LOGS_
+//#define SAVE_IMGS_
 
 //グローバル変数
 /// 画像に関する変数
 cv::Mat in_img_now;
 vector<cv::Mat> in_imgs;
 long long in_imgs_saveid = 0;
+cv::Mat full, zero;
 /// 時間に関する変数
 int timeout = 10;
 LARGE_INTEGER freq, start;
@@ -117,6 +118,8 @@ int main() {
 	cam.setParam(paramTypeCamera::paramFloat::FPS, fps);
 	cam.setParam(paramTypeKAYACoaXpress::paramFloat::ExposureTime, exposuretime);
 	cam.setParam(paramTypeKAYACoaXpress::Gain::x1);
+	cam.setParam(paramTypeKAYACoaXpress::CaptureType::BayerGRGrab);
+	cam.setParam(paramTypeKAYACoaXpress::OutputType::Bayer2Mono);
 	cam.parameter_all_print();
 
 	//レーザCalibrationの結果の呼び出し
@@ -140,14 +143,33 @@ int main() {
 	//MBEDのRS232接続
 	mbed.Connect("COM4", 115200, 8, NOPARITY, 0, 0, 0, 5000, 20000);
 
+	//カラーORモノクロ
+	const char* outformat = cam.getParam(paramTypeKAYACoaXpress::OutputType::Bayer2Color);
+	if (outformat=="Bayer2Mono"||outformat=="Mono2Mono")
+	{
+		full = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(255));
+		zero = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(0));
+	}
+	else if (outformat=="Bayer2Color")
+	{
+		full = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC3, cv::Scalar::all(255));
+		zero = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC3, cv::Scalar::all(0));
+	}
+	else
+	{
+		full = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(255));
+		zero = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(0));
+	}
+
+
 	//画像出力用Mat
-	in_img_now = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(255));
+	in_img_now = full.clone();
 
 	//マスク画像の生成
-	lsm.mask_refarc = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(0));
+	lsm.mask_refarc = zero.clone();
 	cv::circle(lsm.mask_refarc, cv::Point((int)lsm.ref_center[0], (int)lsm.ref_center[1]), (int)(lsm.ref_radius - lsm.ref_arcwidth / 2), cv::Scalar::all(255), (int)lsm.ref_arcwidth);
 	roi_ref = cv::Rect((int)(lsm.ref_center[0] - lsm.ref_radius), (int)(lsm.ref_center[1] - lsm.ref_radius), (int)(2 * lsm.ref_radius), (int)(2 * lsm.ref_radius));
-	lsm.mask_lsm = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(0));
+	lsm.mask_lsm = zero.clone();
 	cv::circle(lsm.mask_lsm, cv::Point(960, 540), 430, cv::Scalar::all(255), -1);
 	cv::circle(lsm.mask_lsm, cv::Point((int)lsm.ref_center[0], (int)lsm.ref_center[1]), (int)(lsm.ref_radius)+20, cv::Scalar::all(0), -1);
 
@@ -155,7 +177,7 @@ int main() {
 	cout << "Set Mat Vector..." << endl;
 	for (size_t i = 0; i < (int)(timeout)*fps+100; i++)
 	{
-		in_imgs.push_back(cv::Mat(height, width, CV_8UC1, cv::Scalar::all(0)));
+		in_imgs.push_back(zero.clone());
 		lsm.processflgs.push_back(false);
 	}
 
@@ -170,7 +192,7 @@ int main() {
 	/// 1000fpsで画像を格納し続けるスレッド
 	thread thr1(TakePicture, &cam, &flg, &lsm);
 	/// 現在の画像をPCに出力して見えるようするスレッド
-	//thread thr2(ShowLogs, &flg);
+	thread thr2(ShowLogs, &flg);
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
 	thread thr3(DetectAR, &flg);
 	/// DDMotorにコマンドを送信するスレッド
@@ -203,7 +225,7 @@ int main() {
 
 	//スレッドの停止
 	if (thr1.joinable())thr1.join();
-	//if (thr2.joinable())thr2.join();
+	if (thr2.joinable())thr2.join();
 	if (thr3.joinable())thr3.join();
 	if (thr4.joinable())thr4.join();
 
@@ -277,7 +299,7 @@ int main() {
 
 //画像を格納する
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
-	cv::Mat temp = cv::Mat(1080, 1920, CV_8UC1, cv::Scalar::all(0));
+	cv::Mat temp = zero.clone();
 	while (*flg)
 	{
 		QueryPerformanceCounter(&takestart);
