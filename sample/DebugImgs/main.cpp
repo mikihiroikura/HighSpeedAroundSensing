@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <filesystem>
 
+#pragma warning(disable:4996)
 using namespace std;
 
 int main() {
@@ -90,6 +91,25 @@ int main() {
 		if (key == 27)
 			break;
 	}
+
+	//char dir[] = "G:/マイドライブ/博士/淺間山下研/研究/Conference/SI2020/figures/mov/data/Pictures/frame";
+	//char todir[] = "G:/マイドライブ/博士/淺間山下研/研究/Conference/SI2020/figures/mov/data/Pictures/selected/frame";
+	//int cnt = 0;
+	//for (int i = 1; i < 9397; i++)
+	//{
+	//	if (i % 30 == 0)
+	//	{
+	//		char filename[256];
+	//		char tofilename[256];
+	//		char a[256];
+	//		sprintf(filename, "%s%05d.png", dir, i);
+	//		sprintf(tofilename, "%s%05d.png", todir, i);
+	//		sprintf(a, "%s%05d.png", todir, cnt);
+	//		rename(tofilename, a);
+	//		cnt++;
+	//	}
+
+	//}
 
 	return 0;
 }
