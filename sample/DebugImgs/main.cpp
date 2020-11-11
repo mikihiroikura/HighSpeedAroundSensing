@@ -6,11 +6,12 @@
 #include <vector>
 #include <cstdio>
 #include <filesystem>
+#include <Windows.h>
 
 using namespace std;
 
 int main() {
-	string video_dir = "202010131041_video.mp4";
+	string video_dir = "202009302029_video.mp4";
 	cv::VideoCapture video;
 	video.open(video_dir);
 	if (!video.isOpened()) {
@@ -29,9 +30,18 @@ int main() {
 
 	cv::Point2f bias(10.0, 1000.2);
 
+	vector<cv::Mat> mask_concircles;
+	cv::Mat mask_conc;
+	for (size_t i = 0; i < 100; i++)
+	{
+		mask_conc = cv::Mat(1080, 1920, CV_8UC1, cv::Scalar::all(0));
+		cv::circle(mask_conc, cv::Point(960, 540), 430, cv::Scalar::all(255), 200);
+		mask_concircles.push_back(mask_conc);
+	}
+
 	while (video.grab())
 	{
-		cv::Mat  image, imageCopy, mask ,nonzero, imageCopy2, mask_lsm, rei;
+		cv::Mat  image, imageCopy, mask ,nonzero, imageCopy2, mask_lsm, rei, mask_lsmcircle, rei2;
 		cv::Point2f out;
 		
 		vector<cv::Point> bps, bps_roi;
@@ -83,6 +93,49 @@ int main() {
 		circle(image, cv::Point(960, 540), 430, cv::Scalar(0, 0, 255), 3, 8, 0);
 		circle(image, refp, 3, cv::Scalar(0, 255, 0), -1, 8, 0);
 
+		//20201111 ìØêSâ~èÛÇ…ãPìxèdêSÇåvéZÇ∑ÇÈ
+		//cout << (int)rei.data[424 * rei.step + 558 * rei.elemSize() + 1] << endl;
+		int x, y;
+		int step = rei.step;
+		int elem = rei.elemSize();
+		
+		double deg = atan2(refp.y - 492, refp.x - 938);
+		double dtheta = 30;
+		double mass, moment_x, moment_y;
+		double cog[430 - 60][2] = { 0 };
+		LARGE_INTEGER freq, start, end;
+		double logtime = 0;
+		cv::Mat detectarea = cv::Mat(1080, 1920, CV_8UC1, cv::Scalar::all(0));
+		if (!QueryPerformanceFrequency(&freq)) { return 0; }
+		if (!QueryPerformanceCounter(&start)) { return 0; }
+		for (int r = 100; r < 430; r++)
+		{
+			mass = 0;
+			moment_x = 0;
+			moment_y = 0;
+			int forend = (int)(3.15 * 2 * (double)r * dtheta / 360);
+			for (size_t i = 0; i < forend; i++)
+			{
+				x = (int)(960 + (double)r * cos((double)i / r + deg - dtheta / 2 / 360 * 3.1415));
+				y = (int)(540 + (double)r * sin((double)i / r + deg - dtheta / 2 / 360 * 3.1415));
+				//detectarea.data[y * rei.cols + x] = 255;
+				if ((int)rei.data[y * step + x * elem + 1] > 0)
+				{
+					//cout << x << "," << y << " bps " << (int)rei.data[y * rei.step + x * rei.elemSize() + 1] << endl;
+					mass += rei.data[y * step + x * elem + 1];
+					moment_x += rei.data[y * step + x * elem + 1] * x;
+					moment_y += rei.data[y * step + x * elem + 1] * y;
+				}
+			}
+			if (mass > 0)
+			{
+				cog[r - 60][0] = moment_x / mass;
+				cog[r - 60][1] = moment_y / mass;
+			}
+		}
+		if (!QueryPerformanceCounter(&end)) { return 0; }
+		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+		cout << logtime;
 		//cv::imshow("out", image);
 		//cv::imshow("masked", mask);
 		cv::imshow("lsmout", rei);
