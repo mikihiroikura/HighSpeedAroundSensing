@@ -62,7 +62,8 @@ int main() {
 		cv::cvtColor(imageCopy2, imageCopy2, CV_BGR2GRAY);
 		cv::HoughCircles(imageCopy2, circles, CV_HOUGH_GRADIENT, 2, 100, 200, 100, 400, 530);
 		cv::threshold(imageCopy, mask, 240, 255, cv::THRESH_BINARY);
-		cv::threshold(rei, rei, 240, 255, cv::THRESH_BINARY);
+		cv::threshold(rei, rei2, 240, 255, cv::THRESH_BINARY);
+		cv::bitwise_and(imageCopy, rei2, rei2);
 
 		cv::cvtColor(mask, mask, CV_RGB2GRAY);
 		cv::findNonZero(mask(roi), bps_roi);
@@ -99,44 +100,47 @@ int main() {
 		int x, y;
 		int step = rei.step;
 		int elem = rei.elemSize();
-		
+		int rstart = 100;
+		int forend;
 		double deg = atan2(refp.y - 492, refp.x - 938);
 		double dtheta = 30;
 		double mass, moment_x, moment_y;
-		double cog[430 - 60][2] = { 0 };
+		double cog[(430 - 60)*2][2] = { 0 };
 		LARGE_INTEGER freq, start, end;
 		double logtime = 0;
 		cv::Mat detectarea = cv::Mat(1080, 1920, CV_8UC1, cv::Scalar::all(0));
+		cv::Mat cogs = cv::Mat(1080, 1920, CV_8UC1, cv::Scalar::all(0));
 		if (!QueryPerformanceFrequency(&freq)) { return 0; }
 		if (!QueryPerformanceCounter(&start)) { return 0; }
-		for (int r = 100; r < 430; r++)
+		for (double r = rstart; r < 430; r=r+0.5)
 		{
 			mass = 0;
 			moment_x = 0;
 			moment_y = 0;
-			int forend = (int)(3.15 * 2 * (double)r * dtheta / 360);
+			forend = (int)(3.15 * 2 * (double)r * dtheta / 360);
 			for (size_t i = 0; i < forend; i++)
 			{
 				x = (int)(960 + (double)r * cos((double)i / r + deg - dtheta / 2 / 360 * 3.1415));
 				y = (int)(540 + (double)r * sin((double)i / r + deg - dtheta / 2 / 360 * 3.1415));
-				//detectarea.data[y * rei.cols + x] = 255;
-				if ((int)rei.data[y * step + x * elem + 1] > 0)
+				//detectarea.data[y * detectarea.cols + x] = 255;
+				if ((int)rei2.data[y * step + x * elem + 1] > 0)
 				{
-					//cout << x << "," << y << " bps " << (int)rei.data[y * rei.step + x * rei.elemSize() + 1] << endl;
-					mass += rei.data[y * step + x * elem + 1];
-					moment_x += rei.data[y * step + x * elem + 1] * x;
-					moment_y += rei.data[y * step + x * elem + 1] * y;
+					//cout << x << "," << y << " bps " << (int)rei2.data[y * rei2.step + x * rei2.elemSize() + 1] << endl;
+					mass += rei2.data[y * step + x * elem + 1];
+					moment_x += rei2.data[y * step + x * elem + 1] * x;
+					moment_y += rei2.data[y * step + x * elem + 1] * y;
 				}
 			}
 			if (mass > 0)
 			{
-				cog[r - 60][0] = moment_x / mass;
-				cog[r - 60][1] = moment_y / mass;
+				cog[(int)((r - rstart) * 2)][0] = moment_x / mass;
+				cog[(int)((r - rstart) * 2)][1] = moment_y / mass;
+				//cogs.data[(int)(moment_y / mass) * rei.cols + (int)(moment_x / mass)] = 255;
 			}
 		}
 		if (!QueryPerformanceCounter(&end)) { return 0; }
 		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
-		cout << logtime;
+		cout << logtime << endl;
 		//cv::imshow("out", image);
 		//cv::imshow("masked", mask);
 		cv::imshow("lsmout", rei);
