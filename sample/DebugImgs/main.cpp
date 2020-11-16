@@ -124,7 +124,7 @@ int main() {
 			{
 				x = (int)(960 + (double)rs * cos((double)i / rs + deg - dtheta / 2 / 360 * 3.1415));
 				y = (int)(540 + (double)rs * sin((double)i / rs + deg - dtheta / 2 / 360 * 3.1415));
-				detectarea.data[y * detectarea.cols + x] = 255;
+				//detectarea.data[y * detectarea.cols + x] = 255;
 				if ((int)rei2.data[y * step + x * elem + 1] > 0)
 				{
 					//cout << x << "," << y << " bps " << (int)rei2.data[y * rei2.step + x * rei2.elemSize() + 1] << endl;
