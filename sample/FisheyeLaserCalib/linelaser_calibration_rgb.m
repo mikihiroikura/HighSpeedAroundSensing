@@ -68,13 +68,17 @@ function linelaser_calibration_rgb()
         detectedimgs = laserimg(:,:,:,imagesUsed);
         for i=1:size(detectedimgs, 4)
            J = detectedimgs(:,:,:,i);
-           BW = imbinarize(J, 0.8);
-           BW = uint8(BW);
-           J = J.*BW;
+           R = J(:,:,1)>150;
+           J = J.*uint8(R);
 
            %レーザ点群取得
-           rect =int16([min(imagePoints(:,:,i))-margin, max(imagePoints(:,:,i))-min(imagePoints(:,:,i))+2*margin]); % チェッカーボード周辺の矩形
-           Jtrim = imcrop(J, rect); % Trimming
+           rect = zeros(size(R));
+           area =int16([min(imagePoints(:,:,i))-margin, max(imagePoints(:,:,i))-min(imagePoints(:,:,i))+2*margin]); % チェッカーボード周辺の矩形
+           rect(area(1):area(1)+area(3),area(2):area(2)+area(4)) = 1;
+           Jtrim = J.*rect; % Trimming
+           
+           %輝度重心の計算
+           %1119ここから
            [Yd, Xd] = find(Jtrim(:,:,1) > bright_thr);  
            BrightPoints = [Xd, Yd] + double([rect(1), rect(2)]);% 閾値以上の輝点の画像座標
 
