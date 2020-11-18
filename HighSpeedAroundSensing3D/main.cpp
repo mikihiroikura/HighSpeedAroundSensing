@@ -119,7 +119,6 @@ int main() {
 	cam.setParam(paramTypeKAYACoaXpress::paramFloat::ExposureTime, exposuretime);
 	cam.setParam(paramTypeKAYACoaXpress::Gain::x1);
 	cam.setParam(paramTypeKAYACoaXpress::CaptureType::BayerGRGrab);
-	cam.setParam(paramTypeKAYACoaXpress::OutputType::Bayer2Mono);
 	cam.parameter_all_print();
 
 	//レーザCalibrationの結果の呼び出し
@@ -144,7 +143,7 @@ int main() {
 	mbed.Connect("COM4", 115200, 8, NOPARITY, 0, 0, 0, 5000, 20000);
 
 	//カラーORモノクロ
-	const char* outformat = cam.getParam(paramTypeKAYACoaXpress::OutputType::Bayer2Color);
+	const char* outformat = "Bayer2Color";
 	if (outformat=="Bayer2Mono"||outformat=="Mono2Mono")
 	{
 		full = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(255));

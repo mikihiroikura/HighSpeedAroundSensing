@@ -16,53 +16,13 @@ using namespace std;
 int main() {
 	LARGE_INTEGER freq, start, end;
 	double logtime = 0;
-	////•À—ñ‰»‚ª‚‘¬‚©‚Ç‚¤‚©”»’è
-	//int exam[10000];
-	//vector<thread> works;
-	//if (!QueryPerformanceFrequency(&freq)) { return 0; }
-	//if (!QueryPerformanceCounter(&start)) { return 0; }
-	//for (size_t i = 0; i < 10; i++)
-	//{
-	//	works.emplace_back([&](int id) {
-	//		int a0 = 10000 / 10 * id;
-	//		int a1 = 10000 / 10 * (id + 1);
-	//		for (int j = a0; j < a1; j++)
-	//		{
-	//			exam[j] = j;
-	//		}
-	//		}, i);
-	//}
-	//if (!QueryPerformanceCounter(&end)) { return 0; }
-	//logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
-	//cout << logtime << endl;
-
-	//if (!QueryPerformanceCounter(&start)) { return 0; }
-	//for (int j = 0; j < 10000; j++)
-	//{
-	//	exam[j] = j;
-	//}
-	//if (!QueryPerformanceCounter(&end)) { return 0; }
-	//logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
-	//cout << logtime << endl;
-
-
-	string video_dir = "202009302029_video.mp4";
+	string video_dir = "202011181922_video.mp4";
 	cv::VideoCapture video;
 	video.open(video_dir);
 	if (!video.isOpened()) {
 		cout << "video cannot ne opened..." << endl;
 		return 0;
 	}
-
-	//char dir[] = "E:/Github_output/HighSpeedAroundSensing/HighSpeedAroundSensing3D/results/100/100";
-	//namespace fs = std::filesystem;
-	//if (!fs::create_directories(dir)) { return 0; }
-	//double ref = atan2(-0.36, -0.09) + 3.159265 / 2;
-	//vector<vector<double>> a;
-
-	//a.push_back(b);
-	//cout << a.size() << endl;
-
 	cv::Point2f bias(10.0, 1000.2);
 
 	while (video.grab())
@@ -75,39 +35,16 @@ int main() {
 		video.retrieve(image);
 		image.copyTo(imageCopy);
 		image.copyTo(imageCopy2);
-		cv::Rect roi(960 - 430, 540 - 430 , 430*2, 430*2);
-		cv::Rect roi_ref(938 - 34, 492 - 34, 34 * 2, 34 * 2);
+		cv::Rect roi_ref(423 - 34, 397 - 34, 34 * 2, 34 * 2);
 
-		mask_lsm = cv::Mat(1080, 1920, CV_8UC1, cv::Scalar::all(0));
-		cv::circle(mask_lsm, cv::Point(960, 540), 430, cv::Scalar::all(255), -1);
-		cv::circle(mask_lsm, cv::Point(938, 492), 34+20, cv::Scalar::all(0), -1);
+		mask_lsm = cv::Mat(896, 896, CV_8UC3, cv::Scalar::all(0));
+		cv::circle(mask_lsm, cv::Point(448, 448), 430, cv::Scalar::all(255), -1);
+		cv::circle(mask_lsm, cv::Point(423, 397), 34+20, cv::Scalar::all(0), -1);
 
 		imageCopy2.copyTo(rei, mask_lsm);
 
 		cv::cvtColor(imageCopy2, imageCopy2, CV_BGR2GRAY);
-		cv::HoughCircles(imageCopy2, circles, CV_HOUGH_GRADIENT, 2, 100, 200, 100, 400, 530);
-		cv::threshold(imageCopy, mask, 240, 255, cv::THRESH_BINARY);
-		cv::threshold(rei, rei2, 240, 255, cv::THRESH_BINARY);
-		cv::bitwise_and(imageCopy, rei2, rei2);
-
-		cv::cvtColor(mask, mask, CV_RGB2GRAY);
-		cv::findNonZero(mask(roi), bps_roi);
-		cv::findNonZero(mask, bps);
-		
-
-		out.x = bps[0].x + bias.x;
-		out.y = bps[0].y - bias.y;
-
-		for (size_t i = 0; i < bps_roi.size(); i++)
-		{
-			bps_roi[i] = bps_roi[i] + cv::Point(roi.x, roi.y);
-		}
-
-		cv::Moments mu = cv::moments(mask(roi_ref));
-		cv::Point refp;
-		refp.x = mu.m10 / mu.m00 + 938-34;
-		refp.y = mu.m01 / mu.m00 + 492-34;
-
+		cv::HoughCircles(imageCopy2, circles, CV_HOUGH_GRADIENT, 2, 100, 200, 100, 10, 50);
 		//for (size_t i = 0; i < circles.size(); i++)
 		//{
 		//	cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
@@ -117,6 +54,23 @@ int main() {
 		//	// ‰~‚ğ•`‰æ‚µ‚Ü‚·D
 		//	circle(image, center, radius, cv::Scalar(0, 0, 255), 3, 8, 0);
 		//}
+		/*cv::threshold(imageCopy, mask, 240, 255, cv::THRESH_BINARY);
+		cv::threshold(rei, rei2, 240, 255, cv::THRESH_BINARY);
+		cv::bitwise_and(imageCopy, rei2, rei2);*/
+		cv::Scalar s_min(0, 0, 150);
+		cv::Scalar s_max(200, 200, 255);
+		cv::inRange(imageCopy, s_min, s_max, mask);
+
+		cv::cvtColor(mask, mask, CV_RGB2GRAY);
+		cv::findNonZero(mask, bps);
+
+
+		cv::Moments mu = cv::moments(mask(roi_ref));
+		cv::Point refp;
+		refp.x = mu.m10 / mu.m00 + 423-34;
+		refp.y = mu.m01 / mu.m00 + 397-34;
+
+		
 		circle(image, cv::Point(960, 540), 430, cv::Scalar(0, 0, 255), 3, 8, 0);
 		circle(image, refp, 3, cv::Scalar(0, 255, 0), -1, 8, 0);
 
