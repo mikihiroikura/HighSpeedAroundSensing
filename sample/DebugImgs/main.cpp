@@ -8,11 +8,44 @@
 #include <filesystem>
 #include <Windows.h>
 #include <omp.h>
+#include <thread>
 
 #pragma warning(disable:4996)
 using namespace std;
 
 int main() {
+	LARGE_INTEGER freq, start, end;
+	double logtime = 0;
+	////ï¿óÒâªÇ™çÇë¨Ç©Ç«Ç§Ç©îªíË
+	//int exam[10000];
+	//vector<thread> works;
+	//if (!QueryPerformanceFrequency(&freq)) { return 0; }
+	//if (!QueryPerformanceCounter(&start)) { return 0; }
+	//for (size_t i = 0; i < 10; i++)
+	//{
+	//	works.emplace_back([&](int id) {
+	//		int a0 = 10000 / 10 * id;
+	//		int a1 = 10000 / 10 * (id + 1);
+	//		for (int j = a0; j < a1; j++)
+	//		{
+	//			exam[j] = j;
+	//		}
+	//		}, i);
+	//}
+	//if (!QueryPerformanceCounter(&end)) { return 0; }
+	//logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+	//cout << logtime << endl;
+
+	//if (!QueryPerformanceCounter(&start)) { return 0; }
+	//for (int j = 0; j < 10000; j++)
+	//{
+	//	exam[j] = j;
+	//}
+	//if (!QueryPerformanceCounter(&end)) { return 0; }
+	//logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+	//cout << logtime << endl;
+
+
 	string video_dir = "202009302029_video.mp4";
 	cv::VideoCapture video;
 	video.open(video_dir);
@@ -92,54 +125,94 @@ int main() {
 		int x, y;
 		int step = rei.step;
 		int elem = rei.elemSize();
-		int rstart = 100;
+		int rstart = 104;
+		int rend = 432;
 		int forend;
+		const int kmax = 4;
 		double deg = atan2(refp.y - 492, refp.x - 938);
 		double dtheta = 30;
 		double mass, moment_x, moment_y,rs;
+		double masss[kmax], moment_xs[kmax], moment_ys[kmax], rss[kmax];
+		int xs[kmax], ys[kmax];
+		int forends[kmax];
 		double cog[(430 - 60)*2][2] = { 0 };
-		LARGE_INTEGER freq, start, end;
-		double logtime = 0;
+		
+		
 #ifdef _OPENMP
 		cout << omp_get_max_threads() << endl;
 #endif
 		omp_set_num_threads(16);
 		int a[10000];
-		if (!QueryPerformanceFrequency(&freq)) { return 0; }
-		if (!QueryPerformanceCounter(&start)) { return 0; }
+		vector<thread> worker;
 		
 		cv::Mat detectarea = cv::Mat(1080, 1920, CV_8UC1, cv::Scalar::all(0));
 		cv::Mat cogs = cv::Mat(1080, 1920, CV_8UC1, cv::Scalar::all(0));
 		if (!QueryPerformanceFrequency(&freq)) { return 0; }
 		if (!QueryPerformanceCounter(&start)) { return 0; }
 //#pragma omp parallel for
-		for (int r = rstart*2; r < 430*2; r++)
+		
+		for (int k = 0; k < kmax; k++)
 		{
-			mass = 0;
-			moment_x = 0;
-			moment_y = 0;
-			rs = (double)r / 2;
-			forend = (int)(3.15 * 2 * rs * dtheta / 360);
-			for (size_t i = 0; i < forend; i++)
-			{
-				x = (int)(960 + (double)rs * cos((double)i / rs + deg - dtheta / 2 / 360 * 3.1415));
-				y = (int)(540 + (double)rs * sin((double)i / rs + deg - dtheta / 2 / 360 * 3.1415));
-				//detectarea.data[y * detectarea.cols + x] = 255;
-				if ((int)rei2.data[y * step + x * elem + 1] > 0)
+			worker.emplace_back([&](int id) {
+				int r0 = (rend - rstart) / kmax *2 * id + rstart * 2;
+				int r1 = (rend - rstart) / kmax *2 *(id + 1) + rstart * 2;
+				for (int r = r0; r < r1; r++)
 				{
-					//cout << x << "," << y << " bps " << (int)rei2.data[y * rei2.step + x * rei2.elemSize() + 1] << endl;
-					mass += rei2.data[y * step + x * elem + 1];
-					moment_x += rei2.data[y * step + x * elem + 1] * x;
-					moment_y += rei2.data[y * step + x * elem + 1] * y;
+					masss[id] = 0;
+					moment_xs[id] = 0;
+					moment_ys[id] = 0;
+					rss[id] = (double)r / 2;
+					forends[id] = (int)(3.15 * 2 * rss[id] * dtheta / 360);
+					for (int i = 0; i < forends[id]; i++)
+					{
+						xs[id] = (int)(960 + (double)rss[id] * cos((double)i / rss[id] + deg - dtheta / 2 / 360 * 3.1415));
+						ys[id] = (int)(540 + (double)rss[id] * sin((double)i / rss[id] + deg - dtheta / 2 / 360 * 3.1415));
+						//detectarea.data[y * detectarea.cols + x] = 255;
+						if ((int)rei2.data[ys[id] * step + xs[id] * elem + 1] > 0)
+						{
+							//cout << x << "," << y << " bps " << (int)rei2.data[y * rei2.step + x * rei2.elemSize() + 1] << endl;
+							masss[id] += rei2.data[ys[id] * step + xs[id] * elem + 1];
+							moment_xs[id] += rei2.data[ys[id] * step + xs[id] * elem + 1] * xs[id];
+							moment_ys[id] += rei2.data[ys[id] * step + xs[id] * elem + 1] * ys[id];
+						}
+					}
+					if (masss[id] > 0)
+					{
+						cog[(int)((r - rstart * 2))][0] = moment_xs[id] / masss[id];
+						cog[(int)((r - rstart * 2))][1] = moment_ys[id] / masss[id];
+						//cogs.data[(int)(moment_y / mass) * rei.cols + (int)(moment_x / mass)] = 255;
+					}
 				}
-			}
-			if (mass > 0)
-			{
-				cog[(int)((r - rstart*2))][0] = moment_x / mass;
-				cog[(int)((r - rstart * 2))][1] = moment_y / mass;
-				//cogs.data[(int)(moment_y / mass) * rei.cols + (int)(moment_x / mass)] = 255;
-			}
+				},k);
 		}
+		for (auto& t : worker) { t.join(); }
+		//for (int r = rstart*2; r < rend*2; r++)
+		//{
+		//	mass = 0;
+		//	moment_x = 0;
+		//	moment_y = 0;
+		//	rs = (double)r / 2;
+		//	forend = (int)(3.15 * 2 * rs * dtheta / 360);
+		//	for (size_t i = 0; i < forend; i++)
+		//	{
+		//		x = (int)(960 + (double)rs * cos((double)i / rs + deg - dtheta / 2 / 360 * 3.1415));
+		//		y = (int)(540 + (double)rs * sin((double)i / rs + deg - dtheta / 2 / 360 * 3.1415));
+		//		//detectarea.data[y * detectarea.cols + x] = 255;
+		//		if ((int)rei2.data[y * step + x * elem + 1] > 0)
+		//		{
+		//			//cout << x << "," << y << " bps " << (int)rei2.data[y * rei2.step + x * rei2.elemSize() + 1] << endl;
+		//			mass += rei2.data[y * step + x * elem + 1];
+		//			moment_x += rei2.data[y * step + x * elem + 1] * x;
+		//			moment_y += rei2.data[y * step + x * elem + 1] * y;
+		//		}
+		//	}
+		//	if (mass > 0)
+		//	{
+		//		cog[(int)((r - rstart*2))][0] = moment_x / mass;
+		//		cog[(int)((r - rstart * 2))][1] = moment_y / mass;
+		//		//cogs.data[(int)(moment_y / mass) * rei.cols + (int)(moment_x / mass)] = 255;
+		//	}
+		//}
 //#pragma omp parallel for
 		//for (int r = rstart; r < 430; r++)
 		//{

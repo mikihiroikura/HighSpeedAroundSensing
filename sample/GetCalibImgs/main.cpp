@@ -21,12 +21,12 @@ cv::Mat in_img;
 
 int main() {
 	//カメラパラメータ
-	int width = 1920;
-	int height = 1080;
+	int width = 896;
+	int height = 896;
 	float fps = 1000.0;
 	float exposuretime = 912.0;
-	int offsetx = 0;
-	int offsety = 0;
+	int offsetx = 480;
+	int offsety = 92;
 
 	//カメラのインスタンス生成
 	kayacoaxpress cam;
@@ -35,13 +35,16 @@ int main() {
 	//パラメータの設定
 	cam.setParam(paramTypeCamera::paramInt::WIDTH, width);
 	cam.setParam(paramTypeCamera::paramInt::HEIGHT, height);
+	cam.setParam(paramTypeKAYACoaXpress::paramInt::OffsetX, offsetx);
+	cam.setParam(paramTypeKAYACoaXpress::paramInt::OffsetY, offsety);
 	cam.setParam(paramTypeCamera::paramFloat::FPS, fps);
 	cam.setParam(paramTypeKAYACoaXpress::paramFloat::ExposureTime, exposuretime);
+	cam.setParam(paramTypeKAYACoaXpress::CaptureType::BayerGRGrab);
 	cam.setParam(paramTypeKAYACoaXpress::Gain::x1);
 	cam.parameter_all_print();
 
 	//画像出力用Mat
-	in_img = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(255));
+	in_img = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC3, cv::Scalar::all(255));
 
 	//動画保存用のファイル作成
 	string save_dir = "D:\\Github_output\\HighSpeedAroundSensing\\GetCalibImgs\\";
@@ -50,10 +53,10 @@ int main() {
 	char buff[128];
 	sprintf(buff, "%04d%02d%02d%02d%02d_video.mp4", 1900 + pnow->tm_year, 1 + pnow->tm_mon, pnow->tm_mday, pnow->tm_hour, pnow->tm_min);
 	save_dir += buff;
-	cv::VideoWriter video(save_dir, cv::VideoWriter::fourcc('M', 'P', '4', 'V'), 30, cv::Size(cam.getParam(paramTypeCamera::paramInt::WIDTH), cam.getParam(paramTypeCamera::paramInt::HEIGHT)),false);
+	cv::VideoWriter video(save_dir, cv::VideoWriter::fourcc('M', 'P', '4', 'V'), 30, cv::Size(cam.getParam(paramTypeCamera::paramInt::WIDTH), cam.getParam(paramTypeCamera::paramInt::HEIGHT)),true);
 	if (!video.isOpened()) {
 		cout << "Video cannot be opened..." << endl;
-		return 0;
+		return 1;
 	}
 
 	//カメラ起動
