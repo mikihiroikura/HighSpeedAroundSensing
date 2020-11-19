@@ -68,7 +68,7 @@ int main() {
     //頂点バッファオブジェクト
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(position), position);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(position), position, GL_DYNAMIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     // viewport
@@ -109,7 +109,7 @@ int main() {
         glColor3f(1.0, 0.0, 0.0);
         glDrawArrays(GL_POINTS, 0, 100*100);
         glDisableClientState(GL_VERTEX_ARRAY);
-        glPopMatrix();
+        glPopMatrix();      
 
         glfwPollEvents();
 
