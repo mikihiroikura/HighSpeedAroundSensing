@@ -40,7 +40,7 @@ int main() {
 	cam.setParam(paramTypeCamera::paramFloat::FPS, fps);
 	cam.setParam(paramTypeKAYACoaXpress::paramFloat::ExposureTime, exposuretime);
 	cam.setParam(paramTypeKAYACoaXpress::CaptureType::BayerGRGrab);
-	cam.setParam(paramTypeKAYACoaXpress::Gain::x1);
+	cam.setParam(paramTypeKAYACoaXpress::Gain::x2);
 	cam.parameter_all_print();
 
 	//‰æ‘œo—Í—pMat
