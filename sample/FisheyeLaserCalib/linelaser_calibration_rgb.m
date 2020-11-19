@@ -74,13 +74,29 @@ function linelaser_calibration_rgb()
            %レーザ点群取得
            rect = zeros(size(R));
            area =int16([min(imagePoints(:,:,i))-margin, max(imagePoints(:,:,i))-min(imagePoints(:,:,i))+2*margin]); % チェッカーボード周辺の矩形
-           rect(area(1):area(1)+area(3),area(2):area(2)+area(4)) = 1;
-           Jtrim = J.*rect; % Trimming
+           rect(area(2):area(2)+area(4),area(1):area(1)+area(3)) = 1;
+           Jtrim = J.*uint8(rect); % Trimming
            
            %輝度重心の計算
-           %1119ここから
-           [Yd, Xd] = find(Jtrim(:,:,1) > bright_thr);  
-           BrightPoints = [Xd, Yd] + double([rect(1), rect(2)]);% 閾値以上の輝点の画像座標
+           BrightPoints = [];
+           for r=100:1:430
+               mass = 0;
+               momx = 0;
+               momy = 0;
+               forend = uint32(3.15*2*r);
+               for i=1:forend
+                   x = uint32(448+r*cos(double(i)/r));
+                   y=uint32(448+r*sin(double(i)/r));
+                   if Jtrim(y,x,1)>0
+                       mass = mass + uint32(Jtrim(y,x,1));
+                       momx = momx + uint32(Jtrim(y,x,1))*x;
+                       momy = momy + uint32(Jtrim(y,x,1))*y;
+                   end
+               end
+               if mass>0
+                   BrightPoints = [BrightPoints;momx/mass,momy/mass];
+               end
+           end
 
            %レーザの輝点の画像座標->World座標系に変換
            LaserworldPoints = pointsToWorld(fisheyeParams.Intrinsics, RotMatrix(:,:,i),TransVec(i,:),BrightPoints);
