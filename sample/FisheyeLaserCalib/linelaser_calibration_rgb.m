@@ -15,6 +15,7 @@ function linelaser_calibration_rgb()
     All_Opt_cameraPoints = [];
     All_Opt_fvals = [];
     All_Opt_PointsCnts = [];
+    OnePlane_refPoints = [];
     
     %全パターンの動画から1枚づつ取ってきてそこから参照面の円を検出
     All_centers = [];
@@ -77,20 +78,20 @@ function linelaser_calibration_rgb()
            rect(area(2):area(2)+area(4),area(1):area(1)+area(3)) = 1;
            Jtrim = J.*uint8(rect); % Trimming
            
-           %輝度重心の計算
+           %輝度重心の計算(サブピクセル単位)
            BrightPoints = [];
            for r=100:1:430
                mass = 0;
                momx = 0;
                momy = 0;
                forend = uint32(3.15*2*r);
-               for i=1:forend
-                   x = uint32(448+r*cos(double(i)/r));
-                   y=uint32(448+r*sin(double(i)/r));
+               for k=1:forend
+                   x = uint32(448+r*cos(double(k)/r));
+                   y=uint32(448+r*sin(double(k)/r));
                    if Jtrim(y,x,1)>0
-                       mass = mass + uint32(Jtrim(y,x,1));
-                       momx = momx + uint32(Jtrim(y,x,1))*x;
-                       momy = momy + uint32(Jtrim(y,x,1))*y;
+                       mass = mass + double(Jtrim(y,x,1));
+                       momx = momx + double(Jtrim(y,x,1))*double(x);
+                       momy = momy + double(Jtrim(y,x,1))*double(y);
                    end
                end
                if mass>0
@@ -99,13 +100,32 @@ function linelaser_calibration_rgb()
            end
 
            %レーザの輝点の画像座標->World座標系に変換
-           LaserworldPoints = pointsToWorld(fisheyeParams.Intrinsics, RotMatrix(:,:,i),TransVec(i,:),BrightPoints);
-           newworldPoints = [LaserworldPoints, zeros(size(LaserworldPoints,1),1)];
-           %World->Camera座標系に変換
-           cameraPoints = newworldPoints * RotMatrix(:,:,i) + TransVec(i,:);
-           OnePlane_cameraPoints = [OnePlane_cameraPoints;cameraPoints];
-
+           if size(BrightPoints,2)>0
+               LaserworldPoints = pointsToWorld(fisheyeParams.Intrinsics, RotMatrix(:,:,i),TransVec(i,:),BrightPoints);
+               newworldPoints = [LaserworldPoints, zeros(size(LaserworldPoints,1),1)];
+               %World->Camera座標系に変換
+               cameraPoints = newworldPoints * RotMatrix(:,:,i) + TransVec(i,:);
+               OnePlane_cameraPoints = [OnePlane_cameraPoints;cameraPoints];
+           end
            %中央のレーザ映る場所の輝点抽出
+           Jref = J.* mask;
+           [Yr, Xr] = find(Jref(:,:,1) > 150);
+           massref = 0;
+           momxref = 0;
+           momyref = 0;
+           for xr = min(Xr):max(Xr)
+               for yr = min(Yr):max(Yr)
+                   if Jref(yr,xr,1)>150
+                       massref = massref + double(Jref(yr,xr,1));
+                       momxref = momxref + double(Jref(yr,xr,1))*double(xr);
+                       momyref = momyref + double(Jref(yr,xr,1))*double(yr);
+                   end
+               end
+           end
+           if massref > 0
+               RefPoints = [momxref/massref, momyref/massref];
+               OnePlane_refPoints = [OnePlane_refPoints;RefPoints];
+           end
         end
 
         %レーザ輝点群を最小二乗法で一つの平面を出力
@@ -158,14 +178,14 @@ function linelaser_calibration_rgb()
         end
 
         %参照面の輝点出力
-        OnePlane_refPoints = [];
-        for i=1:size(detectedimgs, 4)
-           J = detectedimgs(:,:,:,i);
-           Jref = J.* mask;
-           [Yr, Xr] = find(Jref(:,:,1) > ref_thr);
-           RefPoints = [Xr, Yr];
-           OnePlane_refPoints = [OnePlane_refPoints;RefPoints];
-        end
+%         OnePlane_refPoints = [];
+%         for i=1:size(detectedimgs, 4)
+%            J = detectedimgs(:,:,:,i);
+%            Jref = J.* mask;
+%            [Yr, Xr] = find(Jref(:,:,1) > ref_thr);
+%            RefPoints = [Xr, Yr];
+%            OnePlane_refPoints = [OnePlane_refPoints;RefPoints];
+%         end
         refPoint = mean(OnePlane_refPoints);
         
         %一つの動画から得られる情報の保存
