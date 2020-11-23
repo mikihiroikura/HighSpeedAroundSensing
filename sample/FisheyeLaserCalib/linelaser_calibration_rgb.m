@@ -3,8 +3,8 @@ function linelaser_calibration_rgb()
 %   
     %.matファイルから変数群の呼び出し  
     load fishparams.mat fisheyeParams
-    load setup.mat linelaser_folder laser_step squareSize laser_time_margin ...
-    margin bright_thr ref_circle_radi ref_thr ref_arcwidth linelaser_file_num
+    load setup_rgb.mat linelaser_folder laser_step squareSize laser_time_margin ...
+    margin bright_r_thr ref_circle_radi ref_r_thr ref_arcwidth linelaser_file_num
 
     %保存用の行列
     All_planeparams = [];
@@ -69,7 +69,7 @@ function linelaser_calibration_rgb()
         detectedimgs = laserimg(:,:,:,imagesUsed);
         for i=1:size(detectedimgs, 4)
            J = detectedimgs(:,:,:,i);
-           R = J(:,:,1)>150;
+           R = J(:,:,1)>bright_r_thr;
            J = J.*uint8(R);
 
            %レーザ点群取得
@@ -107,9 +107,9 @@ function linelaser_calibration_rgb()
                cameraPoints = newworldPoints * RotMatrix(:,:,i) + TransVec(i,:);
                OnePlane_cameraPoints = [OnePlane_cameraPoints;cameraPoints];
            end
-           %中央のレーザ映る場所の輝点抽出
+           %参照面にレーザ映る場所の輝点抽出
            Jref = J.* mask;
-           [Yr, Xr] = find(Jref(:,:,1) > 150);
+           [Yr, Xr] = find(Jref(:,:,1) > ref_r_thr);
            massref = 0;
            momxref = 0;
            momyref = 0;
