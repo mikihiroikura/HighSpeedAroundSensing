@@ -115,7 +115,7 @@ function linelaser_calibration_rgb()
            momyref = 0;
            for xr = min(Xr):max(Xr)
                for yr = min(Yr):max(Yr)
-                   if Jref(yr,xr,1)>150
+                   if Jref(yr,xr,1)>ref_r_thr
                        massref = massref + double(Jref(yr,xr,1));
                        momxref = momxref + double(Jref(yr,xr,1))*double(xr);
                        momyref = momyref + double(Jref(yr,xr,1))*double(yr);

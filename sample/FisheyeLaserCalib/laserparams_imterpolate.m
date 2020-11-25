@@ -3,7 +3,7 @@ function laserparams_imterpolate()
     
     %平面Calibrationのパラメータを呼び出す
     load linelaserparams.mat All_planeparams All_refPoints ref_center ref_radi
-    load setup.mat interpolate_outputfile ref_arcwidth
+    load setup_rgb.mat interpolate_outputfile ref_arcwidth
     
     %All_planeparamsをそれぞれの成分ごとに補完する
     xr = All_refPoints(:,1)-1;
