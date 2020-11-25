@@ -6,7 +6,7 @@ make_setup_rgb();
 disp('Setup Finished.');
 
 % 魚眼カメラのキャリブレーション
-fisheye_calibration();
+fisheye_calibration_rgb();
 disp('Camera Calibration finished.');
 
 % 魚眼カメラ画像の円のハフ変換

@@ -4,7 +4,7 @@ function make_setup_rgb()
     %魚眼カメラのCalibration用変数
     %fisheye_calibration()
     video_folder = './videos/fisheye/';
-    video_name = '202009301647_video.mp4';
+    video_name = '202011251933_video.mp4';
     video_dir = strcat(video_folder, video_name);
     fish_step = 10;
     squareSize = 32;

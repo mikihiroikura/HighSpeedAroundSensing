@@ -75,7 +75,7 @@ function linelaser_calibration_rgb()
            %レーザ点群取得
            rect = zeros(size(R));
            area =int16([min(imagePoints(:,:,i))-margin, max(imagePoints(:,:,i))-min(imagePoints(:,:,i))+2*margin]); % チェッカーボード周辺の矩形
-           rect(area(2):area(2)+area(4),area(1):area(1)+area(3)) = 1;
+           rect(max(area(2),1):min(area(2)+area(4),size(J,2)),max(area(1),1):min(area(1)+area(3),size(J,1))) = 1;
            Jtrim = J.*uint8(rect); % Trimming
            
            %輝度重心の計算(サブピクセル単位)
@@ -85,9 +85,9 @@ function linelaser_calibration_rgb()
                momx = 0;
                momy = 0;
                forend = uint32(3.15*2*r);
-               for k=1:forend
-                   x = uint32(448+r*cos(double(k)/r));
-                   y=uint32(448+r*sin(double(k)/r));
+               for dt=1:forend
+                   x = uint32(448+r*cos(double(dt)/r));
+                   y=uint32(448+r*sin(double(dt)/r));
                    if Jtrim(y,x,1)>0
                        mass = mass + double(Jtrim(y,x,1));
                        momx = momx + double(Jtrim(y,x,1))*double(x);
@@ -133,7 +133,7 @@ function linelaser_calibration_rgb()
             norm = 0;
             maxcnt = 3;
         else
-            norm = 0.001;
+            norm = -0.001;
             maxcnt = 10;
         end
         func = @(param)calcplane_func(param, OnePlane_cameraPoints);
