@@ -67,6 +67,7 @@ function linelaser_calibration_rgb()
         %レーザの輝点の画像座標を計算
         OnePlane_cameraPoints = [];    
         detectedimgs = laserimg(:,:,:,imagesUsed);
+        OnePlane_refPoints = [];
         for i=1:size(detectedimgs, 4)
            J = detectedimgs(:,:,:,i);
            R = J(:,:,1)>bright_r_thr;
