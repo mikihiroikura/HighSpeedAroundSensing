@@ -16,7 +16,7 @@ using namespace std;
 int main() {
 	LARGE_INTEGER freq, start, end;
 	double logtime = 0;
-	string video_dir = "202011181922_video.mp4";
+	string video_dir = "202011181659_video.mp4";
 	cv::VideoCapture video;
 	video.open(video_dir);
 	if (!video.isOpened()) {
