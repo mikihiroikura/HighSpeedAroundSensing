@@ -125,7 +125,7 @@ int main() {
         dx = mouse_x - mouse_x_old;
         dy = mouse_y - mouse_y_old;
 
-        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS && !hovered)
         {
             horiz_angle += mouse_speed * dx;
             vert_angle += mouse_speed * dy;
@@ -169,6 +169,7 @@ int main() {
         ImGui::SetNextWindowSize(ImVec2(320, 300), ImGuiCond_Once);
         ImGui::Begin("hello world");
         ImGui::Text("This is useful text");
+        hovered = ImGui::IsWindowHovered();
         ImGui::DragFloat("rotate x", &rotate_x);
         ImGui::DragFloat("rotate y", &rotate_y);
         ImGui::DragFloat("trans x", &translate_x);
