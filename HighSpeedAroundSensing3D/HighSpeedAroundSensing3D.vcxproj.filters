@@ -48,6 +48,9 @@
     <ClCompile Include="..\util\src\imgui\imgui_widgets.cpp">
       <Filter>ソース ファイル\imgui</Filter>
     </ClCompile>
+    <ClCompile Include="graphics.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\util\include\HSC\KAYACoaXpressClass.hpp">
@@ -82,6 +85,9 @@
     </ClInclude>
     <ClInclude Include="..\util\include\imgui\imstb_truetype.h">
       <Filter>ヘッダー ファイル\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="graphics.h">
+      <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

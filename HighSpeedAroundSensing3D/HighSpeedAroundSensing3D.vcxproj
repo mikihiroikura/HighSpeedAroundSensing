@@ -62,24 +62,32 @@
     <Import Project="..\util\HSC.props" />
     <Import Project="..\util\OpenCV.props" />
     <Import Project="..\util\KAYA.props" />
+    <Import Project="..\util\glfw.props" />
+    <Import Project="..\util\imgui.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\util\HSC.props" />
     <Import Project="..\util\OpenCV.props" />
     <Import Project="..\util\KAYA.props" />
+    <Import Project="..\util\glfw.props" />
+    <Import Project="..\util\imgui.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\util\HSC.props" />
     <Import Project="..\util\OpenCV.props" />
     <Import Project="..\util\KAYA.props" />
+    <Import Project="..\util\glfw.props" />
+    <Import Project="..\util\imgui.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\util\HSC.props" />
     <Import Project="..\util\OpenCV.props" />
     <Import Project="..\util\KAYA.props" />
+    <Import Project="..\util\glfw.props" />
+    <Import Project="..\util\imgui.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -160,6 +168,7 @@
     <ClCompile Include="..\util\src\imgui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="..\util\src\imgui\imgui_widgets.cpp" />
     <ClCompile Include="..\util\src\KAYACoaXpress\KAYACoaXpressClass.cpp" />
+    <ClCompile Include="graphics.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="RS232c.cpp" />
   </ItemGroup>
@@ -173,6 +182,7 @@
     <ClInclude Include="..\util\include\imgui\imstb_rectpack.h" />
     <ClInclude Include="..\util\include\imgui\imstb_textedit.h" />
     <ClInclude Include="..\util\include\imgui\imstb_truetype.h" />
+    <ClInclude Include="graphics.h" />
     <ClInclude Include="params.h" />
     <ClInclude Include="RS232c.h" />
   </ItemGroup>

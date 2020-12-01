@@ -18,8 +18,9 @@ const unsigned int window_height = 720;
 GLFWwindow* window;
 
 //vbo
-GLuint vbo;
+GLuint vbo, cbo;
 float position[100][100][3];
+float colors[100][100][3];
 
 //imgui
 float rotate_x = 0.0, rotate_y = 0.0;
@@ -59,9 +60,12 @@ int main() {
     {
         for (size_t j = 0; j < 100; j++)
         {
-            position[i][j][0] = (float)i * 0.01;
-            position[i][j][1] = (float)j * 0.01;
+            position[i][j][0] = (float)i * 0.01-100*0.01/2;
+            position[i][j][1] = (float)j * 0.01-100 * 0.01 / 2;
             position[i][j][2] = 0.0;
+            colors[i][j][0] = (float)i * 0.01;
+            colors[i][j][1] = (float)j * 0.01;
+            colors[i][j][2] = 0.0;
         }
     }
 
@@ -69,6 +73,12 @@ int main() {
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(position), position, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    //色バッファオブジェクト
+    glGenBuffers(1, &cbo);
+    glBindBuffer(GL_ARRAY_BUFFER, cbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_DYNAMIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     // viewport
@@ -105,10 +115,15 @@ int main() {
 
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glVertexPointer(3, GL_FLOAT, 0, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, cbo);
+        glColorPointer(3, GL_FLOAT, 0, 0);
+        //glColorPointer(3, GL_FLOAT, 0, colors);
         glEnableClientState(GL_VERTEX_ARRAY);
-        glColor3f(1.0, 0.0, 0.0);
+        glEnableClientState(GL_COLOR_ARRAY);
+        //glColor3f(0.0, 1.0, 0.0);
         glDrawArrays(GL_POINTS, 0, 100*100);
         glDisableClientState(GL_VERTEX_ARRAY);
+        glDisableClientState(GL_COLOR_ARRAY);
         glPopMatrix();      
 
         glfwPollEvents();
