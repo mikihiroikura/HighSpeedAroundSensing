@@ -9,7 +9,7 @@ const unsigned int window_height = 720;
 GLFWwindow* window;
 
 //vbo
-GLuint vbo;
+GLuint vbo, cbo;
 
 //imgui
 
@@ -45,6 +45,20 @@ int initGL() {
 
     glClearColor(0.0, 0.0, 0.0, 1.0);   //背景色の指定
     glDisable(GL_DEPTH_TEST);
+
+
+    //頂点バッファオブジェクトのBind
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    //glBufferData(GL_ARRAY_BUFFER, )
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    //色バッファオブジェクトのBind
+    glGenBuffers(1, &cbo);
+    glBindBuffer(GL_ARRAY_BUFFER, cbo);
+    //glBufferData(GL_ARRAY_BUFFER, )
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
 
 
 	return 0;

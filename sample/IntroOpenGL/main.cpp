@@ -1,4 +1,7 @@
 #include <iostream>
+#include <cmath>
+#define _USE_MATH_DEFINES
+#include <math.h>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -19,12 +22,21 @@ GLFWwindow* window;
 
 //vbo
 GLuint vbo, cbo;
-float position[100][100][3];
+float vertices[100][100][3];
 float colors[100][100][3];
 
 //imgui
 float rotate_x = 0.0, rotate_y = 0.0;
-float translate_z = -3.0;
+float translate_x = 0.0, translate_y = 0.0, translate_z = -.0;
+double mouse_x, mouse_y, mouse_x_old, mouse_y_old;
+double horiz_angle = -M_PI, vert_angle = 0.0;
+double mouse_speed = 0.01;
+double dx = 0.0, dy = 0.0;
+bool move_flg;
+glm::vec3 position(0, 0, -1);
+glm::vec3 up(0, -1, 0);
+glm::vec3 direction(0, 0, 0);
+bool hovered;
 
 int main() {
     //GLFWの初期化
@@ -60,9 +72,9 @@ int main() {
     {
         for (size_t j = 0; j < 100; j++)
         {
-            position[i][j][0] = (float)i * 0.01-100*0.01/2;
-            position[i][j][1] = (float)j * 0.01-100 * 0.01 / 2;
-            position[i][j][2] = 0.0;
+            vertices[i][j][0] = (float)i * 0.01-100*0.01/2;
+            vertices[i][j][1] = (float)j * 0.01-100 * 0.01 / 2;
+            vertices[i][j][2] = 0.0;
             colors[i][j][0] = (float)i * 0.01;
             colors[i][j][1] = (float)j * 0.01;
             colors[i][j][2] = 0.0;
@@ -72,7 +84,7 @@ int main() {
     //頂点バッファオブジェクト
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(position), position, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     //色バッファオブジェクト
@@ -87,7 +99,7 @@ int main() {
     // projection
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(60.0, (GLfloat)window_width / (GLfloat)window_height, 0.1, 10.0);
+    gluPerspective(60.0, (GLfloat)window_width / (GLfloat)window_height, 0.1, 100.0);
 
     //imguiの初期化
     IMGUI_CHECKVERSION();
@@ -96,6 +108,7 @@ int main() {
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init();
+    hovered = ImGui::IsWindowHovered();
 
     //ここにループを書く
     while (glfwWindowShouldClose(window) == GL_FALSE)
@@ -105,13 +118,33 @@ int main() {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glLoadIdentity();
+        glLoadIdentity();//視野変換，モデリング変換行列の初期化
         glMatrixMode(GL_MODELVIEW);
         glPushMatrix();
-        gluLookAt(0, 0, 0, 0, 0, 1, 0, -1, 0); //これでカメラの上向きの軸を--y方向にすることで上下を合わせる
+        glfwGetCursorPos(window, &mouse_x, &mouse_y);
+        dx = mouse_x - mouse_x_old;
+        dy = mouse_y - mouse_y_old;
+
+        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+        {
+            horiz_angle += mouse_speed * dx;
+            vert_angle += mouse_speed * dy;
+        }
+        mouse_x_old = mouse_x;
+        mouse_y_old = mouse_y;
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+        {
+            horiz_angle = -M_PI;
+            vert_angle = 0.0;
+            rotate_x = 0.0, rotate_y = 0.0;
+            translate_x = 0.0, translate_y = 0.0, translate_z = -.0;
+        }
+        position = glm::vec3(cos(vert_angle) * sin(horiz_angle), sin(vert_angle), cos(vert_angle) * cos(horiz_angle));
+        gluLookAt(position.x, position.y, position.z, direction.x, direction.y, direction.z, up.x, up.y, up.z);
+        //glm::lookAt(position, direction, up);
         glRotated(rotate_x, 1, 0, 0);
         glRotated(rotate_y, 0, 1, 0);
-        glTranslatef(0, 0, translate_z);
+        glTranslatef(translate_x, translate_y, translate_z);
 
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glVertexPointer(3, GL_FLOAT, 0, 0);
@@ -133,10 +166,13 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        ImGui::SetNextWindowSize(ImVec2(320, 300), ImGuiCond_Once);
         ImGui::Begin("hello world");
         ImGui::Text("This is useful text");
         ImGui::DragFloat("rotate x", &rotate_x);
         ImGui::DragFloat("rotate y", &rotate_y);
+        ImGui::DragFloat("trans x", &translate_x);
+        ImGui::DragFloat("trans y", &translate_y);
         ImGui::DragFloat("trans z", &translate_z);
         ImGui::End();
 
