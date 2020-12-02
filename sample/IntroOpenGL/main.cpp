@@ -37,6 +37,11 @@ glm::vec3 position(0, 0, -1);
 glm::vec3 up(0, -1, 0);
 glm::vec3 direction(0, 0, 0);
 bool hovered;
+bool show_red;
+bool show_green;
+bool show_blue;
+float time = 0;
+float pointsize = 2.5;
 
 int main() {
     //GLFWの初期化
@@ -65,6 +70,7 @@ int main() {
     }
 
     glClearColor(0.0, 0.0, 0.0, 1.0);   //背景色の指定
+    glPointSize(pointsize);
     glDisable(GL_DEPTH_TEST);
 
     //positionの初期化
@@ -73,10 +79,10 @@ int main() {
         for (size_t j = 0; j < 100; j++)
         {
             vertices[i][j][0] = (float)i * 0.01-100*0.01/2;
-            vertices[i][j][1] = (float)j * 0.01-100 * 0.01 / 2;
-            vertices[i][j][2] = 0.0;
-            colors[i][j][0] = (float)i * 0.01;
-            colors[i][j][1] = (float)j * 0.01;
+            vertices[i][j][1] = 0;
+            vertices[i][j][2] = (float)j * 0.01 - 100 * 0.01 / 2;
+            colors[i][j][0] = 1;
+            colors[i][j][1] = 0;
             colors[i][j][2] = 0.0;
         }
     }
@@ -113,8 +119,37 @@ int main() {
     //ここにループを書く
     while (glfwWindowShouldClose(window) == GL_FALSE)
     {
-        // run the cuda part
-        /*runCuda(&cuda_vbo_resource);*/
+        //点群の位置更新
+        for (size_t i = 0; i < 100; i++)
+        {
+            for (size_t j = 0; j < 100; j++)
+            {
+                vertices[i][j][0] = (float)i * 0.01 - 100 * 0.01 / 2;
+                vertices[i][j][1] = sin((float)i + time) * cos((float)j + time);
+                vertices[i][j][2] = (float)j * 0.01 - 100 * 0.01 / 2;
+                if (vertices[i][j][1]<0.5 && vertices[i][j][1] > -0.5)
+                {
+                    colors[i][j][1] = 0;
+                    colors[i][j][2] = 0.0;
+                    if (show_red) colors[i][j][0] = 0;
+                    else colors[i][j][0] = 1;
+                }
+                else if (vertices[i][j][1] > 0.5)
+                {
+                    colors[i][j][0] = 0;
+                    colors[i][j][2] = 0.0;
+                    if (show_green) colors[i][j][1] = 0.0;
+                    else colors[i][j][1] = 1.0;
+                }
+                else
+                {
+                    colors[i][j][0] = 0;
+                    colors[i][j][1] = 0;
+                    if (show_blue) colors[i][j][2] = 0.0;
+                    else colors[i][j][2] = 1.0;
+                }
+            }
+        }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -147,8 +182,10 @@ int main() {
         glTranslatef(translate_x, translate_y, translate_z);
 
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
         glVertexPointer(3, GL_FLOAT, 0, 0);
         glBindBuffer(GL_ARRAY_BUFFER, cbo);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(colors), colors);
         glColorPointer(3, GL_FLOAT, 0, 0);
         //glColorPointer(3, GL_FLOAT, 0, colors);
         glEnableClientState(GL_VERTEX_ARRAY);
@@ -170,6 +207,9 @@ int main() {
         ImGui::Begin("hello world");
         ImGui::Text("This is useful text");
         hovered = ImGui::IsWindowHovered();
+        ImGui::Checkbox("Hide Red", &show_red);
+        ImGui::Checkbox("Hide Green", &show_green);
+        ImGui::Checkbox("Hide Blue", &show_blue);
         ImGui::DragFloat("rotate x", &rotate_x);
         ImGui::DragFloat("rotate y", &rotate_y);
         ImGui::DragFloat("trans x", &translate_x);
@@ -182,6 +222,8 @@ int main() {
 
 
         glfwSwapBuffers(window);
+
+        time += 0.01;
     }
 
     glBindBuffer(1, vbo);
