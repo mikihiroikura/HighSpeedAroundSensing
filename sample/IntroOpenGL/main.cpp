@@ -33,15 +33,20 @@ double horiz_angle = -M_PI, vert_angle = 0.0;
 double mouse_speed = 0.01;
 double dx = 0.0, dy = 0.0;
 bool move_flg;
+float init_fov = 60;
+float fov = init_fov;
 glm::vec3 position(0, 0, -1);
 glm::vec3 up(0, -1, 0);
 glm::vec3 direction(0, 0, 0);
 bool hovered;
-bool show_red;
-bool show_green;
-bool show_blue;
+bool hide_red;
+bool hide_green;
+bool hide_blue;
 float time = 0;
 float pointsize = 2.5;
+
+static void setfov(GLFWwindow* window, double x, double y);
+
 
 int main() {
     //GLFWの初期化
@@ -105,7 +110,8 @@ int main() {
     // projection
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(60.0, (GLfloat)window_width / (GLfloat)window_height, 0.1, 100.0);
+    gluPerspective(fov, (GLfloat)window_width / (GLfloat)window_height, 0.1, 100.0);
+    glfwSetScrollCallback(window, setfov);
 
     //imguiの初期化
     IMGUI_CHECKVERSION();
@@ -131,30 +137,33 @@ int main() {
                 {
                     colors[i][j][1] = 0;
                     colors[i][j][2] = 0.0;
-                    if (show_red) colors[i][j][0] = 0;
+                    if (hide_red) colors[i][j][0] = 0;
                     else colors[i][j][0] = 1;
                 }
                 else if (vertices[i][j][1] > 0.5)
                 {
                     colors[i][j][0] = 0;
                     colors[i][j][2] = 0.0;
-                    if (show_green) colors[i][j][1] = 0.0;
+                    if (hide_green) colors[i][j][1] = 0.0;
                     else colors[i][j][1] = 1.0;
                 }
                 else
                 {
                     colors[i][j][0] = 0;
                     colors[i][j][1] = 0;
-                    if (show_blue) colors[i][j][2] = 0.0;
+                    if (hide_blue) colors[i][j][2] = 0.0;
                     else colors[i][j][2] = 1.0;
                 }
             }
         }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        glLoadIdentity();//視野変換，モデリング変換行列の初期化
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        gluPerspective(fov, (GLfloat)window_width / (GLfloat)window_height, 0.1, 100.0);
+        
         glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();//視野変換，モデリング変換行列の初期化
         glPushMatrix();
         glfwGetCursorPos(window, &mouse_x, &mouse_y);
         dx = mouse_x - mouse_x_old;
@@ -173,6 +182,10 @@ int main() {
             vert_angle = 0.0;
             rotate_x = 0.0, rotate_y = 0.0;
             translate_x = 0.0, translate_y = 0.0, translate_z = -.0;
+            fov = init_fov;
+            hide_red = false;
+            hide_green = false;
+            hide_blue = false;
         }
         position = glm::vec3(cos(vert_angle) * sin(horiz_angle), sin(vert_angle), cos(vert_angle) * cos(horiz_angle));
         gluLookAt(position.x, position.y, position.z, direction.x, direction.y, direction.z, up.x, up.y, up.z);
@@ -207,9 +220,9 @@ int main() {
         ImGui::Begin("hello world");
         ImGui::Text("This is useful text");
         hovered = ImGui::IsWindowHovered();
-        ImGui::Checkbox("Hide Red", &show_red);
-        ImGui::Checkbox("Hide Green", &show_green);
-        ImGui::Checkbox("Hide Blue", &show_blue);
+        ImGui::Checkbox("Hide Red", &hide_red);
+        ImGui::Checkbox("Hide Green", &hide_green);
+        ImGui::Checkbox("Hide Blue", &hide_blue);
         ImGui::DragFloat("rotate x", &rotate_x);
         ImGui::DragFloat("rotate y", &rotate_y);
         ImGui::DragFloat("trans x", &translate_x);
@@ -230,4 +243,8 @@ int main() {
     glDeleteBuffers(1, &vbo);
 
     return 0;
+}
+
+static void setfov(GLFWwindow* window, double x, double y) {
+    fov -= static_cast<GLfloat>(y);
 }
