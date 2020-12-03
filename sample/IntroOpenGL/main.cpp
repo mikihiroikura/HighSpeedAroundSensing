@@ -46,7 +46,7 @@ bool hovered;
 bool hide_red;
 bool hide_green;
 bool hide_blue;
-float time = 0;
+float Time = 0;
 float pointsize = 2.5;
 glm::mat4 mvp, View, Projection;
 GLint matlocation;
@@ -62,6 +62,8 @@ int main() {
         std::cerr << "Can't initilize GLFW" << std::endl;
         return 1;
     }
+
+
 
     //Windowの作成
     window = glfwCreateWindow(window_width, window_height, "Cuda GL Interop (VBO)", NULL, NULL);
@@ -83,7 +85,7 @@ int main() {
 
     glClearColor(0.0, 0.0, 0.0, 1.0);   //背景色の指定
     glPointSize(pointsize);
-    glDisable(GL_DEPTH_TEST);
+    //glDisable(GL_DEPTH_TEST);
 
     //shaderオブジェクトの作成
     vertShader = glCreateShader(GL_VERTEX_SHADER);
@@ -101,6 +103,9 @@ int main() {
     glDeleteShader(vertShader);
     glAttachShader(gl2Program, fragShader);
     glDeleteShader(fragShader);
+
+    glBindFragDataLocation(gl2Program, 0, "gl_FragColor");
+    glLinkProgram(gl2Program);
 
     matlocation = glGetUniformLocation(gl2Program, "MVP");
 
@@ -135,6 +140,8 @@ int main() {
     glBindBuffer(GL_ARRAY_BUFFER, cbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_DYNAMIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(1);
 
     // viewport
     glViewport(0, 0, window_width, window_height);
@@ -163,40 +170,33 @@ int main() {
             for (size_t j = 0; j < 100; j++)
             {
                 vertices[i][j][0] = (float)i * 0.01 - 100 * 0.01 / 2;
-                vertices[i][j][1] = sin((float)i + time) * cos((float)j + time);
+                vertices[i][j][1] = sin((float)i + Time) * cos((float)j + Time);
                 vertices[i][j][2] = (float)j * 0.01 - 100 * 0.01 / 2;
-                //if (vertices[i][j][1]<0.5 && vertices[i][j][1] > -0.5)
-                //{
-                //    colors[i][j][1] = 0;
-                //    colors[i][j][2] = 0.0;
-                //    if (hide_red) colors[i][j][0] = 0;
-                //    else colors[i][j][0] = 1;
-                //}
-                //else if (vertices[i][j][1] > 0.5)
-                //{
-                //    colors[i][j][0] = 0;
-                //    colors[i][j][2] = 0.0;
-                //    if (hide_green) colors[i][j][1] = 0.0;
-                //    else colors[i][j][1] = 1.0;
-                //}
-                //else
-                //{
-                //    colors[i][j][0] = 0;
-                //    colors[i][j][1] = 0;
-                //    if (hide_blue) colors[i][j][2] = 0.0;
-                //    else colors[i][j][2] = 1.0;
-                //}
+                if (vertices[i][j][1]<0.5 && vertices[i][j][1] > -0.5)
+                {
+                    colors[i][j][1] = 0;
+                    colors[i][j][2] = 0.0;
+                    if (hide_red) colors[i][j][0] = 0;
+                    else colors[i][j][0] = 1;
+                }
+                else if (vertices[i][j][1] > 0.5)
+                {
+                    colors[i][j][0] = 0;
+                    colors[i][j][2] = 0.0;
+                    if (hide_green) colors[i][j][1] = 0.0;
+                    else colors[i][j][1] = 1.0;
+                }
+                else
+                {
+                    colors[i][j][0] = 0;
+                    colors[i][j][1] = 0;
+                    if (hide_blue) colors[i][j][2] = 0.0;
+                    else colors[i][j][2] = 1.0;
+                }
             }
         }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        //glMatrixMode(GL_PROJECTION);
-        //glLoadIdentity();
-        //gluPerspective(fov, (GLfloat)window_width / (GLfloat)window_height, 0.1, 100.0);
-        //
-        //glMatrixMode(GL_MODELVIEW);
-        //glLoadIdentity();//視野変換，モデリング変換行列の初期化
-        //glPushMatrix();
         glfwGetCursorPos(window, &mouse_x, &mouse_y);
         dx = mouse_x - mouse_x_old;
         dy = mouse_y - mouse_y_old;
@@ -225,12 +225,11 @@ int main() {
         View = glm::lookAt(position, direction, up);
         mvp = Projection * View;
         glUseProgram(gl2Program);
-        matlocation = glGetUniformLocation(gl2Program, "MV");
         glUniformMatrix4fv(matlocation, 1, GL_FALSE, &mvp[0][0]);
 
-        glRotated(rotate_x, 1, 0, 0);
-        glRotated(rotate_y, 0, 1, 0);
-        glTranslatef(translate_x, translate_y, translate_z);
+        //glRotated(rotate_x, 1, 0, 0);
+        //glRotated(rotate_y, 0, 1, 0);
+        //glTranslatef(translate_x, translate_y, translate_z);
 
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(0);
@@ -242,15 +241,9 @@ int main() {
         //glBindVertexArray(vao);
         glBindBuffer(GL_ARRAY_BUFFER, cbo);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(colors), colors);
-        glColorPointer(3, GL_FLOAT, 0, 0);
-        //glColorPointer(3, GL_FLOAT, 0, colors);
-        glEnableClientState(GL_VERTEX_ARRAY);
-        glEnableClientState(GL_COLOR_ARRAY);
-        //glColor3f(0.0, 1.0, 0.0);
-        glDrawArrays(GL_POINTS, 0, 100*100);
-        glDisableClientState(GL_VERTEX_ARRAY);
-        glDisableClientState(GL_COLOR_ARRAY);
-        //glPopMatrix();      
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(1);
+        glDrawArrays(GL_POINTS, 0, 100*100);    
 
         glfwPollEvents();
 
@@ -279,7 +272,7 @@ int main() {
 
         glfwSwapBuffers(window);
 
-        time += 0.01;
+        Time += 0.01;
     }
 
     glBindBuffer(1, vbo);
