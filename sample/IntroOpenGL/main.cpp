@@ -13,6 +13,8 @@
 #include <glm/gtc/matrix_transform.hpp> 
 #include <glm/gtx/transform.hpp>
 
+#pragma warning(disable:4996)
+
 using namespace std;
 
 // constants
@@ -20,8 +22,11 @@ const unsigned int window_width = 1280;
 const unsigned int window_height = 720;
 GLFWwindow* window;
 
+//shader object
+static GLuint vertShader, fragShader, gl2Program;
+
 //vbo
-GLuint vbo, cbo;
+GLuint vbo, cbo, vao;
 float vertices[100][100][3];
 float colors[100][100][3];
 
@@ -32,7 +37,6 @@ double mouse_x, mouse_y, mouse_x_old, mouse_y_old;
 double horiz_angle = -M_PI, vert_angle = 0.0;
 double mouse_speed = 0.01;
 double dx = 0.0, dy = 0.0;
-bool move_flg;
 float init_fov = 60;
 float fov = init_fov;
 glm::vec3 position(0, 0, -1);
@@ -44,8 +48,11 @@ bool hide_green;
 bool hide_blue;
 float time = 0;
 float pointsize = 2.5;
+glm::mat4 mvp, View, Projection;
+GLint matlocation;
 
 static void setfov(GLFWwindow* window, double x, double y);
+int readShaderSource(GLuint shader, const char* file);
 
 
 int main() {
@@ -78,6 +85,29 @@ int main() {
     glPointSize(pointsize);
     glDisable(GL_DEPTH_TEST);
 
+    //shaderオブジェクトの作成
+    vertShader = glCreateShader(GL_VERTEX_SHADER);
+    fragShader = glCreateShader(GL_FRAGMENT_SHADER);
+    if (readShaderSource(vertShader, "graphics.vert")) exit(1);
+    if (readShaderSource(fragShader, "graphics.frag")) exit(1);
+
+    //Shader compile
+    glCompileShader(vertShader);
+    glCompileShader(fragShader);
+
+    //プログラムオブジェクト作成
+    gl2Program = glCreateProgram();
+    glAttachShader(gl2Program, vertShader);
+    glDeleteShader(vertShader);
+    glAttachShader(gl2Program, fragShader);
+    glDeleteShader(fragShader);
+
+    matlocation = glGetUniformLocation(gl2Program, "MVP");
+
+    //glGenVertexArrays(1, &vao);
+    //glBindVertexArray(vao);
+
+
     //positionの初期化
     for (size_t i = 0; i < 100; i++)
     {
@@ -97,6 +127,8 @@ int main() {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
 
     //色バッファオブジェクト
     glGenBuffers(1, &cbo);
@@ -133,38 +165,38 @@ int main() {
                 vertices[i][j][0] = (float)i * 0.01 - 100 * 0.01 / 2;
                 vertices[i][j][1] = sin((float)i + time) * cos((float)j + time);
                 vertices[i][j][2] = (float)j * 0.01 - 100 * 0.01 / 2;
-                if (vertices[i][j][1]<0.5 && vertices[i][j][1] > -0.5)
-                {
-                    colors[i][j][1] = 0;
-                    colors[i][j][2] = 0.0;
-                    if (hide_red) colors[i][j][0] = 0;
-                    else colors[i][j][0] = 1;
-                }
-                else if (vertices[i][j][1] > 0.5)
-                {
-                    colors[i][j][0] = 0;
-                    colors[i][j][2] = 0.0;
-                    if (hide_green) colors[i][j][1] = 0.0;
-                    else colors[i][j][1] = 1.0;
-                }
-                else
-                {
-                    colors[i][j][0] = 0;
-                    colors[i][j][1] = 0;
-                    if (hide_blue) colors[i][j][2] = 0.0;
-                    else colors[i][j][2] = 1.0;
-                }
+                //if (vertices[i][j][1]<0.5 && vertices[i][j][1] > -0.5)
+                //{
+                //    colors[i][j][1] = 0;
+                //    colors[i][j][2] = 0.0;
+                //    if (hide_red) colors[i][j][0] = 0;
+                //    else colors[i][j][0] = 1;
+                //}
+                //else if (vertices[i][j][1] > 0.5)
+                //{
+                //    colors[i][j][0] = 0;
+                //    colors[i][j][2] = 0.0;
+                //    if (hide_green) colors[i][j][1] = 0.0;
+                //    else colors[i][j][1] = 1.0;
+                //}
+                //else
+                //{
+                //    colors[i][j][0] = 0;
+                //    colors[i][j][1] = 0;
+                //    if (hide_blue) colors[i][j][2] = 0.0;
+                //    else colors[i][j][2] = 1.0;
+                //}
             }
         }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        gluPerspective(fov, (GLfloat)window_width / (GLfloat)window_height, 0.1, 100.0);
-        
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();//視野変換，モデリング変換行列の初期化
-        glPushMatrix();
+        //glMatrixMode(GL_PROJECTION);
+        //glLoadIdentity();
+        //gluPerspective(fov, (GLfloat)window_width / (GLfloat)window_height, 0.1, 100.0);
+        //
+        //glMatrixMode(GL_MODELVIEW);
+        //glLoadIdentity();//視野変換，モデリング変換行列の初期化
+        //glPushMatrix();
         glfwGetCursorPos(window, &mouse_x, &mouse_y);
         dx = mouse_x - mouse_x_old;
         dy = mouse_y - mouse_y_old;
@@ -188,15 +220,26 @@ int main() {
             hide_blue = false;
         }
         position = glm::vec3(cos(vert_angle) * sin(horiz_angle), sin(vert_angle), cos(vert_angle) * cos(horiz_angle));
-        gluLookAt(position.x, position.y, position.z, direction.x, direction.y, direction.z, up.x, up.y, up.z);
-        //glm::lookAt(position, direction, up);
+        //gluLookAt(position.x, position.y, position.z, direction.x, direction.y, direction.z, up.x, up.y, up.z);
+        Projection = glm::perspective(glm::radians(fov), (GLfloat)window_width / (GLfloat)window_height, 0.1f, 100.0f);
+        View = glm::lookAt(position, direction, up);
+        mvp = Projection * View;
+        glUseProgram(gl2Program);
+        matlocation = glGetUniformLocation(gl2Program, "MV");
+        glUniformMatrix4fv(matlocation, 1, GL_FALSE, &mvp[0][0]);
+
         glRotated(rotate_x, 1, 0, 0);
         glRotated(rotate_y, 0, 1, 0);
         glTranslatef(translate_x, translate_y, translate_z);
 
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
-        glVertexPointer(3, GL_FLOAT, 0, 0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(0);
+        //glVertexPointer(3, GL_FLOAT, 0, 0);
+        //glBindVertexArray(vao);
         glBindBuffer(GL_ARRAY_BUFFER, cbo);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(colors), colors);
         glColorPointer(3, GL_FLOAT, 0, 0);
@@ -207,7 +250,7 @@ int main() {
         glDrawArrays(GL_POINTS, 0, 100*100);
         glDisableClientState(GL_VERTEX_ARRAY);
         glDisableClientState(GL_COLOR_ARRAY);
-        glPopMatrix();      
+        //glPopMatrix();      
 
         glfwPollEvents();
 
@@ -247,4 +290,49 @@ int main() {
 
 static void setfov(GLFWwindow* window, double x, double y) {
     fov -= static_cast<GLfloat>(y);
+}
+
+/*
+** シェーダーのソースプログラムをメモリに読み込む
+*/
+int readShaderSource(GLuint shader, const char* file)
+{
+    FILE* fp;
+    const GLchar* source;
+    GLsizei length;
+    int ret;
+
+    /* ファイルを開く */
+    fp = fopen(file, "rb");
+    if (fp == NULL) {
+        perror(file);
+        return -1;
+    }
+
+    /* ファイルの末尾に移動し現在位置 (つまりファイルサイズ) を得る */
+    fseek(fp, 0L, SEEK_END);
+    length = ftell(fp);
+
+    /* ファイルサイズのメモリを確保 */
+    source = (GLchar*)malloc(length);
+    if (source == NULL) {
+        fprintf(stderr, "Could not allocate read buffer.\n");
+        return -1;
+    }
+
+    /* ファイルを先頭から読み込む */
+    fseek(fp, 0L, SEEK_SET);
+    ret = fread((void*)source, 1, length, fp) != (size_t)length;
+    fclose(fp);
+
+    /* シェーダのソースプログラムのシェーダオブジェクトへの読み込み */
+    if (ret)
+        fprintf(stderr, "Could not read file: %s.\n", file);
+    else
+        glShaderSource(shader, 1, &source, &length);
+
+    /* 確保したメモリの開放 */
+    free((void*)source);
+
+    return ret;
 }

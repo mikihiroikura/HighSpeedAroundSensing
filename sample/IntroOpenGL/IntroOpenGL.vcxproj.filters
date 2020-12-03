@@ -69,4 +69,8 @@
       <Filter>ヘッダー ファイル\imgui</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="graphics.frag" />
+    <None Include="graphics.vert" />
+  </ItemGroup>
 </Project>
