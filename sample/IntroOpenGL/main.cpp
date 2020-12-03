@@ -128,11 +128,11 @@ int main() {
     glBindVertexArray(vao);
 
     //頂点バッファオブジェクト
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(0);
+    glGenBuffers(1, &vbo);//vbp作成
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);//vboのバインド，これからの処理の対象
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);//vboのデータ領域の確保
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);//vertex shader内の引数の指定indexに合うように変更する
+    glEnableVertexAttribArray(0);//indexの値のattribute変数の有効化
     //glEnableVertexArrayAttrib(vao, 0); //上の関数の代わりにこれでもいい
 
     //色バッファオブジェクト
