@@ -85,7 +85,7 @@ int main() {
 
     glClearColor(0.0, 0.0, 0.0, 1.0);   //背景色の指定
     glPointSize(pointsize);
-    //glDisable(GL_DEPTH_TEST);
+    glDisable(GL_DEPTH_TEST);
 
     //shaderオブジェクトの作成
     vertShader = glCreateShader(GL_VERTEX_SHADER);
@@ -104,14 +104,10 @@ int main() {
     glAttachShader(gl2Program, fragShader);
     glDeleteShader(fragShader);
 
-    glBindFragDataLocation(gl2Program, 0, "gl_FragColor");
+    //シェーダプログラムのリンク
     glLinkProgram(gl2Program);
 
-    matlocation = glGetUniformLocation(gl2Program, "MVP");
-
-    //glGenVertexArrays(1, &vao);
-    //glBindVertexArray(vao);
-
+    matlocation = glGetUniformLocation(gl2Program, "MVP");//シェーダプログラム上の"MVP" uniformの位置の検索
 
     //positionの初期化
     for (size_t i = 0; i < 100; i++)
@@ -127,29 +123,30 @@ int main() {
         }
     }
 
+    //VAOのバインド
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
     //頂点バッファオブジェクト
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);
+    //glEnableVertexArrayAttrib(vao, 0); //上の関数の代わりにこれでもいい
 
     //色バッファオブジェクト
     glGenBuffers(1, &cbo);
     glBindBuffer(GL_ARRAY_BUFFER, cbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_DYNAMIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(1);
+    //glEnableVertexArrayAttrib(vao, 1);
 
-    // viewport
-    glViewport(0, 0, window_width, window_height);
-
-    // projection
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(fov, (GLfloat)window_width / (GLfloat)window_height, 0.1, 100.0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0); //EnableVertexAttribArrayの後に行う
+    glBindVertexArray(0);//VAOに上のVBOの処理をまとめる，ループで一度これを呼べばvertexattrib,enablevertexattribは実行される
+    
+    //スクロール時にCallbackする関数の指定
     glfwSetScrollCallback(window, setfov);
 
     //imguiの初期化
@@ -159,12 +156,11 @@ int main() {
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init();
-    hovered = ImGui::IsWindowHovered();
 
     //ここにループを書く
     while (glfwWindowShouldClose(window) == GL_FALSE)
     {
-        //点群の位置更新
+        //点群の位置と色の更新
         for (size_t i = 0; i < 100; i++)
         {
             for (size_t j = 0; j < 100; j++)
@@ -197,10 +193,13 @@ int main() {
         }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        //カーソル位置から移動変化量を計算
         glfwGetCursorPos(window, &mouse_x, &mouse_y);
         dx = mouse_x - mouse_x_old;
         dy = mouse_y - mouse_y_old;
 
+        //左クリックしていればかつIMGUI上のWindowにいなければ，移動変化量を基に角度更新
         if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS && !hovered)
         {
             horiz_angle += mouse_speed * dx;
@@ -208,6 +207,8 @@ int main() {
         }
         mouse_x_old = mouse_x;
         mouse_y_old = mouse_y;
+
+        //スペースキーを押していれば，パラメータリセット
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
         {
             horiz_angle = -M_PI;
@@ -219,33 +220,31 @@ int main() {
             hide_green = false;
             hide_blue = false;
         }
+
+        //Model view行列の計算
         position = glm::vec3(cos(vert_angle) * sin(horiz_angle), sin(vert_angle), cos(vert_angle) * cos(horiz_angle));
-        //gluLookAt(position.x, position.y, position.z, direction.x, direction.y, direction.z, up.x, up.y, up.z);
         Projection = glm::perspective(glm::radians(fov), (GLfloat)window_width / (GLfloat)window_height, 0.1f, 100.0f);
         View = glm::lookAt(position, direction, up);
         mvp = Projection * View;
+
+        //シェーダプログラムの開始
         glUseProgram(gl2Program);
-        glUniformMatrix4fv(matlocation, 1, GL_FALSE, &mvp[0][0]);
+        glUniformMatrix4fv(matlocation, 1, GL_FALSE, &mvp[0][0]); //シェーダプログラムの開始の後にシェーダプログラム内のMVP行列を更新
 
         //glRotated(rotate_x, 1, 0, 0);
         //glRotated(rotate_y, 0, 1, 0);
         //glTranslatef(translate_x, translate_y, translate_z);
 
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(0);
+        //点群の位置と色を更新
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(0);
-        //glVertexPointer(3, GL_FLOAT, 0, 0);
-        //glBindVertexArray(vao);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices); //VBO内の点群の位置の更新
         glBindBuffer(GL_ARRAY_BUFFER, cbo);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(colors), colors);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(1);
-        glDrawArrays(GL_POINTS, 0, 100*100);    
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(colors), colors);//VBO内の色を更新
+        glBindVertexArray(vao);//VBOでの点群位置と色更新をまとめたVAOをバインドして実行
+        glDrawArrays(GL_POINTS, 0, 100*100);//実際の描画
+        glBindVertexArray(0);//VBOのアンバインド
 
-        glfwPollEvents();
+        glfwPollEvents(); //マウスイベントを取り出し記録
 
         //start imgui
         ImGui_ImplOpenGL3_NewFrame();
@@ -255,7 +254,7 @@ int main() {
         ImGui::SetNextWindowSize(ImVec2(320, 300), ImGuiCond_Once);
         ImGui::Begin("hello world");
         ImGui::Text("This is useful text");
-        hovered = ImGui::IsWindowHovered();
+        hovered = ImGui::IsWindowHovered(); //IMGUI上のWindowでのカーソル処理時のフラグを立てる
         ImGui::Checkbox("Hide Red", &hide_red);
         ImGui::Checkbox("Hide Green", &hide_green);
         ImGui::Checkbox("Hide Blue", &hide_blue);
@@ -270,13 +269,15 @@ int main() {
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 
-        glfwSwapBuffers(window);
+        glfwSwapBuffers(window);//ダブルバッファの入れ替え，これを行うことで画面が一部更新したもので一部更新されていないなどのがたつきをなくせる
 
         Time += 0.01;
     }
 
-    glBindBuffer(1, vbo);
+    //vao,vboの消去
+    glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &cbo);
 
     return 0;
 }
