@@ -18,6 +18,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <filesystem>
+#include "graphics.h"
 
 
 #ifdef _DEBUG
@@ -196,6 +197,8 @@ int main() {
 	thread thr3(DetectAR, &flg);
 	/// DDMotorにコマンドを送信するスレッド
 	thread thr4(SendDDMotorCommand, & flg);
+	/// OpenGLで点群を表示するスレッド
+	thread thr5(drawGL, &flg);
 	
 
 	//メインループ
@@ -227,6 +230,7 @@ int main() {
 	if (thr2.joinable())thr2.join();
 	if (thr3.joinable())thr3.join();
 	if (thr4.joinable())thr4.join();
+	if (thr5.joinable())thr5.join();
 
 	//カメラの停止，RS232Cの切断
 	cam.stop();

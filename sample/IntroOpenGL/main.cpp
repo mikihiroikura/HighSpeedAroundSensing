@@ -48,7 +48,7 @@ bool hide_green;
 bool hide_blue;
 float Time = 0;
 float pointsize = 2.5;
-glm::mat4 mvp, View, Projection;
+glm::mat4 mvp, Model, View, Projection;
 GLint matlocation;
 
 static void setfov(GLFWwindow* window, double x, double y);
@@ -225,7 +225,10 @@ int main() {
         position = glm::vec3(cos(vert_angle) * sin(horiz_angle), sin(vert_angle), cos(vert_angle) * cos(horiz_angle));
         Projection = glm::perspective(glm::radians(fov), (GLfloat)window_width / (GLfloat)window_height, 0.1f, 100.0f);
         View = glm::lookAt(position, direction, up);
-        mvp = Projection * View;
+        Model = glm::translate(glm::mat4(1.0), glm::vec3(translate_x, translate_y, translate_z))
+            * glm::rotate(glm::radians(rotate_x), glm::vec3(1, 0, 0)) 
+            * glm::rotate(glm::radians(rotate_y), glm::vec3(0, 1, 0));
+        mvp = Projection * View *Model;
 
         //シェーダプログラムの開始
         glUseProgram(gl2Program);
@@ -254,7 +257,7 @@ int main() {
         ImGui::SetNextWindowSize(ImVec2(320, 300), ImGuiCond_Once);
         ImGui::Begin("hello world");
         ImGui::Text("This is useful text");
-        hovered = ImGui::IsWindowHovered(); //IMGUI上のWindowでのカーソル処理時のフラグを立てる
+        hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem); //IMGUI上のWindowでのカーソル処理時のフラグを立てる
         ImGui::Checkbox("Hide Red", &hide_red);
         ImGui::Checkbox("Hide Green", &hide_green);
         ImGui::Checkbox("Hide Blue", &hide_blue);

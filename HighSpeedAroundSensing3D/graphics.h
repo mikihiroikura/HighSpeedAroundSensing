@@ -13,6 +13,8 @@
 #include <glm/gtc/matrix_transform.hpp> 
 #include <glm/gtx/transform.hpp>
 
+extern void drawGL(bool* flg);
+
 
 #endif // GRAPHICS_H
 
