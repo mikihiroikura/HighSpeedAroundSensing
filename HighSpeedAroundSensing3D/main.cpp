@@ -43,6 +43,7 @@ cv::Mat in_img_now;
 vector<cv::Mat> in_imgs;
 long long in_imgs_saveid = 0;
 cv::Mat full, zero;
+const char* outformat = "Bayer2Color";
 /// 時間に関する変数
 int timeout = 10;
 LARGE_INTEGER freq, start;
@@ -74,6 +75,13 @@ cv::Mat campt;
 cv::Rect roi_lsm(960 - 430, 540 - 430, 430 * 2, 430 * 2);
 cv::Rect roi_ref;
 vector<double> rps;
+float mono_thr = 240.0;
+cv::Scalar color_thr_min(0, 0, 150);
+cv::Scalar color_thr_max(256, 256, 256);
+vector<cv::Point> refpts;
+int colorstep, colorelem;
+double refmass, refmomx, refmomy;
+int refx, refy;
 //デバッグ用変数
 LARGE_INTEGER lsmstart, lsmend, takestart, takeend, arstart, arend;
 double taketime = 0;
@@ -94,12 +102,12 @@ int main() {
 	if (!QueryPerformanceFrequency(&freq)) { return 0; }// 単位習得
 
 	//カメラパラメータ
-	int width = 1920;
-	int height = 1080;
+	int width = 896;
+	int height = 896;
 	float fps = 1000.0;
 	float exposuretime = 912.0;
-	int offsetx = 0;
-	int offsety = 0;
+	int offsetx = 480;
+	int offsety = 92;
 
 	//光切断法に関する構造体のインスタンス
 	LSM lsm;
@@ -116,9 +124,11 @@ int main() {
 	cout << "Set Camera Params..." << endl;
 	cam.setParam(paramTypeCamera::paramInt::WIDTH, width);
 	cam.setParam(paramTypeCamera::paramInt::HEIGHT, height);
+	cam.setParam(paramTypeKAYACoaXpress::paramInt::OffsetX, offsetx);
+	cam.setParam(paramTypeKAYACoaXpress::paramInt::OffsetY, offsety);
 	cam.setParam(paramTypeCamera::paramFloat::FPS, fps);
 	cam.setParam(paramTypeKAYACoaXpress::paramFloat::ExposureTime, exposuretime);
-	cam.setParam(paramTypeKAYACoaXpress::Gain::x1);
+	cam.setParam(paramTypeKAYACoaXpress::Gain::x2);
 	cam.setParam(paramTypeKAYACoaXpress::CaptureType::BayerGRGrab);
 	cam.parameter_all_print();
 
@@ -144,7 +154,6 @@ int main() {
 	mbed.Connect("COM4", 115200, 8, NOPARITY, 0, 0, 0, 5000, 20000);
 
 	//カラーORモノクロ
-	const char* outformat = "Bayer2Color";
 	if (outformat=="Bayer2Mono"||outformat=="Mono2Mono")
 	{
 		full = cv::Mat(cam.getParam(paramTypeCamera::paramInt::HEIGHT), cam.getParam(paramTypeCamera::paramInt::WIDTH), CV_8UC1, cv::Scalar::all(255));
@@ -173,13 +182,15 @@ int main() {
 	cv::circle(lsm.mask_lsm, cv::Point(960, 540), 430, cv::Scalar::all(255), -1);
 	cv::circle(lsm.mask_lsm, cv::Point((int)lsm.ref_center[0], (int)lsm.ref_center[1]), (int)(lsm.ref_radius)+20, cv::Scalar::all(0), -1);
 
+#ifdef SAVE_IMGS_
 	//取得画像を格納するVectorの作成
 	cout << "Set Mat Vector..." << endl;
-	for (size_t i = 0; i < (int)(timeout)*fps+100; i++)
+	for (size_t i = 0; i < (int)(timeout)*fps + 100; i++)
 	{
 		in_imgs.push_back(zero.clone());
 		lsm.processflgs.push_back(false);
 	}
+#endif // SAVE_IMGS_
 
 	//カメラ起動
 	cout << "Aroud 3D Sensing Start!" << endl;
@@ -222,7 +233,11 @@ int main() {
 		//時刻の更新
 		if (!QueryPerformanceCounter(&end)) { return 0; }
 		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
-		if (logtime > timeout){	flg = false;}
+#ifdef SAVE_IMGS_
+		if (logtime > timeout) { flg = false; }
+#endif // SAVE_IMGS_
+
+		
 	}
 
 	//スレッドの停止
@@ -447,15 +462,48 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 	{
 		//参照面の輝度重心の検出
 		lsm->in_img.copyTo(lsm->ref_arc, lsm->mask_refarc);
-		cv::threshold(lsm->ref_arc, lsm->ref_arc, 240.0, 255.0, cv::THRESH_BINARY);
-		cv::Moments mu = cv::moments(lsm->ref_arc(roi_ref));
-		lsm->rp[0] = mu.m10 / mu.m00 + roi_ref.x;
-		lsm->rp[1] = mu.m01 / mu.m00 + roi_ref.y;
+		if (outformat == "Bayer2Color")
+		{
+			cv::inRange(lsm->ref_arc, color_thr_min, color_thr_max, lsm->ref_arc);
+			cv::findNonZero(lsm->ref_arc(roi_ref), refpts);
+			refmass = 0, refmomx = 0,refmomy = 0;
+			colorstep = lsm->ref_arc.step;
+			colorelem = lsm->ref_arc.elemSize();
+			for (size_t i = 0; i < refpts.size(); i++)
+			{
+				refx = refpts[i].x + roi_ref.x;
+				refy = refpts[i].y + roi_ref.y;
+				refmass += lsm->ref_arc.data[refy * colorstep + refx * colorelem + 2];
+				refmomx += lsm->ref_arc.data[refy * colorstep + refx * colorelem + 2] * refx;
+				refmomy += lsm->ref_arc.data[refy * colorstep + refx * colorelem + 2] * refy;
+			}
+			lsm->rp[0] = refmomx / refmass;
+			lsm->rp[1] = refmomy / refmass;
+		}
+		else
+		{
+			cv::threshold(lsm->ref_arc, lsm->ref_arc, mono_thr, 255.0, cv::THRESH_BINARY);
+			cv::Moments mu = cv::moments(lsm->ref_arc(roi_ref));
+			lsm->rp[0] = mu.m10 / mu.m00 + roi_ref.x;
+			lsm->rp[1] = mu.m01 / mu.m00 + roi_ref.y;
+		}
 		//ラインレーザの輝点座標を検出
 		lsm->in_img.copyTo(lsm->lsm_laser, lsm->mask_lsm);
-		cv::threshold(lsm->lsm_laser, lsm->lsm_laser, 240, 255, cv::THRESH_BINARY);
-		cv::findNonZero(lsm->lsm_laser(roi_lsm), lsm->bps);
-		for (size_t i = 0; i < lsm->bps.size(); i++) { lsm->bps[i] += cv::Point(roi_lsm.x, roi_lsm.y); }
+		if (outformat == "Bayer2Color")
+		{
+			cv::inRange(lsm->lsm_laser, color_thr_min, color_thr_max, lsm->lsm_laser);
+			cv::findNonZero(lsm->lsm_laser(roi_lsm), lsm->bps);
+			for (size_t i = 0; i < lsm->bps.size(); i++) { lsm->bps[i] += cv::Point(roi_lsm.x, roi_lsm.y); }
+			//ここで同心円状に輝度重心を取得
+
+		}
+		else
+		{
+			cv::threshold(lsm->lsm_laser, lsm->lsm_laser, mono_thr, 255, cv::THRESH_BINARY);
+			cv::findNonZero(lsm->lsm_laser(roi_lsm), lsm->bps);
+			for (size_t i = 0; i < lsm->bps.size(); i++) { lsm->bps[i] += cv::Point(roi_lsm.x, roi_lsm.y); }
+		}
+		
 		
 		//レーザ平面の法線ベクトルの計算
 		lsm->plane_nml[0] = lsm->pa[0] + lsm->pa[1] * lsm->rp[0] + lsm->pa[2] * lsm->rp[1] + lsm->pa[3] * pow(lsm->rp[0], 2)

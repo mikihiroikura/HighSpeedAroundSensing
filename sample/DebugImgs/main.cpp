@@ -16,7 +16,7 @@ using namespace std;
 int main() {
 	LARGE_INTEGER freq, start, end;
 	double logtime = 0;
-	string video_dir = "202011181659_video.mp4";
+	string video_dir = "202011251655_video.mp4";
 	cv::VideoCapture video;
 	video.open(video_dir);
 	if (!video.isOpened()) {
@@ -58,12 +58,14 @@ int main() {
 		cv::threshold(rei, rei2, 240, 255, cv::THRESH_BINARY);
 		cv::bitwise_and(imageCopy, rei2, rei2);*/
 		cv::Scalar s_min(0, 0, 150);
-		cv::Scalar s_max(200, 200, 255);
+		cv::Scalar s_max(255, 255, 256);
 		cv::inRange(imageCopy, s_min, s_max, mask);
 
-		cv::cvtColor(mask, mask, CV_RGB2GRAY);
+		//cv::cvtColor(mask, mask, CV_RGB2GRAY);
+		cv::findNonZero(mask(roi_ref), bps);
 		cv::findNonZero(mask, bps);
 
+		cout << (int)imageCopy.data[2];
 
 		cv::Moments mu = cv::moments(mask(roi_ref));
 		cv::Point refp;
