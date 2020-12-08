@@ -93,6 +93,8 @@ int forend, cogx, cogy;
 double lsmmass, lsmmomx, lsmmomy;
 double dtheta = 30;
 double deg;
+/// ログに関する変数
+int maxlogsize = 100;
 //デバッグ用変数
 LARGE_INTEGER lsmstart, lsmend, takestart, takeend, arstart, arend;
 double taketime = 0;
@@ -229,6 +231,16 @@ int main() {
 				logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
 				logs.LSM_times.push_back(logtime);
 				logs.LSM_modes.push_back(mode);
+#ifndef SAVE_IMGS_ //IMGのログを残さないとき，ログ用のVectorの先頭を削除する
+				if (logs.LSM_times.size()>maxlogsize)
+				{
+					logs.LSM_times.erase(logs.LSM_times.begin(), logs.LSM_times.begin() + 1);
+					logs.LSM_modes.erase(logs.LSM_modes.begin(), logs.LSM_modes.begin() + 1);
+					logs.LSM_pts.erase(logs.LSM_pts.begin(), logs.LSM_pts.begin() + 1);
+					logs.LSM_rps.erase(logs.LSM_rps.begin(), logs.LSM_rps.begin() + 1);
+				}
+#endif // SAVE_IMGS_
+
 			}
 		}
 		
