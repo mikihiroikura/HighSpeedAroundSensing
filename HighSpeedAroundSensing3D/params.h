@@ -32,6 +32,7 @@ struct LSM
 	long long processcnt;
 	double rp[2];
 	vector<cv::Point> bps;
+	vector<cv::Point> allbps;
 	vector<cv::Point2f> idpixs;
 	vector<cv::Mat> campts;
 	vector<bool> processflgs;

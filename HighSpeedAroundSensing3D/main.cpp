@@ -38,6 +38,13 @@ namespace fs = std::filesystem;
 //#define SAVE_IMGS_
 
 //グローバル変数
+/// カメラパラメータ
+int width = 896;
+int height = 896;
+float fps = 1000.0;
+float exposuretime = 912.0;
+int offsetx = 480;
+int offsety = 92;
 /// 画像に関する変数
 cv::Mat in_img_now;
 vector<cv::Mat> in_imgs;
@@ -71,7 +78,6 @@ const int rotpulse = 432000 / gearratio;
 long long detectfailcnt = 0;
 /// 光切断法計算用変数
 double phi, lambda, u, v, w;
-cv::Mat campt;
 cv::Rect roi_lsm(960 - 430, 540 - 430, 430 * 2, 430 * 2);
 cv::Rect roi_ref;
 vector<double> rps;
@@ -82,6 +88,11 @@ vector<cv::Point> refpts;
 int colorstep, colorelem;
 double refmass, refmomx, refmomy;
 int refx, refy;
+int rstart = 104, rends=432;
+int forend, cogx, cogy;
+double lsmmass, lsmmomx, lsmmomy;
+double dtheta = 30;
+double deg;
 //デバッグ用変数
 LARGE_INTEGER lsmstart, lsmend, takestart, takeend, arstart, arend;
 double taketime = 0;
@@ -100,14 +111,6 @@ int main() {
 	bool flg = true;
 	LARGE_INTEGER end;
 	if (!QueryPerformanceFrequency(&freq)) { return 0; }// 単位習得
-
-	//カメラパラメータ
-	int width = 896;
-	int height = 896;
-	float fps = 1000.0;
-	float exposuretime = 912.0;
-	int offsetx = 480;
-	int offsety = 92;
 
 	//光切断法に関する構造体のインスタンス
 	LSM lsm;
@@ -209,7 +212,7 @@ int main() {
 	/// DDMotorにコマンドを送信するスレッド
 	thread thr4(SendDDMotorCommand, & flg);
 	/// OpenGLで点群を表示するスレッド
-	thread thr5(drawGL, &flg);
+	thread thr5(drawGL, &logs, &flg);
 	
 
 	//メインループ
@@ -473,9 +476,9 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 			{
 				refx = refpts[i].x + roi_ref.x;
 				refy = refpts[i].y + roi_ref.y;
-				refmass += lsm->ref_arc.data[refy * colorstep + refx * colorelem + 2];
-				refmomx += lsm->ref_arc.data[refy * colorstep + refx * colorelem + 2] * refx;
-				refmomy += lsm->ref_arc.data[refy * colorstep + refx * colorelem + 2] * refy;
+				refmass += (double)lsm->ref_arc.data[refy * colorstep + refx * colorelem + 2];
+				refmomx += (double)lsm->ref_arc.data[refy * colorstep + refx * colorelem + 2] * refx;
+				refmomy += (double)lsm->ref_arc.data[refy * colorstep + refx * colorelem + 2] * refy;
 			}
 			lsm->rp[0] = refmomx / refmass;
 			lsm->rp[1] = refmomy / refmass;
@@ -489,13 +492,30 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 		}
 		//ラインレーザの輝点座標を検出
 		lsm->in_img.copyTo(lsm->lsm_laser, lsm->mask_lsm);
+		deg = atan2(lsm->rp[1] - lsm->ref_center[1], lsm->rp[0] - lsm->ref_center[0]);
 		if (outformat == "Bayer2Color")
 		{
 			cv::inRange(lsm->lsm_laser, color_thr_min, color_thr_max, lsm->lsm_laser);
-			cv::findNonZero(lsm->lsm_laser(roi_lsm), lsm->bps);
-			for (size_t i = 0; i < lsm->bps.size(); i++) { lsm->bps[i] += cv::Point(roi_lsm.x, roi_lsm.y); }
+			cv::findNonZero(lsm->lsm_laser(roi_lsm), lsm->allbps);
+			for (size_t i = 0; i < lsm->allbps.size(); i++) { lsm->allbps[i] += cv::Point(roi_lsm.x, roi_lsm.y); }
 			//ここで同心円状に輝度重心を取得
-
+			for (int r = rstart; r < rends; r++)
+			{
+				lsmmass= 0, lsmmomx= 0, lsmmomy = 0;
+				forend = (int)(M_PI * 2 * r * dtheta / 360);
+				for (size_t j = 0; j < forend; j++)
+				{
+					cogx = (int)(width / 2 * (double)r * cos((double)j / r + deg - dtheta / 2 / 180 * M_PI));
+					cogy = (int)(height / 2 * (double)r * sin((double)j / r + deg - dtheta / 2 / 180 * M_PI));
+					if ((int)lsm->lsm_laser.data[cogy*colorstep*cogx*colorelem]>0)
+					{
+						lsmmass += lsm->lsm_laser.data[cogy * colorstep * cogx * colorelem];
+						lsmmomx += (double)lsm->lsm_laser.data[cogy * colorstep * cogx * colorelem] * cogx;
+						lsmmomy += (double)lsm->lsm_laser.data[cogy * colorstep * cogx * colorelem] * cogy;
+					}
+				}
+				if (lsmmass>0){lsm->bps.push_back(cv::Point(lsmmomx / lsmmass, lsmmomy / lsmmass));}
+			}
 		}
 		else
 		{
@@ -537,8 +557,7 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 			w = lsm->map_coefficient[0] + lsm->map_coefficient[1] * pow(phi, 2) +
 				lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
 			lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
-			campt = (cv::Mat_<double>(1, 3) << lambda * u, lambda * v, lambda * w);
-			lsm->campts.push_back(campt);
+			lsm->campts.emplace_back((cv::Mat_<double>(1, 3) << lambda * u, lambda* v, lambda* w));
 		}
 	}
 	//QueryPerformanceCounter(&lsmend);

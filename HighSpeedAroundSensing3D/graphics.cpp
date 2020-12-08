@@ -2,6 +2,8 @@
 #include <iostream>
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <opencv2/opencv.hpp>
+#include <vector>
 
 using namespace std;
 
@@ -31,13 +33,24 @@ glm::vec3 position(0, 0, -1), up(0, -1, 0), direction(0, 0, 0);
 glm::mat4 mvp, Model, View, Projection;
 GLint matlocation;
 
+//出力点群に関するパラメータ
+queue<cv::Mat> vertices;
+queue<vector<float>> colors;
+vector<float> color;
+vector<cv::Mat> vertices_vec;
+int maxvertsize = 1000;
+double safe_area = 1.0, danger_area = 0.5;
+double dist;
+
 //プロトタイプ宣言
 static void setfov(GLFWwindow* window, double x, double y);
-int readShaderSource(GLuint shader, const char* file);
+static int readShaderSource(GLuint shader, const char* file);
+
+#pragma warning(disable:4996)
 
 
 //OpenGLの初期化
-void drawGL(bool* flg) {
+void drawGL(Logs *logs, bool* flg) {
     //GLFWの初期化
     if (glfwInit() == GL_FALSE)
     {
@@ -93,7 +106,7 @@ void drawGL(bool* flg) {
     //頂点バッファオブジェクト
     glGenBuffers(1, &vbo);//vbp作成
     glBindBuffer(GL_ARRAY_BUFFER, vbo);//vboのバインド，これからの処理の対象
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);//vboのデータ領域の確保
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), nullptr, GL_DYNAMIC_DRAW);//vboのデータ領域の確保
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);//vertex shader内の引数の指定indexに合うように変更する
     glEnableVertexAttribArray(0);//indexの値のattribute変数の有効化
     //glEnableVertexArrayAttrib(vao, 0); //上の関数の代わりにこれでもいい
@@ -101,7 +114,7 @@ void drawGL(bool* flg) {
     //色バッファオブジェクト
     glGenBuffers(1, &cbo);
     glBindBuffer(GL_ARRAY_BUFFER, cbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(colors), nullptr, GL_DYNAMIC_DRAW);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(1);
     //glEnableVertexArrayAttrib(vao, 1);
@@ -124,6 +137,25 @@ void drawGL(bool* flg) {
     while (glfwWindowShouldClose(window) == GL_FALSE && *flg)
     {
         //点群の位置更新
+        vector<cv::Mat> last_pts = logs->LSM_pts[logs->LSM_pts.size() - 1];
+        for (size_t i = 0; i < last_pts.size(); i++)
+        {
+            vertices.emplace(last_pts[i]);
+            dist = pow(pow((float)last_pts[i].data[0] * 0.001, 2) + pow((float)last_pts[i].data[1] * 0.001, 2), 0.5);
+            color = vector<float>(3, 0);
+            if (dist > safe_area && !hide_red) color[0] = 1.0;
+            else if (dist <= safe_area && dist > danger_area && !hide_green) color[1] = 1.0;
+            else if (dist <= danger_area && !hide_blue) color[2] = 1.0;
+            colors.emplace(color);
+        }
+        if (vertices.size()>maxvertsize)
+        {
+            for (size_t j = 0; j < vertices.size()-maxvertsize; j++)
+            {
+                vertices.pop();
+                colors.pop();
+            }
+        }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -169,9 +201,9 @@ void drawGL(bool* flg) {
         
         //点群の位置と色を更新
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices); //VBO内の点群の位置の更新
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), &vertices.front()); //VBO内の点群の位置の更新
         glBindBuffer(GL_ARRAY_BUFFER, cbo);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(colors), colors);//VBO内の色を更新
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(colors), &colors.front());//VBO内の色を更新
         glBindVertexArray(vao);//VBOでの点群位置と色更新をまとめたVAOをバインドして実行
         glDrawArrays(GL_POINTS, 0, 100 * 100);//実際の描画
         glBindVertexArray(0);//VBOのアンバインド
@@ -217,7 +249,7 @@ static void setfov(GLFWwindow* window, double x, double y) {
 /*
 ** シェーダーのソースプログラムをメモリに読み込む
 */
-int readShaderSource(GLuint shader, const char* file)
+static int readShaderSource(GLuint shader, const char* file)
 {
     FILE* fp;
     const GLchar* source;
