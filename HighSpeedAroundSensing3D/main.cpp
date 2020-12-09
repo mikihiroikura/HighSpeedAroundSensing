@@ -51,6 +51,7 @@ vector<cv::Mat> in_imgs;
 long long in_imgs_saveid = 0;
 cv::Mat full, zero;
 const char* outformat = "Bayer2Color";
+int takepicid;
 /// 時間に関する変数
 int timeout = 10;
 LARGE_INTEGER freq, start;
@@ -85,16 +86,19 @@ float mono_thr = 240.0;
 cv::Scalar color_thr_min(0, 0, 150);
 cv::Scalar color_thr_max(256, 256, 256);
 vector<cv::Point> refpts;
-int colorstep, colorelem;
+int colorstep=width*3, colorelem =3;
+int monostep = width, monoelem = 1;
 double refmass, refmomx, refmomy;
 int refx, refy;
 int rstart = 104, rends=432;
-int forend, cogx, cogy;
+unsigned int forend, cogx, cogy;
 double lsmmass, lsmmomx, lsmmomy;
 double dtheta = 30;
 double deg;
+vector<double> calcpt(3, 0);
+cv::Point2f idpix;
 /// ログに関する変数
-int maxlogsize = 100;
+int cyclebuffersize = 100;
 //デバッグ用変数
 LARGE_INTEGER lsmstart, lsmend, takestart, takeend, arstart, arend;
 double taketime = 0;
@@ -117,6 +121,7 @@ int main() {
 	//光切断法に関する構造体のインスタンス
 	LSM lsm;
 	lsm.processcnt = 0;
+	lsm.buffersize = cyclebuffersize;
 
 	//ログ保存に関する構造体のインスタンス
 	Logs logs;
@@ -139,13 +144,13 @@ int main() {
 
 	//レーザCalibrationの結果の呼び出し
 	FILE* fcam, * flaser;
-	fcam = fopen("202009301655_fisheyeparam.csv", "r");
+	fcam = fopen("202011251943_fisheyeparam.csv", "r");
 	for (size_t i = 0; i < 4; i++){ fscanf(fcam, "%lf,", &lsm.map_coefficient[i]); }
 	for (size_t i = 0; i < 4; i++) { fscanf(fcam, "%lf,", &lsm.stretch_mat[i]); }
 	swap(lsm.stretch_mat[1], lsm.stretch_mat[2]);
 	for (size_t i = 0; i < 2; i++) { fscanf(fcam, "%lf,", &lsm.distortion[i]); }
 	fclose(fcam);
-	flaser = fopen("202010051818_laserinterpolparam.csv", "r");
+	flaser = fopen("202011251943_laserinterpolparam.csv", "r");
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pa[i]); }
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pb[i]); }
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pc[i]); }
@@ -184,7 +189,7 @@ int main() {
 	cv::circle(lsm.mask_refarc, cv::Point((int)lsm.ref_center[0], (int)lsm.ref_center[1]), (int)(lsm.ref_radius - lsm.ref_arcwidth / 2), cv::Scalar::all(255), (int)lsm.ref_arcwidth);
 	roi_ref = cv::Rect((int)(lsm.ref_center[0] - lsm.ref_radius), (int)(lsm.ref_center[1] - lsm.ref_radius), (int)(2 * lsm.ref_radius), (int)(2 * lsm.ref_radius));
 	lsm.mask_lsm = zero.clone();
-	cv::circle(lsm.mask_lsm, cv::Point(960, 540), 430, cv::Scalar::all(255), -1);
+	cv::circle(lsm.mask_lsm, cv::Point((int)width/2, (int)height/2), 430, cv::Scalar::all(255), -1);
 	cv::circle(lsm.mask_lsm, cv::Point((int)lsm.ref_center[0], (int)lsm.ref_center[1]), (int)(lsm.ref_radius)+20, cv::Scalar::all(0), -1);
 
 #ifdef SAVE_IMGS_
@@ -196,6 +201,15 @@ int main() {
 		lsm.processflgs.push_back(false);
 	}
 #endif // SAVE_IMGS_
+#ifndef SAVE_IMGS_
+	cout << "Set Mat Cycle Buffer..." << endl;
+	for (size_t i = 0; i < cyclebuffersize; i++)
+	{
+		in_imgs.push_back(zero.clone());
+		lsm.processflgs.push_back(false);
+	}
+#endif // !SAVE_IMGS_
+
 
 	//カメラ起動
 	cout << "Aroud 3D Sensing Start!" << endl;
@@ -208,13 +222,13 @@ int main() {
 	/// 1000fpsで画像を格納し続けるスレッド
 	thread thr1(TakePicture, &cam, &flg, &lsm);
 	/// 現在の画像をPCに出力して見えるようするスレッド
-	thread thr2(ShowLogs, &flg);
+	//thread thr2(ShowLogs, &flg);
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
-	thread thr3(DetectAR, &flg);
+	//thread thr3(DetectAR, &flg);
 	/// DDMotorにコマンドを送信するスレッド
-	thread thr4(SendDDMotorCommand, & flg);
+	//thread thr4(SendDDMotorCommand, & flg);
 	/// OpenGLで点群を表示するスレッド
-	thread thr5(drawGL, &logs, &flg);
+	thread thr5(drawGL, &lsm, &logs, &flg);
 	
 
 	//メインループ
@@ -232,7 +246,7 @@ int main() {
 				logs.LSM_times.push_back(logtime);
 				logs.LSM_modes.push_back(mode);
 #ifndef SAVE_IMGS_ //IMGのログを残さないとき，ログ用のVectorの先頭を削除する
-				if (logs.LSM_times.size()>maxlogsize)
+				if (logs.LSM_times.size()>cyclebuffersize)
 				{
 					logs.LSM_times.erase(logs.LSM_times.begin(), logs.LSM_times.begin() + 1);
 					logs.LSM_modes.erase(logs.LSM_modes.begin(), logs.LSM_modes.begin() + 1);
@@ -257,9 +271,9 @@ int main() {
 
 	//スレッドの停止
 	if (thr1.joinable())thr1.join();
-	if (thr2.joinable())thr2.join();
-	if (thr3.joinable())thr3.join();
-	if (thr4.joinable())thr4.join();
+	//if (thr2.joinable())thr2.join();
+	//if (thr3.joinable())thr3.join();
+	//if (thr4.joinable())thr4.join();
 	if (thr5.joinable())thr5.join();
 
 	//カメラの停止，RS232Cの切断
@@ -335,14 +349,20 @@ void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
 	cv::Mat temp = zero.clone();
 	while (*flg)
 	{
+#ifdef SAVE_IMGS_
+		takepicid = in_imgs_saveid;
+#endif // SAVE_IMG
+#ifndef SAVE_IMGS_
+		takepicid = in_imgs_saveid % cyclebuffersize;
+#endif // !SAVE_IMGS
 		QueryPerformanceCounter(&takestart);
 		cam->captureFrame(temp.data);
 		{
 			//cv::AutoLock lock(mutex);
-			in_imgs[in_imgs_saveid] = temp.clone();
+			in_imgs[takepicid] = temp.clone();
 			//in_img_now = temp.clone();
 		}
-		lsm->processflgs[in_imgs_saveid] = true;
+		lsm->processflgs[takepicid] = true;
 		in_imgs_saveid++;
 		QueryPerformanceCounter(&takeend);
 		taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
@@ -363,7 +383,12 @@ void ShowLogs(bool* flg) {
 		if (in_imgs_saveid>3)
 		{
 			//cv::AutoLock lock(mutex);
-			cv::imshow("img", in_imgs[in_imgs_saveid-3]);
+#ifdef SAVE_IMGS
+			cv::imshow("img", in_imgs[in_imgs_saveid - 3]);
+#endif // SAVE_IMGS
+#ifndef SAVE_IMGS
+			cv::imshow("img", in_imgs[(in_imgs_saveid - 3) % cyclebuffersize]);
+#endif // !SAVE_IMGS
 		}		
 		int key = cv::waitKey(1);
 		if (key == 'q') *flg = false;
@@ -470,20 +495,23 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 	//画像の格納
 	{
 		//cv::AutoLock lock(mutex);
-		lsm->in_img = in_imgs[in_imgs_saveid-1].clone();
+#ifdef SAVE_IMGS_
+		lsm->in_img = in_imgs[in_imgs_saveid - 1].clone();
+#endif // SAVE_IMGS_
+#ifndef SAVE_IMGS_
+		lsm->in_img = in_imgs[(in_imgs_saveid - 1)%cyclebuffersize].clone();
+#endif // !SAVE_IMGS_
 	}
-	lsm->processcnt++;
+	
 	if (lsm->in_img.data!=NULL)
 	{
 		//参照面の輝度重心の検出
 		lsm->in_img.copyTo(lsm->ref_arc, lsm->mask_refarc);
 		if (outformat == "Bayer2Color")
 		{
-			cv::inRange(lsm->ref_arc, color_thr_min, color_thr_max, lsm->ref_arc);
-			cv::findNonZero(lsm->ref_arc(roi_ref), refpts);
+			cv::inRange(lsm->ref_arc, color_thr_min, color_thr_max, lsm->ref_arc_ranged);
+			cv::findNonZero(lsm->ref_arc_ranged(roi_ref), refpts);
 			refmass = 0, refmomx = 0,refmomy = 0;
-			colorstep = lsm->ref_arc.step;
-			colorelem = lsm->ref_arc.elemSize();
 			for (size_t i = 0; i < refpts.size(); i++)
 			{
 				refx = refpts[i].x + roi_ref.x;
@@ -507,26 +535,26 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 		deg = atan2(lsm->rp[1] - lsm->ref_center[1], lsm->rp[0] - lsm->ref_center[0]);
 		if (outformat == "Bayer2Color")
 		{
-			cv::inRange(lsm->lsm_laser, color_thr_min, color_thr_max, lsm->lsm_laser);
-			cv::findNonZero(lsm->lsm_laser(roi_lsm), lsm->allbps);
-			for (size_t i = 0; i < lsm->allbps.size(); i++) { lsm->allbps[i] += cv::Point(roi_lsm.x, roi_lsm.y); }
+			cv::inRange(lsm->lsm_laser, color_thr_min, color_thr_max, lsm->lsm_laser_ranged);
+			cv::findNonZero(lsm->lsm_laser_ranged, lsm->allbps);
+			//for (size_t i = 0; i < lsm->allbps.size(); i++) { lsm->allbps[i] += cv::Point(roi_lsm.x, roi_lsm.y); }
 			//ここで同心円状に輝度重心を取得
 			for (int r = rstart; r < rends; r++)
 			{
 				lsmmass= 0, lsmmomx= 0, lsmmomy = 0;
-				forend = (int)(M_PI * 2 * r * dtheta / 360);
+				forend = (unsigned int)(M_PI * 2 * r * dtheta / 360);
 				for (size_t j = 0; j < forend; j++)
 				{
-					cogx = (int)(width / 2 * (double)r * cos((double)j / r + deg - dtheta / 2 / 180 * M_PI));
-					cogy = (int)(height / 2 * (double)r * sin((double)j / r + deg - dtheta / 2 / 180 * M_PI));
-					if ((int)lsm->lsm_laser.data[cogy*colorstep*cogx*colorelem]>0)
+					cogx = (unsigned int)(width / 2 + (double)r * cos((double)j / r + deg - dtheta / 2 / 180 * M_PI));
+					cogy = (unsigned int)(height / 2 + (double)r * sin((double)j / r + deg - dtheta / 2 / 180 * M_PI));
+					if ((int)lsm->lsm_laser_ranged.data[cogy * monostep + cogx * monoelem]>0)
 					{
-						lsmmass += lsm->lsm_laser.data[cogy * colorstep * cogx * colorelem];
-						lsmmomx += (double)lsm->lsm_laser.data[cogy * colorstep * cogx * colorelem] * cogx;
-						lsmmomy += (double)lsm->lsm_laser.data[cogy * colorstep * cogx * colorelem] * cogy;
+						lsmmass += lsm->lsm_laser.data[cogy * colorstep + cogx * colorelem+2];
+						lsmmomx += (double)lsm->lsm_laser.data[cogy * colorstep + cogx * colorelem+2] * cogx;
+						lsmmomy += (double)lsm->lsm_laser.data[cogy * colorstep + cogx * colorelem+2] * cogy;
 					}
 				}
-				if (lsmmass>0){lsm->bps.push_back(cv::Point(lsmmomx / lsmmass, lsmmomy / lsmmass));}
+				if (lsmmass>0){lsm->bps.emplace_back(cv::Point(lsmmomx / lsmmass, lsmmomy / lsmmass));}
 			}
 		}
 		else
@@ -554,10 +582,9 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 		//理想ピクセル座標系に変換
 		for (size_t i = 0; i < lsm->bps.size(); i++)
 		{
-			cv::Point2f idpix;
 			idpix.x = lsm->det * ((lsm->bps[i].x - lsm->distortion[0]) - lsm->stretch_mat[1] * (lsm->bps[i].y- lsm->distortion[1]));
 			idpix.y = lsm->det * (-lsm->stretch_mat[2] * (lsm->bps[i].x - lsm->distortion[0]) + lsm->stretch_mat[0] * (lsm->bps[i].y - lsm->distortion[1]));
-			lsm->idpixs.push_back(idpix);
+			lsm->idpixs.emplace_back(idpix);
 		}
 
 		//理想ピクセル座標->直線の式とレーザ平面から輝点三次元座標の計算
@@ -569,14 +596,19 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 			w = lsm->map_coefficient[0] + lsm->map_coefficient[1] * pow(phi, 2) +
 				lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
 			lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
-			lsm->campts.emplace_back((cv::Mat_<double>(1, 3) << lambda * u, lambda* v, lambda* w));
+			//lsm->campts.emplace_back((cv::Mat_<double>(1, 3) << lambda * u, lambda* v, lambda* w));
+			calcpt[0] = lambda * u;
+			calcpt[1] = lambda * v;
+			calcpt[2] = lambda * w;
+			lsm->campts.emplace_back(calcpt);
 		}
 	}
 	//QueryPerformanceCounter(&lsmend);
 	//lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 	//cout << lsmtime << endl;
-	logs->LSM_pts.push_back(lsm->campts);
+	logs->LSM_pts.emplace_back(lsm->campts);
 	rps = { lsm->rp[0],lsm->rp[1] };
-	logs->LSM_rps.push_back(rps);
+	logs->LSM_rps.emplace_back(rps);
+	lsm->processcnt++;
 	return 0;
 }

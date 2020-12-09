@@ -26,22 +26,25 @@ struct LSM
 	cv::Mat mask_refarc;
 	cv::Mat mask_lsm;
 	cv::Mat ref_arc;
+	cv::Mat ref_arc_ranged;
 	cv::Mat lsm_laser;
+	cv::Mat lsm_laser_ranged;
 
 	//ÉpÉâÉÅÅ[É^
 	long long processcnt;
-	double rp[2];
+	int buffersize;
+	float rp[2];
 	vector<cv::Point> bps;
 	vector<cv::Point> allbps;
 	vector<cv::Point2f> idpixs;
-	vector<cv::Mat> campts;
+	vector<vector<double>> campts;
 	vector<bool> processflgs;
 };
 
 struct Logs
 {
 	vector<double> LSM_times;
-	vector<vector<cv::Mat>> LSM_pts;
+	vector<vector<vector<double>>> LSM_pts;
 	vector<vector<double>> LSM_rps;
 	vector<char> LSM_modes;
 };

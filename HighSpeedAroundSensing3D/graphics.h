@@ -15,7 +15,7 @@
 #include <queue>
 #include "params.h"
 
-extern void drawGL(Logs* logs, bool* flg);
+extern void drawGL(LSM* lsm, Logs* logs, bool* flg);
 
 
 #endif // GRAPHICS_H

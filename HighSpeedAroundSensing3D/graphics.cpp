@@ -38,9 +38,15 @@ queue<cv::Mat> vertices;
 queue<vector<float>> colors;
 vector<float> color;
 vector<cv::Mat> vertices_vec;
-int maxvertsize = 1000;
+const int maxvertsize = 1000;
 double safe_area = 1.0, danger_area = 0.5;
 double dist;
+float vertices_example[100][100][3];
+float colors_example[100][100][3];
+float Time=0;
+double verts[maxvertsize][300][3] = {0};
+float colos[maxvertsize][300][3] = {0};
+int savecnt = 0;
 
 //プロトタイプ宣言
 static void setfov(GLFWwindow* window, double x, double y);
@@ -50,7 +56,7 @@ static int readShaderSource(GLuint shader, const char* file);
 
 
 //OpenGLの初期化
-void drawGL(Logs *logs, bool* flg) {
+void drawGL(LSM *lsm, Logs *logs, bool* flg) {
     //GLFWの初期化
     if (glfwInit() == GL_FALSE)
     {
@@ -106,15 +112,18 @@ void drawGL(Logs *logs, bool* flg) {
     //頂点バッファオブジェクト
     glGenBuffers(1, &vbo);//vbp作成
     glBindBuffer(GL_ARRAY_BUFFER, vbo);//vboのバインド，これからの処理の対象
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), nullptr, GL_DYNAMIC_DRAW);//vboのデータ領域の確保
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);//vertex shader内の引数の指定indexに合うように変更する
+    //cout << sizeof(vertices_example) << " " << sizeof(vertices_example[0][0][0]) << sizeof(vertices) <<endl;
+    //glBufferData(GL_ARRAY_BUFFER, sizeof(vertices_example), nullptr, GL_DYNAMIC_DRAW);//vboのデータ領域の確保
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), nullptr, GL_DYNAMIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, 0, 0);//vertex shader内の引数の指定indexに合うように変更する
     glEnableVertexAttribArray(0);//indexの値のattribute変数の有効化
     //glEnableVertexArrayAttrib(vao, 0); //上の関数の代わりにこれでもいい
 
     //色バッファオブジェクト
     glGenBuffers(1, &cbo);
     glBindBuffer(GL_ARRAY_BUFFER, cbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(colors), nullptr, GL_DYNAMIC_DRAW);
+    //glBufferData(GL_ARRAY_BUFFER, sizeof(colors_example), nullptr, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(colos), nullptr, GL_DYNAMIC_DRAW);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(1);
     //glEnableVertexArrayAttrib(vao, 1);
@@ -137,25 +146,31 @@ void drawGL(Logs *logs, bool* flg) {
     while (glfwWindowShouldClose(window) == GL_FALSE && *flg)
     {
         //点群の位置更新
-        vector<cv::Mat> last_pts = logs->LSM_pts[logs->LSM_pts.size() - 1];
+        vector<vector<double>> last_pts = logs->LSM_pts[(lsm->processcnt - 1)%lsm->buffersize];
         for (size_t i = 0; i < last_pts.size(); i++)
         {
-            vertices.emplace(last_pts[i]);
-            dist = pow(pow((float)last_pts[i].data[0] * 0.001, 2) + pow((float)last_pts[i].data[1] * 0.001, 2), 0.5);
-            color = vector<float>(3, 0);
-            if (dist > safe_area && !hide_red) color[0] = 1.0;
-            else if (dist <= safe_area && dist > danger_area && !hide_green) color[1] = 1.0;
-            else if (dist <= danger_area && !hide_blue) color[2] = 1.0;
-            colors.emplace(color);
-        }
-        if (vertices.size()>maxvertsize)
-        {
-            for (size_t j = 0; j < vertices.size()-maxvertsize; j++)
-            {
-                vertices.pop();
-                colors.pop();
+            //vertices.emplace(last_pts[i]*0.001);
+            verts[savecnt][i][0] = last_pts[i][0] * 0.001;
+            verts[savecnt][i][1] = last_pts[i][1] * 0.001;
+            verts[savecnt][i][2] = last_pts[i][2] * 0.001;
+            dist = hypot(verts[savecnt][i][0], verts[savecnt][i][1]);
+            if (dist > safe_area && !hide_red) {
+                colos[savecnt][i][0] = 1.0;
+                colos[savecnt][i][1] = 0.0;
+                colos[savecnt][i][2] = 0.0;
+            }
+            else if (dist <= safe_area && dist > danger_area && !hide_green) {
+                colos[savecnt][i][1] = 1.0;
+                colos[savecnt][i][0] = 0.0;
+                colos[savecnt][i][2] = 0.0;
+            }
+            else if (dist <= danger_area && !hide_blue) {
+                colos[savecnt][i][2] = 1.0;
+                colos[savecnt][i][0] = 0.0;
+                colos[savecnt][i][1] = 0.0;
             }
         }
+        savecnt = (savecnt + 1) % maxvertsize;
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -201,9 +216,10 @@ void drawGL(Logs *logs, bool* flg) {
         
         //点群の位置と色を更新
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), &vertices.front()); //VBO内の点群の位置の更新
+        //glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices_example), vertices_example); //VBO内の点群の位置の更新
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verts), verts);
         glBindBuffer(GL_ARRAY_BUFFER, cbo);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(colors), &colors.front());//VBO内の色を更新
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(colos), colos);//VBO内の色を更新
         glBindVertexArray(vao);//VBOでの点群位置と色更新をまとめたVAOをバインドして実行
         glDrawArrays(GL_POINTS, 0, 100 * 100);//実際の描画
         glBindVertexArray(0);//VBOのアンバインド
@@ -234,6 +250,7 @@ void drawGL(Logs *logs, bool* flg) {
 
 
         glfwSwapBuffers(window);//ダブルバッファの入れ替え，これを行うことで画面が一部更新したもので一部更新されていないなどのがたつきをなくせる
+        Time += 0.01;
     }
 
     //vao,vboの消去
