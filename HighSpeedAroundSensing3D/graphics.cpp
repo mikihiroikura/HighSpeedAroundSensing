@@ -245,6 +245,11 @@ void drawGL(LSM *lsm, Logs *logs, bool* flg) {
 
         glfwPollEvents(); //マウスイベントを取り出し記録
 
+        //ここまでの時間計測
+        QueryPerformanceCounter(&glend);
+        gltime = (double)(glend.QuadPart - glstart.QuadPart) / glfreq.QuadPart;
+        cout << "openGL time: " << gltime << endl;
+
         //start imgui
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -252,7 +257,8 @@ void drawGL(LSM *lsm, Logs *logs, bool* flg) {
 
         ImGui::SetNextWindowSize(ImVec2(320, 300), ImGuiCond_Once);
         ImGui::Begin("hello world");
-        ImGui::Text("This is useful text");
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+        ImGui::Text("Processing time %.3f ms", gltime * 1000);
         hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem); //IMGUI上のWindowでのカーソル処理時のフラグを立てる
         ImGui::Checkbox("Hide Red", &hide_red);
         ImGui::Checkbox("Hide Green", &hide_green);
@@ -270,9 +276,7 @@ void drawGL(LSM *lsm, Logs *logs, bool* flg) {
 
         glfwSwapBuffers(window);//ダブルバッファの入れ替え，これを行うことで画面が一部更新したもので一部更新されていないなどのがたつきをなくせる
 
-        QueryPerformanceCounter(&glend);
-        gltime = (double)(glend.QuadPart - glstart.QuadPart) / glfreq.QuadPart;
-        cout << "openGL time: " << gltime << endl;
+        
     }
 
     //vao,vboの消去

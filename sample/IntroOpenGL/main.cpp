@@ -12,6 +12,7 @@
 #include "imgui/imgui_impl_glfw.h"
 #include <glm/gtc/matrix_transform.hpp> 
 #include <glm/gtx/transform.hpp>
+#include <Windows.h>
 
 #pragma warning(disable:4996)
 
@@ -51,11 +52,18 @@ float pointsize = 2.5;
 glm::mat4 mvp, Model, View, Projection;
 GLint matlocation;
 
+//時間計測用変数
+LARGE_INTEGER glstart, glend, glfreq;
+double gltime = 0;
+
 static void setfov(GLFWwindow* window, double x, double y);
 int readShaderSource(GLuint shader, const char* file);
 
 
 int main() {
+    //時間計測用変数の初期化
+    QueryPerformanceFrequency(&glfreq);
+
     //GLFWの初期化
     if (glfwInit() == GL_FALSE)
     {
@@ -160,6 +168,9 @@ int main() {
     //ここにループを書く
     while (glfwWindowShouldClose(window) == GL_FALSE)
     {
+        //時間計測開始
+        QueryPerformanceCounter(&glstart);
+
         //点群の位置と色の更新
         for (size_t i = 0; i < 100; i++)
         {
@@ -249,6 +260,10 @@ int main() {
 
         glfwPollEvents(); //マウスイベントを取り出し記録
 
+        QueryPerformanceCounter(&glend);
+        gltime = (double)(glend.QuadPart - glstart.QuadPart) / glfreq.QuadPart;
+        //cout << "openGL time: " << gltime << endl;
+
         //start imgui
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -256,7 +271,8 @@ int main() {
 
         ImGui::SetNextWindowSize(ImVec2(320, 300), ImGuiCond_Once);
         ImGui::Begin("hello world");
-        ImGui::Text("This is useful text");
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+        ImGui::Text("Processing time %.3f ms", gltime*1000);
         hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem); //IMGUI上のWindowでのカーソル処理時のフラグを立てる
         ImGui::Checkbox("Hide Red", &hide_red);
         ImGui::Checkbox("Hide Green", &hide_green);
