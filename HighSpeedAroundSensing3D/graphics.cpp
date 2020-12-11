@@ -5,6 +5,7 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 
+
 using namespace std;
 
 // constants
@@ -43,10 +44,13 @@ double safe_area = 1.0, danger_area = 0.5;
 double dist;
 float vertices_example[100][100][3];
 float colors_example[100][100][3];
-float Time=0;
 double verts[maxvertsize][300][3] = {0};
 float colos[maxvertsize][300][3] = {0};
 int savecnt = 0;
+
+//時間計測用変数
+LARGE_INTEGER glstart, glend, glfreq;
+double gltime = 0;
 
 //プロトタイプ宣言
 static void setfov(GLFWwindow* window, double x, double y);
@@ -57,6 +61,9 @@ static int readShaderSource(GLuint shader, const char* file);
 
 //OpenGLの初期化
 void drawGL(LSM *lsm, Logs *logs, bool* flg) {
+    //時間計測用変数の初期化
+    QueryPerformanceFrequency(&glfreq);
+
     //GLFWの初期化
     if (glfwInit() == GL_FALSE)
     {
@@ -145,6 +152,9 @@ void drawGL(LSM *lsm, Logs *logs, bool* flg) {
     //ここにループ処理を書く
     while (glfwWindowShouldClose(window) == GL_FALSE && *flg)
     {
+        //時間計測開始
+        QueryPerformanceCounter(&glstart);
+
         //点群の位置更新
         vector<vector<double>> last_pts = logs->LSM_pts[(lsm->processcnt - 1)%lsm->buffersize];
         for (size_t i = 0; i < last_pts.size(); i++)
@@ -250,7 +260,10 @@ void drawGL(LSM *lsm, Logs *logs, bool* flg) {
 
 
         glfwSwapBuffers(window);//ダブルバッファの入れ替え，これを行うことで画面が一部更新したもので一部更新されていないなどのがたつきをなくせる
-        Time += 0.01;
+
+        QueryPerformanceCounter(&glend);
+        gltime = (double)(glend.QuadPart - glstart.QuadPart) / glfreq.QuadPart;
+        cout << "openGL time: " << gltime << endl;
     }
 
     //vao,vboの消去

@@ -13,6 +13,7 @@
 #include <glm/gtc/matrix_transform.hpp> 
 #include <glm/gtx/transform.hpp>
 #include <queue>
+#include <Windows.h>
 #include "params.h"
 
 extern void drawGL(LSM* lsm, Logs* logs, bool* flg);
