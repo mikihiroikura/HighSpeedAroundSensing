@@ -91,7 +91,7 @@ int colorstep=width*3, colorelem =3;
 int monostep = width, monoelem = 1;
 double refmass, refmomx, refmomy;
 int refx, refy;
-int rstart = 104, rends=432;
+const int rstart = 104, rends=432;
 unsigned int forend, cogx, cogy;
 double lsmmass, lsmmomx, lsmmomy;
 double dtheta = 30;
@@ -104,6 +104,10 @@ int cyclebuffersize = 100;
 LARGE_INTEGER lsmstart, lsmend, takestart, takeend, arstart, arend, showstart, showend;
 double taketime = 0, lsmtime = 0, artime = 0, showtime = 0;
 double lsmtime_a, lsmtime_b, lsmtime_c, lsmtime_d;
+/// 光切断の別パターンの計算
+unsigned int r_calc;
+double lsmmass_r[rends - rstart] = { 0 }, lsmmomx_r[rends - rstart] = { 0 }, lsmmomy_r[rends - rstart] = { 0 };
+
 
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
@@ -503,10 +507,10 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 	if (lsm->in_img.data!=NULL)
 	{
 		//参照面の輝度重心の検出
-		lsm->in_img.copyTo(lsm->ref_arc, lsm->mask_refarc);
+		lsm->in_img(roi_ref).copyTo(lsm->ref_arc, lsm->mask_refarc(roi_ref));
 #ifdef OUT_COLOR_
 		cv::inRange(lsm->ref_arc, color_thr_min, color_thr_max, lsm->ref_arc_ranged);
-		cv::findNonZero(lsm->ref_arc_ranged(roi_ref), refpts);
+		cv::findNonZero(lsm->ref_arc_ranged, refpts);
 		refmass = 0, refmomx = 0, refmomy = 0;
 		for (size_t i = 0; i < refpts.size(); i++)
 		{
@@ -554,6 +558,21 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 			}
 			if (lsmmass > 0) { lsm->bps.emplace_back(cv::Point(lsmmomx / lsmmass, lsmmomy / lsmmass)); }
 		}
+		//for (const auto& pts: lsm->allbps)
+		//{
+		//	r_calc = (unsigned int)hypot(pts.x - lsm->ref_center[0], pts.y - lsm->ref_center[1]);
+		//	lsmmass_r[r_calc] += lsm->lsm_laser.data[pts.y * colorstep + pts.x * colorelem + 2];
+		//	lsmmomx_r[r_calc] += (double)lsm->lsm_laser.data[pts.y * colorstep + pts.x * colorelem + 2] * pts.x;
+		//	lsmmomy_r[r_calc] += (double)lsm->lsm_laser.data[pts.y * colorstep + pts.x * colorelem + 2] * pts.y;
+		//}
+		//for (size_t rs = 0; rs < rends-rstart; rs++)
+		//{
+		//	if (lsmmass_r[rs]>0)
+		//	{
+		//		lsm->bps.emplace_back(cv::Point(lsmmomx_r[rs] / lsmmass_r[rs], lsmmomy_r[rs] / lsmmass_r[rs]));
+		//		lsmmass_r[rs] = 0, lsmmomx_r[rs] = 0, lsmmomy_r[rs] = 0;
+		//	}
+		//}
 #endif // OUT_COLOR_
 #ifdef OUT_MONO_
 		cv::threshold(lsm->lsm_laser, lsm->lsm_laser, mono_thr, 255, cv::THRESH_BINARY);

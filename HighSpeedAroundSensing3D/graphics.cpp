@@ -164,20 +164,29 @@ void drawGL(LSM *lsm, Logs *logs, bool* flg) {
             verts[savecnt][i][1] = last_pts[i][1] * 0.001;
             verts[savecnt][i][2] = last_pts[i][2] * 0.001;
             dist = hypot(verts[savecnt][i][0], verts[savecnt][i][1]);
-            if (dist > safe_area && !hide_red) {
+            if (dist > safe_area) {
+                colos[savecnt][i][1] = 0.0;
+                colos[savecnt][i][2] = 0.0;
+                if (hide_red) colos[savecnt][i][0] = 0.0;
+                else colos[savecnt][i][0] = 1.0;
+            }
+            else if (dist <= safe_area && dist > danger_area) {
+                colos[savecnt][i][0] = 0.0;
+                colos[savecnt][i][2] = 0.0;
+                if (hide_green) colos[savecnt][i][1] = 0.0;
+                else colos[savecnt][i][1] = 1.0;
+            }
+            else if (dist <= danger_area) {
+                colos[savecnt][i][0] = 0.0;
+                colos[savecnt][i][1] = 0.0;
+                if (hide_blue) colos[savecnt][i][2] = 0.0;
+                else colos[savecnt][i][2] = 1.0;
+            }
+            else
+            {
                 colos[savecnt][i][0] = 1.0;
-                colos[savecnt][i][1] = 0.0;
-                colos[savecnt][i][2] = 0.0;
-            }
-            else if (dist <= safe_area && dist > danger_area && !hide_green) {
                 colos[savecnt][i][1] = 1.0;
-                colos[savecnt][i][0] = 0.0;
-                colos[savecnt][i][2] = 0.0;
-            }
-            else if (dist <= danger_area && !hide_blue) {
                 colos[savecnt][i][2] = 1.0;
-                colos[savecnt][i][0] = 0.0;
-                colos[savecnt][i][1] = 0.0;
             }
         }
         savecnt = (savecnt + 1) % maxvertsize;

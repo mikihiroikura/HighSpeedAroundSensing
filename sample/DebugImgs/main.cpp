@@ -35,13 +35,17 @@ int main() {
 		video.retrieve(image);
 		image.copyTo(imageCopy);
 		image.copyTo(imageCopy2);
-		cv::Rect roi_ref(423 - 34, 397 - 34, 34 * 2, 34 * 2);
+		cv::Rect roi_ref(446 - 34, 401 - 34, 34 * 2, 34 * 2);
 
 		mask_lsm = cv::Mat(896, 896, CV_8UC3, cv::Scalar::all(0));
 		cv::circle(mask_lsm, cv::Point(448, 448), 430, cv::Scalar::all(255), -1);
 		cv::circle(mask_lsm, cv::Point(423, 397), 34+20, cv::Scalar::all(0), -1);
 
+		cv::Mat mask_ref= cv::Mat(896, 896, CV_8UC3, cv::Scalar::all(0));
+		cv::circle(mask_ref, cv::Point(446, 401), 34, cv::Scalar::all(255), -1);
+
 		imageCopy2.copyTo(rei, mask_lsm);
+		image(roi_ref).copyTo(rei2, mask_ref(roi_ref));
 
 		cv::cvtColor(imageCopy2, imageCopy2, CV_BGR2GRAY);
 		cv::HoughCircles(imageCopy2, circles, CV_HOUGH_GRADIENT, 2, 100, 200, 100, 10, 50);
