@@ -37,7 +37,7 @@ function laserparams_imterpolate()
 end
 
 %デバッグ
-%plot(sfs{1},[xr,yr], All_planeparams(:,1));
+%plot(sfs{1},[xr,yr], All_planeparams(:,1)); %%論文用の図はこれ
 %zlim([min(All_planeparams(:,1)) max(All_planeparams(:,1))])
 
 % 補間の確認
