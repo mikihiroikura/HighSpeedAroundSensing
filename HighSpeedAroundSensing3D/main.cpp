@@ -52,7 +52,7 @@ cv::Mat in_img_now;
 vector<cv::Mat> in_imgs;
 long long in_imgs_saveid = 0;
 cv::Mat full, zero;
-int takepicid;
+int takepicid = 0;
 /// 時間に関する変数
 int timeout = 10;
 LARGE_INTEGER freq, start;
@@ -99,15 +99,15 @@ double deg;
 vector<double> calcpt(3, 0);
 cv::Point2f idpix;
 /// ログに関する変数
-int cyclebuffersize = 100;
+int cyclebuffersize = 10;
 //デバッグ用変数
 LARGE_INTEGER lsmstart, lsmend, takestart, takeend, arstart, arend, showstart, showend;
 double taketime = 0, lsmtime = 0, artime = 0, showtime = 0;
 double lsmtime_a, lsmtime_b, lsmtime_c, lsmtime_d;
 /// 光切断の別パターンの計算
 unsigned int r_calc;
+//vector<double> lsmmass_r(rends - rstart, 0), lsmmomx_r(rends - rstart, 0), lsmmomy_r(rends - rstart, 0);
 double lsmmass_r[rends - rstart] = { 0 }, lsmmomx_r[rends - rstart] = { 0 }, lsmmomy_r[rends - rstart] = { 0 };
-
 
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
@@ -218,7 +218,7 @@ int main() {
 	/// 1000fpsで画像を格納し続けるスレッド
 	thread thr1(TakePicture, &cam, &flg, &lsm);
 	/// 現在の画像をPCに出力して見えるようするスレッド
-	//thread thr2(ShowLogs, &flg);
+	thread thr2(ShowLogs, &flg);
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
 	//thread thr3(DetectAR, &flg);
 	/// DDMotorにコマンドを送信するスレッド
@@ -237,15 +237,15 @@ int main() {
 			if (lsm.processflgs[in_imgs_saveid - 1])
 			{
 				CalcLSM(&lsm, &logs);
-				if (!QueryPerformanceCounter(&end)) { return 0; }
+				/*if (!QueryPerformanceCounter(&end)) { return 0; }
 				logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
-				logs.LSM_times.push_back(logtime);
-				logs.LSM_modes.push_back(mode);
+				logs.LSM_times.push_back(logtime);*/
+				/*logs.LSM_modes.push_back(mode);*/
 #ifndef SAVE_IMGS_ //IMGのログを残さないとき，ログ用のVectorの先頭を削除する
-				if (logs.LSM_times.size()>cyclebuffersize)
+				if (logs.LSM_pts.size()>cyclebuffersize)
 				{
-					logs.LSM_times.erase(logs.LSM_times.begin(), logs.LSM_times.begin() + 1);
-					logs.LSM_modes.erase(logs.LSM_modes.begin(), logs.LSM_modes.begin() + 1);
+					/*logs.LSM_times.erase(logs.LSM_times.begin(), logs.LSM_times.begin() + 1);
+					logs.LSM_modes.erase(logs.LSM_modes.begin(), logs.LSM_modes.begin() + 1);*/
 					logs.LSM_pts.erase(logs.LSM_pts.begin(), logs.LSM_pts.begin() + 1);
 					logs.LSM_rps.erase(logs.LSM_rps.begin(), logs.LSM_rps.begin() + 1);
 				}
@@ -256,8 +256,8 @@ int main() {
 		
 		
 		//時刻の更新
-		if (!QueryPerformanceCounter(&end)) { return 0; }
-		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+		/*if (!QueryPerformanceCounter(&end)) { return 0; }
+		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;*/
 #ifdef SAVE_IMGS_
 		if (logtime > timeout) { flg = false; }
 #endif // SAVE_IMGS_
@@ -267,7 +267,7 @@ int main() {
 
 	//スレッドの停止
 	if (thr1.joinable())thr1.join();
-	//if (thr2.joinable())thr2.join();
+	if (thr2.joinable())thr2.join();
 	//if (thr3.joinable())thr3.join();
 	//if (thr4.joinable())thr4.join();
 	if (thr5.joinable())thr5.join();
@@ -362,7 +362,7 @@ void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
 		in_imgs_saveid++;
 		QueryPerformanceCounter(&takeend);
 		taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
-		while (taketime<0.001)
+		while (taketime < 0.001)
 		{
 			QueryPerformanceCounter(&takeend);
 			taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
@@ -376,7 +376,7 @@ void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
 void ShowLogs(bool* flg) {
 	while (*flg)
 	{
-		QueryPerformanceCounter(&showstart);
+		/*QueryPerformanceCounter(&showstart);*/
 		if (in_imgs_saveid>3)
 		{
 			//cv::AutoLock lock(mutex);
@@ -389,9 +389,9 @@ void ShowLogs(bool* flg) {
 		}		
 		int key = cv::waitKey(1);
 		if (key == 'q') *flg = false;
-		QueryPerformanceCounter(&showend);
+		/*QueryPerformanceCounter(&showend);
 		showtime = (double)(showend.QuadPart - showstart.QuadPart) / freq.QuadPart;
-		//cout << "ShowLogs() time: " << showtime << endl;
+		cout << "ShowLogs() time: " << showtime << endl;*/
 	}
 }
 
@@ -411,7 +411,7 @@ void DetectAR(bool* flg) {
 	calibxml["D"] >> D;
 	while (*flg)
 	{
-		QueryPerformanceCounter(&arstart);
+		//QueryPerformanceCounter(&arstart);
 		//マーカ検出
 		std::vector<int> ids;
 		std::vector<std::vector<cv::Point2f> > corners;
@@ -434,8 +434,8 @@ void DetectAR(bool* flg) {
 			detect_arid0_flgs.push_back(false);
 			cout << "FALSE" << endl;
 		}
-		QueryPerformanceCounter(&arend);
-		artime = (double)(arend.QuadPart - arstart.QuadPart) / freq.QuadPart;
+		/*QueryPerformanceCounter(&arend);
+		artime = (double)(arend.QuadPart - arstart.QuadPart) / freq.QuadPart;*/
 		//cout << "AR time:" << artime << endl;
 	}
 }
@@ -501,9 +501,9 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 		lsm->in_img = in_imgs[(in_imgs_saveid - 1)%cyclebuffersize].clone();
 #endif // !SAVE_IMGS_
 	}
-	QueryPerformanceCounter(&lsmend);
+	/*QueryPerformanceCounter(&lsmend);
 	lsmtime_a = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-	cout << "CalcLSM() getimg time: " << lsmtime_a << endl;
+	cout << "CalcLSM() getimg time: " << lsmtime_a << endl;*/
 	if (lsm->in_img.data!=NULL)
 	{
 		//参照面の輝度重心の検出
@@ -514,14 +514,12 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 		refmass = 0, refmomx = 0, refmomy = 0;
 		for (size_t i = 0; i < refpts.size(); i++)
 		{
-			refx = refpts[i].x + roi_ref.x;
-			refy = refpts[i].y + roi_ref.y;
-			refmass += (double)lsm->ref_arc.data[refy * colorstep + refx * colorelem + 2];
-			refmomx += (double)lsm->ref_arc.data[refy * colorstep + refx * colorelem + 2] * refx;
-			refmomy += (double)lsm->ref_arc.data[refy * colorstep + refx * colorelem + 2] * refy;
+			refmass += (double)lsm->ref_arc.data[refpts[i].y * 66*3 + refpts[i].x * 3 + 2];
+			refmomx += (double)lsm->ref_arc.data[refpts[i].y * 66*3 + refpts[i].x * 3 + 2] * refpts[i].x;
+			refmomy += (double)lsm->ref_arc.data[refpts[i].y * 66*3 + refpts[i].x * 3 + 2] * refpts[i].y;
 		}
-		lsm->rp[0] = refmomx / refmass;
-		lsm->rp[1] = refmomy / refmass;
+		lsm->rp[0] = refmomx / refmass + roi_ref.x;
+		lsm->rp[1] = refmomy / refmass + roi_ref.y;
 #endif // OUT_COLOR
 #ifdef OUT_MONO_
 		cv::threshold(lsm->ref_arc, lsm->ref_arc, mono_thr, 255.0, cv::THRESH_BINARY);
@@ -529,59 +527,76 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 		lsm->rp[0] = mu.m10 / mu.m00 + roi_ref.x;
 		lsm->rp[1] = mu.m01 / mu.m00 + roi_ref.y;
 #endif // OUT_MONO_
-		QueryPerformanceCounter(&lsmend);
+		/*QueryPerformanceCounter(&lsmend);
 		lsmtime_b = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-		cout << "CalcLSM() calcrefpt time: " << lsmtime_b - lsmtime_a << endl;
+		cout << "CalcLSM() calcrefpt time: " << lsmtime_b - lsmtime_a << endl;*/
 
 		//ラインレーザの輝点座標を検出
 		lsm->in_img.copyTo(lsm->lsm_laser, lsm->mask_lsm);
-		deg = atan2(lsm->rp[1] - lsm->ref_center[1], lsm->rp[0] - lsm->ref_center[0]);
+		/*QueryPerformanceCounter(&lsmend);
+		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 #ifdef OUT_COLOR_
 		cv::inRange(lsm->lsm_laser, color_thr_min, color_thr_max, lsm->lsm_laser_ranged);
+		/*QueryPerformanceCounter(&lsmend);
+		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 		cv::findNonZero(lsm->lsm_laser_ranged, lsm->allbps);
-		//for (size_t i = 0; i < lsm->allbps.size(); i++) { lsm->allbps[i] += cv::Point(roi_lsm.x, roi_lsm.y); }
+		/*QueryPerformanceCounter(&lsmend);
+		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 		//ここで同心円状に輝度重心を取得
-		for (int r = rstart; r < rends; r++)
-		{
-			lsmmass = 0, lsmmomx = 0, lsmmomy = 0;
-			forend = (unsigned int)(M_PI * 2 * r * dtheta / 360);
-			for (size_t j = 0; j < forend; j++)
-			{
-				cogx = (unsigned int)(width / 2 + (double)r * cos((double)j / r + deg - dtheta / 2 / 180 * M_PI));
-				cogy = (unsigned int)(height / 2 + (double)r * sin((double)j / r + deg - dtheta / 2 / 180 * M_PI));
-				if ((int)lsm->lsm_laser_ranged.data[cogy * monostep + cogx * monoelem] > 0)
-				{
-					lsmmass += lsm->lsm_laser.data[cogy * colorstep + cogx * colorelem + 2];
-					lsmmomx += (double)lsm->lsm_laser.data[cogy * colorstep + cogx * colorelem + 2] * cogx;
-					lsmmomy += (double)lsm->lsm_laser.data[cogy * colorstep + cogx * colorelem + 2] * cogy;
-				}
-			}
-			if (lsmmass > 0) { lsm->bps.emplace_back(cv::Point(lsmmomx / lsmmass, lsmmomy / lsmmass)); }
-		}
-		//for (const auto& pts: lsm->allbps)
+		//deg = atan2(lsm->rp[1] - lsm->ref_center[1], lsm->rp[0] - lsm->ref_center[0]);
+		//for (int r = rstart; r < rends; r++)
 		//{
-		//	r_calc = (unsigned int)hypot(pts.x - lsm->ref_center[0], pts.y - lsm->ref_center[1]);
-		//	lsmmass_r[r_calc] += lsm->lsm_laser.data[pts.y * colorstep + pts.x * colorelem + 2];
-		//	lsmmomx_r[r_calc] += (double)lsm->lsm_laser.data[pts.y * colorstep + pts.x * colorelem + 2] * pts.x;
-		//	lsmmomy_r[r_calc] += (double)lsm->lsm_laser.data[pts.y * colorstep + pts.x * colorelem + 2] * pts.y;
-		//}
-		//for (size_t rs = 0; rs < rends-rstart; rs++)
-		//{
-		//	if (lsmmass_r[rs]>0)
+		//	lsmmass = 0, lsmmomx = 0, lsmmomy = 0;
+		//	forend = (unsigned int)(M_PI * 2 * r * dtheta / 360);
+		//	for (size_t j = 0; j < forend; j++)
 		//	{
-		//		lsm->bps.emplace_back(cv::Point(lsmmomx_r[rs] / lsmmass_r[rs], lsmmomy_r[rs] / lsmmass_r[rs]));
-		//		lsmmass_r[rs] = 0, lsmmomx_r[rs] = 0, lsmmomy_r[rs] = 0;
+		//		cogx = (unsigned int)(width / 2 + (double)r * cos((double)j / r + deg - dtheta / 2 / 180 * M_PI));
+		//		cogy = (unsigned int)(height / 2 + (double)r * sin((double)j / r + deg - dtheta / 2 / 180 * M_PI));
+		//		if ((int)lsm->lsm_laser_ranged.data[cogy * monostep + cogx * monoelem] > 0)
+		//		{
+		//			lsmmass += lsm->lsm_laser.data[cogy * colorstep + cogx * colorelem + 2];
+		//			lsmmomx += (double)lsm->lsm_laser.data[cogy * colorstep + cogx * colorelem + 2] * cogx;
+		//			lsmmomy += (double)lsm->lsm_laser.data[cogy * colorstep + cogx * colorelem + 2] * cogy;
+		//		}
 		//	}
+		//	if (lsmmass > 0) { lsm->bps.emplace_back(cv::Point(lsmmomx / lsmmass, lsmmomy / lsmmass)); }
 		//}
+		for (const auto& pts: lsm->allbps)
+		{
+			r_calc = (unsigned int)hypot(pts.x - lsm->ref_center[0], pts.y - lsm->ref_center[1]);
+			if (r_calc<rends-rstart)
+			{
+				lsmmass_r[r_calc] += lsm->lsm_laser.data[pts.y * colorstep + pts.x * colorelem + 2];
+				lsmmomx_r[r_calc] += (double)lsm->lsm_laser.data[pts.y * colorstep + pts.x * colorelem + 2] * pts.x;
+				lsmmomy_r[r_calc] += (double)lsm->lsm_laser.data[pts.y * colorstep + pts.x * colorelem + 2] * pts.y;
+			}	
+		}
+		/*QueryPerformanceCounter(&lsmend);
+		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
+		for (int rs = 0; rs < rends-rstart; rs++)
+		{
+			if (lsmmass_r[rs]>0)
+			{
+				lsm->bps.emplace_back(cv::Point(lsmmomx_r[rs] / lsmmass_r[rs], lsmmomy_r[rs] / lsmmass_r[rs]));
+				lsmmass_r[rs] = 0, lsmmomx_r[rs] = 0, lsmmomy_r[rs] = 0;
+			}
+		}
+		/*QueryPerformanceCounter(&lsmend);
+		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 #endif // OUT_COLOR_
 #ifdef OUT_MONO_
 		cv::threshold(lsm->lsm_laser, lsm->lsm_laser, mono_thr, 255, cv::THRESH_BINARY);
 		cv::findNonZero(lsm->lsm_laser(roi_lsm), lsm->bps);
 		for (size_t i = 0; i < lsm->bps.size(); i++) { lsm->bps[i] += cv::Point(roi_lsm.x, roi_lsm.y); }
 #endif // OUT_MONO_
-		QueryPerformanceCounter(&lsmend);
+		/*QueryPerformanceCounter(&lsmend);
 		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;
+		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 		
 		//レーザ平面の法線ベクトルの計算
 		lsm->plane_nml[0] = lsm->pa[0] + lsm->pa[1] * lsm->rp[0] + lsm->pa[2] * lsm->rp[1] + lsm->pa[3] * pow(lsm->rp[0], 2)
@@ -616,6 +631,7 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 			lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
 			//lsm->campts.emplace_back((cv::Mat_<double>(1, 3) << lambda * u, lambda* v, lambda* w));
 			calcpt[0] = lambda * u;
+			//calcpt[1] = lambda * v + 100*sin(lsm->processcnt*0.0099);
 			calcpt[1] = lambda * v;
 			calcpt[2] = lambda * w;
 			lsm->campts.emplace_back(calcpt);
@@ -623,7 +639,7 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 	}
 	QueryPerformanceCounter(&lsmend);
 	lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-	cout << "CalcLSM() calc3dpts time: " << lsmtime-lsmtime_c << endl;
+	/*cout << "CalcLSM() calc3dpts time: " << lsmtime-lsmtime_c << endl;*/
 	cout << "CalcLSM() total time: " << lsmtime << endl;
 	logs->LSM_pts.emplace_back(lsm->campts);
 	rps = { lsm->rp[0],lsm->rp[1] };

@@ -45,7 +45,7 @@ void Stream_callback_func(void* userContext, STREAM_HANDLE streamHandle)
 	if (KYFALSE == copyingDataFlag)
 	{
 		copyingDataFlag = KYTRUE;
-		printf("\rGood callback buffer handle:%X, current index:%d, total frames:%lld        ", streamHandle, buffIndex, totalFrames); //\r‚Í“¯‚¶s‚Ìæ“ª‚É–ß‚é‚±‚Æ‚ğˆÓ–¡‚·‚é
+		//printf("\rGood callback buffer handle:%X, current index:%d, total frames:%lld        ", streamHandle, buffIndex, totalFrames); //\r‚Í“¯‚¶s‚Ìæ“ª‚É–ß‚é‚±‚Æ‚ğˆÓ–¡‚·‚é
 		if (format_callback == "BayerGR8")
 		{
 			memcpy(cvt_img.data, buffData, buffSize);

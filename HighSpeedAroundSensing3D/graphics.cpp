@@ -39,11 +39,9 @@ queue<cv::Mat> vertices;
 queue<vector<float>> colors;
 vector<float> color;
 vector<cv::Mat> vertices_vec;
-const int maxvertsize = 1000;
+const int maxvertsize = 100;
 double safe_area = 1.0, danger_area = 0.5;
 double dist;
-float vertices_example[100][100][3];
-float colors_example[100][100][3];
 double verts[maxvertsize][300][3] = {0};
 float colos[maxvertsize][300][3] = {0};
 int savecnt = 0;
@@ -119,7 +117,7 @@ void drawGL(LSM *lsm, Logs *logs, bool* flg) {
     //頂点バッファオブジェクト
     glGenBuffers(1, &vbo);//vbp作成
     glBindBuffer(GL_ARRAY_BUFFER, vbo);//vboのバインド，これからの処理の対象
-    //cout << sizeof(vertices_example) << " " << sizeof(vertices_example[0][0][0]) << sizeof(vertices) <<endl;
+    cout << sizeof(verts) << endl;
     //glBufferData(GL_ARRAY_BUFFER, sizeof(vertices_example), nullptr, GL_DYNAMIC_DRAW);//vboのデータ領域の確保
     glBufferData(GL_ARRAY_BUFFER, sizeof(verts), nullptr, GL_DYNAMIC_DRAW);
     glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, 0, 0);//vertex shader内の引数の指定indexに合うように変更する
@@ -156,7 +154,8 @@ void drawGL(LSM *lsm, Logs *logs, bool* flg) {
         QueryPerformanceCounter(&glstart);
 
         //点群の位置更新
-        vector<vector<double>> last_pts = logs->LSM_pts[(lsm->processcnt - 1)%lsm->buffersize];
+        vector<vector<double>> last_pts = logs->LSM_pts[(lsm->processcnt - 2)%lsm->buffersize];
+        //vector<vector<double>> last_pts = logs->LSM_pts[0];
         for (size_t i = 0; i < last_pts.size(); i++)
         {
             //vertices.emplace(last_pts[i]*0.001);
