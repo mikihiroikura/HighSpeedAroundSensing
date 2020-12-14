@@ -39,6 +39,7 @@ struct LSM
 	vector<cv::Point2f> idpixs;
 	vector<vector<double>> campts;
 	vector<bool> processflgs;
+	cv::Point bp;
 };
 
 struct Logs
@@ -47,6 +48,8 @@ struct Logs
 	vector<vector<vector<double>>> LSM_pts;
 	vector<vector<double>> LSM_rps;
 	vector<char> LSM_modes;
+	double LSM_pts_array[10][300][3] = {0};
+	double LSM_rps_array[10][3] = { 0 };
 };
 
 #endif // !PARAMETER_H_

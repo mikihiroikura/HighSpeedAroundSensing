@@ -527,6 +527,19 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 		lsm->rp[0] = mu.m10 / mu.m00 + roi_ref.x;
 		lsm->rp[1] = mu.m01 / mu.m00 + roi_ref.y;
 #endif // OUT_MONO_
+		//レーザ平面の法線ベクトルの計算
+		lsm->plane_nml[0] = lsm->pa[0] + lsm->pa[1] * lsm->rp[0] + lsm->pa[2] * lsm->rp[1] + lsm->pa[3] * pow(lsm->rp[0], 2)
+			+ lsm->pa[4] * lsm->rp[0] * lsm->rp[1] + lsm->pa[5] * pow(lsm->rp[1], 2) + lsm->pa[6] * pow(lsm->rp[0], 3)
+			+ lsm->pa[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pa[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
+			+ lsm->pa[9] * pow(lsm->rp[1], 3);
+		lsm->plane_nml[1] = lsm->pb[0] + lsm->pb[1] * lsm->rp[0] + lsm->pb[2] * lsm->rp[1] + lsm->pb[3] * pow(lsm->rp[0], 2)
+			+ lsm->pb[4] * lsm->rp[0] * lsm->rp[1] + lsm->pb[5] * pow(lsm->rp[1], 2) + lsm->pb[6] * pow(lsm->rp[0], 3)
+			+ lsm->pb[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pb[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
+			+ lsm->pb[9] * pow(lsm->rp[1], 3);
+		lsm->plane_nml[2] = lsm->pc[0] + lsm->pc[1] * lsm->rp[0] + lsm->pc[2] * lsm->rp[1] + lsm->pc[3] * pow(lsm->rp[0], 2)
+			+ lsm->pc[4] * lsm->rp[0] * lsm->rp[1] + lsm->pc[5] * pow(lsm->rp[1], 2) + lsm->pc[6] * pow(lsm->rp[0], 3)
+			+ lsm->pc[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pc[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
+			+ lsm->pc[9] * pow(lsm->rp[1], 3);
 		/*QueryPerformanceCounter(&lsmend);
 		lsmtime_b = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 		cout << "CalcLSM() calcrefpt time: " << lsmtime_b - lsmtime_a << endl;*/
@@ -546,24 +559,6 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 		//ここで同心円状に輝度重心を取得
-		//deg = atan2(lsm->rp[1] - lsm->ref_center[1], lsm->rp[0] - lsm->ref_center[0]);
-		//for (int r = rstart; r < rends; r++)
-		//{
-		//	lsmmass = 0, lsmmomx = 0, lsmmomy = 0;
-		//	forend = (unsigned int)(M_PI * 2 * r * dtheta / 360);
-		//	for (size_t j = 0; j < forend; j++)
-		//	{
-		//		cogx = (unsigned int)(width / 2 + (double)r * cos((double)j / r + deg - dtheta / 2 / 180 * M_PI));
-		//		cogy = (unsigned int)(height / 2 + (double)r * sin((double)j / r + deg - dtheta / 2 / 180 * M_PI));
-		//		if ((int)lsm->lsm_laser_ranged.data[cogy * monostep + cogx * monoelem] > 0)
-		//		{
-		//			lsmmass += lsm->lsm_laser.data[cogy * colorstep + cogx * colorelem + 2];
-		//			lsmmomx += (double)lsm->lsm_laser.data[cogy * colorstep + cogx * colorelem + 2] * cogx;
-		//			lsmmomy += (double)lsm->lsm_laser.data[cogy * colorstep + cogx * colorelem + 2] * cogy;
-		//		}
-		//	}
-		//	if (lsmmass > 0) { lsm->bps.emplace_back(cv::Point(lsmmomx / lsmmass, lsmmomy / lsmmass)); }
-		//}
 		for (const auto& pts: lsm->allbps)
 		{
 			r_calc = (unsigned int)hypot(pts.x - lsm->ref_center[0], pts.y - lsm->ref_center[1]);
@@ -581,8 +576,29 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 		{
 			if (lsmmass_r[rs]>0)
 			{
-				lsm->bps.emplace_back(cv::Point(lsmmomx_r[rs] / lsmmass_r[rs], lsmmomy_r[rs] / lsmmass_r[rs]));
+				//lsm->bps.emplace_back(cv::Point(lsmmomx_r[rs] / lsmmass_r[rs], lsmmomy_r[rs] / lsmmass_r[rs]));
+				lsm->bp.x = lsmmomx_r[rs] / lsmmass_r[rs];
+				lsm->bp.y = lsmmomy_r[rs] / lsmmass_r[rs];
 				lsmmass_r[rs] = 0, lsmmomx_r[rs] = 0, lsmmomy_r[rs] = 0;
+
+				//理想ピクセル座標系に変換
+				idpix.x = lsm->det * ((lsm->bp.x - lsm->distortion[0]) - lsm->stretch_mat[1] * (lsm->bp.y - lsm->distortion[1]));
+				idpix.y = lsm->det * (-lsm->stretch_mat[2] * (lsm->bp.x - lsm->distortion[0]) + lsm->stretch_mat[0] * (lsm->bp.y - lsm->distortion[1]));
+
+				//理想ピクセル座標->直線の式とレーザ平面から輝点三次元座標の計算
+				u = idpix.x;
+				v = idpix.y;
+				phi = hypot(u, v);
+				w = lsm->map_coefficient[0] + lsm->map_coefficient[1] * pow(phi, 2) +
+					lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
+				lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
+				calcpt[0] = lambda * u;
+				//calcpt[1] = lambda * v + 100*sin(lsm->processcnt*0.0099);
+				calcpt[1] = lambda * v;
+				calcpt[2] = lambda * w;
+				logs->LSM_pts_array[lsm->processcnt % cyclebuffersize][rs][0] = lambda * u;
+				logs->LSM_pts_array[lsm->processcnt % cyclebuffersize][rs][1] = lambda * v;
+				logs->LSM_pts_array[lsm->processcnt % cyclebuffersize][rs][2] = lambda * w;
 			}
 		}
 		/*QueryPerformanceCounter(&lsmend);
@@ -598,52 +614,42 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 		
-		//レーザ平面の法線ベクトルの計算
-		lsm->plane_nml[0] = lsm->pa[0] + lsm->pa[1] * lsm->rp[0] + lsm->pa[2] * lsm->rp[1] + lsm->pa[3] * pow(lsm->rp[0], 2)
-			+ lsm->pa[4] * lsm->rp[0] * lsm->rp[1] + lsm->pa[5] * pow(lsm->rp[1], 2) + lsm->pa[6] * pow(lsm->rp[0], 3)
-			+ lsm->pa[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pa[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
-			+ lsm->pa[9] * pow(lsm->rp[1], 3);
-		lsm->plane_nml[1] = lsm->pb[0] + lsm->pb[1] * lsm->rp[0] + lsm->pb[2] * lsm->rp[1] + lsm->pb[3] * pow(lsm->rp[0], 2)
-			+ lsm->pb[4] * lsm->rp[0] * lsm->rp[1] + lsm->pb[5] * pow(lsm->rp[1], 2) + lsm->pb[6] * pow(lsm->rp[0], 3)
-			+ lsm->pb[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pb[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
-			+ lsm->pb[9] * pow(lsm->rp[1], 3);
-		lsm->plane_nml[2] = lsm->pc[0] + lsm->pc[1] * lsm->rp[0] + lsm->pc[2] * lsm->rp[1] + lsm->pc[3] * pow(lsm->rp[0], 2)
-			+ lsm->pc[4] * lsm->rp[0] * lsm->rp[1] + lsm->pc[5] * pow(lsm->rp[1], 2) + lsm->pc[6] * pow(lsm->rp[0], 3)
-			+ lsm->pc[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pc[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
-			+ lsm->pc[9] * pow(lsm->rp[1], 3);
+		
 
 		//理想ピクセル座標系に変換
-		for (size_t i = 0; i < lsm->bps.size(); i++)
-		{
-			idpix.x = lsm->det * ((lsm->bps[i].x - lsm->distortion[0]) - lsm->stretch_mat[1] * (lsm->bps[i].y- lsm->distortion[1]));
-			idpix.y = lsm->det * (-lsm->stretch_mat[2] * (lsm->bps[i].x - lsm->distortion[0]) + lsm->stretch_mat[0] * (lsm->bps[i].y - lsm->distortion[1]));
-			lsm->idpixs.emplace_back(idpix);
-		}
+		//for (size_t i = 0; i < lsm->bps.size(); i++)
+		//{
+		//	idpix.x = lsm->det * ((lsm->bps[i].x - lsm->distortion[0]) - lsm->stretch_mat[1] * (lsm->bps[i].y- lsm->distortion[1]));
+		//	idpix.y = lsm->det * (-lsm->stretch_mat[2] * (lsm->bps[i].x - lsm->distortion[0]) + lsm->stretch_mat[0] * (lsm->bps[i].y - lsm->distortion[1]));
+		//	lsm->idpixs.emplace_back(idpix);
+		//}
 
 		//理想ピクセル座標->直線の式とレーザ平面から輝点三次元座標の計算
-		for (size_t i = 0; i < lsm->idpixs.size(); i++)
-		{
-			u = lsm->idpixs[i].x;
-			v = lsm->idpixs[i].y;
-			phi = hypot(u, v);
-			w = lsm->map_coefficient[0] + lsm->map_coefficient[1] * pow(phi, 2) +
-				lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
-			lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
-			//lsm->campts.emplace_back((cv::Mat_<double>(1, 3) << lambda * u, lambda* v, lambda* w));
-			calcpt[0] = lambda * u;
-			//calcpt[1] = lambda * v + 100*sin(lsm->processcnt*0.0099);
-			calcpt[1] = lambda * v;
-			calcpt[2] = lambda * w;
-			lsm->campts.emplace_back(calcpt);
-		}
+		//for (size_t i = 0; i < lsm->idpixs.size(); i++)
+		//{
+		//	u = lsm->idpixs[i].x;
+		//	v = lsm->idpixs[i].y;
+		//	phi = hypot(u, v);
+		//	w = lsm->map_coefficient[0] + lsm->map_coefficient[1] * pow(phi, 2) +
+		//		lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
+		//	lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
+		//	//lsm->campts.emplace_back((cv::Mat_<double>(1, 3) << lambda * u, lambda* v, lambda* w));
+		//	calcpt[0] = lambda * u;
+		//	//calcpt[1] = lambda * v + 100*sin(lsm->processcnt*0.0099);
+		//	calcpt[1] = lambda * v;
+		//	calcpt[2] = lambda * w;
+		//	lsm->campts.emplace_back(calcpt);
+		//}
 	}
 	QueryPerformanceCounter(&lsmend);
 	lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 	/*cout << "CalcLSM() calc3dpts time: " << lsmtime-lsmtime_c << endl;*/
 	cout << "CalcLSM() total time: " << lsmtime << endl;
-	logs->LSM_pts.emplace_back(lsm->campts);
+	/*logs->LSM_pts.emplace_back(lsm->campts);
 	rps = { lsm->rp[0],lsm->rp[1] };
-	logs->LSM_rps.emplace_back(rps);
+	logs->LSM_rps.emplace_back(rps);*/
+	logs->LSM_rps_array[lsm->processcnt % cyclebuffersize][0] = lsm->rp[0];
+	logs->LSM_rps_array[lsm->processcnt % cyclebuffersize][1] = lsm->rp[1];
 	lsm->processcnt++;
 	return 0;
 }
