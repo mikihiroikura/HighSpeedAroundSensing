@@ -623,11 +623,9 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 						//calcpt[1] = lambda * v + 100*sin(lsm->processcnt*0.0099); //デバッグ用
 						calcpt[1] = lambda * v;
 						calcpt[2] = lambda * w;
+						lsm->campts.emplace_back(calcpt);
 					}
 				}
-				/*QueryPerformanceCounter(&lsmend);
-				lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-				std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 #endif // OUT_COLOR_
 #ifdef OUT_MONO_
 				cv::threshold(lsm->lsm_laser, lsm->lsm_laser, mono_thr, 255, cv::THRESH_BINARY);
