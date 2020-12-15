@@ -516,141 +516,147 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 		cv::inRange(lsm->ref_arc, color_thr_min, color_thr_max, lsm->ref_arc_ranged);
 		cv::findNonZero(lsm->ref_arc_ranged, refpts);
 		refmass = 0, refmomx = 0, refmomy = 0;
-		for (size_t i = 0; i < refpts.size(); i++)
+		if (refpts.size()!=0)
 		{
-			refmass += (double)lsm->ref_arc.data[refpts[i].y * 66*3 + refpts[i].x * 3 + 2];
-			refmomx += (double)lsm->ref_arc.data[refpts[i].y * 66*3 + refpts[i].x * 3 + 2] * refpts[i].x;
-			refmomy += (double)lsm->ref_arc.data[refpts[i].y * 66*3 + refpts[i].x * 3 + 2] * refpts[i].y;
-		}
-		lsm->rp[0] = refmomx / refmass + roi_ref.x;
-		lsm->rp[1] = refmomy / refmass + roi_ref.y;
+			for (size_t i = 0; i < refpts.size(); i++)
+			{
+				refmass += (double)lsm->ref_arc.data[refpts[i].y * 66 * 3 + refpts[i].x * 3 + 2];
+				refmomx += (double)lsm->ref_arc.data[refpts[i].y * 66 * 3 + refpts[i].x * 3 + 2] * refpts[i].x;
+				refmomy += (double)lsm->ref_arc.data[refpts[i].y * 66 * 3 + refpts[i].x * 3 + 2] * refpts[i].y;
+			}
+			lsm->rp[0] = refmomx / refmass + roi_ref.x;
+			lsm->rp[1] = refmomy / refmass + roi_ref.y;
 #endif // OUT_COLOR
 #ifdef OUT_MONO_
-		cv::threshold(lsm->ref_arc, lsm->ref_arc, mono_thr, 255.0, cv::THRESH_BINARY);
-		cv::Moments mu = cv::moments(lsm->ref_arc(roi_ref));
-		lsm->rp[0] = mu.m10 / mu.m00 + roi_ref.x;
-		lsm->rp[1] = mu.m01 / mu.m00 + roi_ref.y;
+			cv::threshold(lsm->ref_arc, lsm->ref_arc, mono_thr, 255.0, cv::THRESH_BINARY);
+			cv::Moments mu = cv::moments(lsm->ref_arc(roi_ref));
+			lsm->rp[0] = mu.m10 / mu.m00 + roi_ref.x;
+			lsm->rp[1] = mu.m01 / mu.m00 + roi_ref.y;
 #endif // OUT_MONO_
-		/*QueryPerformanceCounter(&lsmend);
-		lsmtime_b = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-		cout << "CalcLSM() calcrefpt time: " << lsmtime_b - lsmtime_a << endl;*/
+			/*QueryPerformanceCounter(&lsmend);
+			lsmtime_b = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+			cout << "CalcLSM() calcrefpt time: " << lsmtime_b - lsmtime_a << endl;*/
 
-		//ラインレーザの輝点座標を検出
-		lsm->in_img.copyTo(lsm->lsm_laser, lsm->mask_lsm);
-		/*QueryPerformanceCounter(&lsmend);
-		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
+			//ラインレーザの輝点座標を検出
+			lsm->in_img.copyTo(lsm->lsm_laser, lsm->mask_lsm);
+			/*QueryPerformanceCounter(&lsmend);
+			lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+			cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 #ifdef OUT_COLOR_
-		cv::inRange(lsm->lsm_laser(roi_laser), color_thr_min, color_thr_max, lsm->lsm_laser_ranged);
-		/*QueryPerformanceCounter(&lsmend);
-		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
-		cv::findNonZero(lsm->lsm_laser_ranged, lsm->allbps);
-		/*QueryPerformanceCounter(&lsmend);
-		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
-		//ここで同心円状に輝度重心を取得
-		roi_laser_minx = width, roi_laser_maxx = 0, roi_laser_miny = height, roi_laser_maxy = 0;
-		for (const auto& pts : lsm->allbps)
-		{
-			laser_pts.x = pts.x + roi_laser.x;
-			laser_pts.y = pts.y + roi_laser.y;
-			r_calc = (unsigned int)hypot(laser_pts.x - lsm->ref_center[0], laser_pts.y - lsm->ref_center[1]);
-			if (roi_laser_maxx < laser_pts.x) roi_laser_maxx = laser_pts.x;
-			if (roi_laser_minx > laser_pts.x) roi_laser_minx = laser_pts.x;
-			if (roi_laser_maxy < laser_pts.y) roi_laser_maxy = laser_pts.y;
-			if (roi_laser_miny > laser_pts.y) roi_laser_miny = laser_pts.y;
-			if (r_calc < rends - rstart)
+			cv::inRange(lsm->lsm_laser(roi_laser), color_thr_min, color_thr_max, lsm->lsm_laser_ranged);
+			/*QueryPerformanceCounter(&lsmend);
+			lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+			cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
+			cv::findNonZero(lsm->lsm_laser_ranged, lsm->allbps);
+			/*QueryPerformanceCounter(&lsmend);
+			lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+			cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
+			//ここで同心円状に輝度重心を取得
+			if (lsm->allbps.size()!=0)
 			{
-				lsmmass_r[r_calc] += lsm->lsm_laser.data[laser_pts.y * colorstep + laser_pts.x * colorelem + 2];
-				lsmmomx_r[r_calc] += (double)lsm->lsm_laser.data[laser_pts.y * colorstep + laser_pts.x * colorelem + 2] * laser_pts.x;
-				lsmmomy_r[r_calc] += (double)lsm->lsm_laser.data[laser_pts.y * colorstep + laser_pts.x * colorelem + 2] * laser_pts.y;
-			}
-		}
-		if (roi_laser_maxx > width - roi_laser_margin) roi_laser_maxx = width;
-		else roi_laser_maxx += roi_laser_margin;
-		if (roi_laser_minx < roi_laser_margin) roi_laser_minx = 0;
-		else roi_laser_minx -= roi_laser_margin;
-		if (roi_laser_maxy > height - roi_laser_margin) roi_laser_maxy = height;
-		else roi_laser_maxy += roi_laser_margin;
-		if (roi_laser_miny < roi_laser_margin) roi_laser_miny = 0;
-		else roi_laser_miny -= roi_laser_margin;
-		roi_laser.x = roi_laser_minx;
-		roi_laser.width = roi_laser_maxx - roi_laser_minx;
-		roi_laser.y = roi_laser_miny;
-		roi_laser.height = roi_laser_maxy - roi_laser_miny;
-		
+				roi_laser_minx = width, roi_laser_maxx = 0, roi_laser_miny = height, roi_laser_maxy = 0;
+				for (const auto& pts : lsm->allbps)
+				{
+					laser_pts.x = pts.x + roi_laser.x;
+					laser_pts.y = pts.y + roi_laser.y;
+					r_calc = (unsigned int)hypot(laser_pts.x - lsm->ref_center[0], laser_pts.y - lsm->ref_center[1]);
+					if (roi_laser_maxx < laser_pts.x) roi_laser_maxx = laser_pts.x;
+					if (roi_laser_minx > laser_pts.x) roi_laser_minx = laser_pts.x;
+					if (roi_laser_maxy < laser_pts.y) roi_laser_maxy = laser_pts.y;
+					if (roi_laser_miny > laser_pts.y) roi_laser_miny = laser_pts.y;
+					if (r_calc < rends - rstart)
+					{
+						lsmmass_r[r_calc] += lsm->lsm_laser.data[laser_pts.y * colorstep + laser_pts.x * colorelem + 2];
+						lsmmomx_r[r_calc] += (double)lsm->lsm_laser.data[laser_pts.y * colorstep + laser_pts.x * colorelem + 2] * laser_pts.x;
+						lsmmomy_r[r_calc] += (double)lsm->lsm_laser.data[laser_pts.y * colorstep + laser_pts.x * colorelem + 2] * laser_pts.y;
+					}
+				}
+				if (roi_laser_maxx > width - roi_laser_margin) roi_laser_maxx = width;
+				else roi_laser_maxx += roi_laser_margin;
+				if (roi_laser_minx < roi_laser_margin) roi_laser_minx = 0;
+				else roi_laser_minx -= roi_laser_margin;
+				if (roi_laser_maxy > height - roi_laser_margin) roi_laser_maxy = height;
+				else roi_laser_maxy += roi_laser_margin;
+				if (roi_laser_miny < roi_laser_margin) roi_laser_miny = 0;
+				else roi_laser_miny -= roi_laser_margin;
+				roi_laser.x = roi_laser_minx;
+				roi_laser.width = roi_laser_maxx - roi_laser_minx;
+				roi_laser.y = roi_laser_miny;
+				roi_laser.height = roi_laser_maxy - roi_laser_miny;
 
-		/*QueryPerformanceCounter(&lsmend);
-		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
-		for (int rs = 0; rs < rends-rstart; rs++)
-		{
-			if (lsmmass_r[rs]>0)
-			{
-				lsm->bps.emplace_back(cv::Point(lsmmomx_r[rs] / lsmmass_r[rs], lsmmomy_r[rs] / lsmmass_r[rs]));
-				lsmmass_r[rs] = 0, lsmmomx_r[rs] = 0, lsmmomy_r[rs] = 0;
-			}
-		}
-		/*QueryPerformanceCounter(&lsmend);
-		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
+
+				/*QueryPerformanceCounter(&lsmend);
+				lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+				cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
+				for (int rs = 0; rs < rends - rstart; rs++)
+				{
+					if (lsmmass_r[rs] > 0)
+					{
+						lsm->bps.emplace_back(cv::Point(lsmmomx_r[rs] / lsmmass_r[rs], lsmmomy_r[rs] / lsmmass_r[rs]));
+						lsmmass_r[rs] = 0, lsmmomx_r[rs] = 0, lsmmomy_r[rs] = 0;
+					}
+				}
+				/*QueryPerformanceCounter(&lsmend);
+				lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+				cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 #endif // OUT_COLOR_
 #ifdef OUT_MONO_
-		cv::threshold(lsm->lsm_laser, lsm->lsm_laser, mono_thr, 255, cv::THRESH_BINARY);
-		cv::findNonZero(lsm->lsm_laser(roi_lsm), lsm->bps);
-		for (size_t i = 0; i < lsm->bps.size(); i++) { lsm->bps[i] += cv::Point(roi_lsm.x, roi_lsm.y); }
+				cv::threshold(lsm->lsm_laser, lsm->lsm_laser, mono_thr, 255, cv::THRESH_BINARY);
+				cv::findNonZero(lsm->lsm_laser(roi_lsm), lsm->bps);
+				for (size_t i = 0; i < lsm->bps.size(); i++) { lsm->bps[i] += cv::Point(roi_lsm.x, roi_lsm.y); }
 #endif // OUT_MONO_
-		/*QueryPerformanceCounter(&lsmend);
-		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
-		
-		//レーザ平面の法線ベクトルの計算
-		lsm->plane_nml[0] = lsm->pa[0] + lsm->pa[1] * lsm->rp[0] + lsm->pa[2] * lsm->rp[1] + lsm->pa[3] * pow(lsm->rp[0], 2)
-			+ lsm->pa[4] * lsm->rp[0] * lsm->rp[1] + lsm->pa[5] * pow(lsm->rp[1], 2) + lsm->pa[6] * pow(lsm->rp[0], 3)
-			+ lsm->pa[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pa[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
-			+ lsm->pa[9] * pow(lsm->rp[1], 3);
-		lsm->plane_nml[1] = lsm->pb[0] + lsm->pb[1] * lsm->rp[0] + lsm->pb[2] * lsm->rp[1] + lsm->pb[3] * pow(lsm->rp[0], 2)
-			+ lsm->pb[4] * lsm->rp[0] * lsm->rp[1] + lsm->pb[5] * pow(lsm->rp[1], 2) + lsm->pb[6] * pow(lsm->rp[0], 3)
-			+ lsm->pb[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pb[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
-			+ lsm->pb[9] * pow(lsm->rp[1], 3);
-		lsm->plane_nml[2] = lsm->pc[0] + lsm->pc[1] * lsm->rp[0] + lsm->pc[2] * lsm->rp[1] + lsm->pc[3] * pow(lsm->rp[0], 2)
-			+ lsm->pc[4] * lsm->rp[0] * lsm->rp[1] + lsm->pc[5] * pow(lsm->rp[1], 2) + lsm->pc[6] * pow(lsm->rp[0], 3)
-			+ lsm->pc[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pc[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
-			+ lsm->pc[9] * pow(lsm->rp[1], 3);
+				/*QueryPerformanceCounter(&lsmend);
+				lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+				cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 
-		//理想ピクセル座標系に変換
-		for (size_t i = 0; i < lsm->bps.size(); i++)
-		{
-			idpix.x = lsm->det * ((lsm->bps[i].x - lsm->distortion[0]) - lsm->stretch_mat[1] * (lsm->bps[i].y- lsm->distortion[1]));
-			idpix.y = lsm->det * (-lsm->stretch_mat[2] * (lsm->bps[i].x - lsm->distortion[0]) + lsm->stretch_mat[0] * (lsm->bps[i].y - lsm->distortion[1]));
-			lsm->idpixs.emplace_back(idpix);
-		}
+				//レーザ平面の法線ベクトルの計算
+				lsm->plane_nml[0] = lsm->pa[0] + lsm->pa[1] * lsm->rp[0] + lsm->pa[2] * lsm->rp[1] + lsm->pa[3] * pow(lsm->rp[0], 2)
+					+ lsm->pa[4] * lsm->rp[0] * lsm->rp[1] + lsm->pa[5] * pow(lsm->rp[1], 2) + lsm->pa[6] * pow(lsm->rp[0], 3)
+					+ lsm->pa[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pa[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
+					+ lsm->pa[9] * pow(lsm->rp[1], 3);
+				lsm->plane_nml[1] = lsm->pb[0] + lsm->pb[1] * lsm->rp[0] + lsm->pb[2] * lsm->rp[1] + lsm->pb[3] * pow(lsm->rp[0], 2)
+					+ lsm->pb[4] * lsm->rp[0] * lsm->rp[1] + lsm->pb[5] * pow(lsm->rp[1], 2) + lsm->pb[6] * pow(lsm->rp[0], 3)
+					+ lsm->pb[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pb[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
+					+ lsm->pb[9] * pow(lsm->rp[1], 3);
+				lsm->plane_nml[2] = lsm->pc[0] + lsm->pc[1] * lsm->rp[0] + lsm->pc[2] * lsm->rp[1] + lsm->pc[3] * pow(lsm->rp[0], 2)
+					+ lsm->pc[4] * lsm->rp[0] * lsm->rp[1] + lsm->pc[5] * pow(lsm->rp[1], 2) + lsm->pc[6] * pow(lsm->rp[0], 3)
+					+ lsm->pc[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pc[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
+					+ lsm->pc[9] * pow(lsm->rp[1], 3);
 
-		//理想ピクセル座標->直線の式とレーザ平面から輝点三次元座標の計算
-		for (size_t i = 0; i < lsm->idpixs.size(); i++)
-		{
-			u = lsm->idpixs[i].x;
-			v = lsm->idpixs[i].y;
-			phi = hypot(u, v);
-			w = lsm->map_coefficient[0] + lsm->map_coefficient[1] * pow(phi, 2) +
-				lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
-			lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
-			//lsm->campts.emplace_back((cv::Mat_<double>(1, 3) << lambda * u, lambda* v, lambda* w));
-			calcpt[0] = lambda * u;
-			//calcpt[1] = lambda * v + 100*sin(lsm->processcnt*0.0099);
-			calcpt[1] = lambda * v;
-			calcpt[2] = lambda * w;
-			lsm->campts.emplace_back(calcpt);
+				//理想ピクセル座標系に変換
+				for (size_t i = 0; i < lsm->bps.size(); i++)
+				{
+					idpix.x = lsm->det * ((lsm->bps[i].x - lsm->distortion[0]) - lsm->stretch_mat[1] * (lsm->bps[i].y - lsm->distortion[1]));
+					idpix.y = lsm->det * (-lsm->stretch_mat[2] * (lsm->bps[i].x - lsm->distortion[0]) + lsm->stretch_mat[0] * (lsm->bps[i].y - lsm->distortion[1]));
+					lsm->idpixs.emplace_back(idpix);
+				}
+
+				//理想ピクセル座標->直線の式とレーザ平面から輝点三次元座標の計算
+				for (size_t i = 0; i < lsm->idpixs.size(); i++)
+				{
+					u = lsm->idpixs[i].x;
+					v = lsm->idpixs[i].y;
+					phi = hypot(u, v);
+					w = lsm->map_coefficient[0] + lsm->map_coefficient[1] * pow(phi, 2) +
+						lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
+					lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
+					//lsm->campts.emplace_back((cv::Mat_<double>(1, 3) << lambda * u, lambda* v, lambda* w));
+					calcpt[0] = lambda * u;
+					//calcpt[1] = lambda * v + 100*sin(lsm->processcnt*0.0099);
+					calcpt[1] = lambda * v;
+					calcpt[2] = lambda * w;
+					lsm->campts.emplace_back(calcpt);
+				}
+				QueryPerformanceCounter(&lsmend);
+				lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+				/*cout << "CalcLSM() calc3dpts time: " << lsmtime-lsmtime_c << endl;*/
+				cout << "CalcLSM() total time: " << lsmtime << endl;
+				logs->LSM_pts.emplace_back(lsm->campts);
+				rps = { lsm->rp[0],lsm->rp[1] };
+				logs->LSM_rps.emplace_back(rps);
+				lsm->processcnt++;
+			}	
 		}
 	}
-	QueryPerformanceCounter(&lsmend);
-	lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-	/*cout << "CalcLSM() calc3dpts time: " << lsmtime-lsmtime_c << endl;*/
-	cout << "CalcLSM() total time: " << lsmtime << endl;
-	logs->LSM_pts.emplace_back(lsm->campts);
-	rps = { lsm->rp[0],lsm->rp[1] };
-	logs->LSM_rps.emplace_back(rps);
-	lsm->processcnt++;
 	return 0;
 }

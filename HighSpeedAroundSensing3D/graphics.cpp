@@ -154,41 +154,44 @@ void drawGL(LSM *lsm, Logs *logs, bool* flg) {
         QueryPerformanceCounter(&glstart);
 
         //点群の位置更新
-        vector<vector<double>> last_pts = logs->LSM_pts[(lsm->processcnt - 2)%lsm->buffersize];
-        //vector<vector<double>> last_pts = logs->LSM_pts[0];
-        for (size_t i = 0; i < last_pts.size(); i++)
+        if (logs->LSM_pts.size()!=0)
         {
-            //vertices.emplace(last_pts[i]*0.001);
-            verts[savecnt][i][0] = last_pts[i][0] * 0.001;
-            verts[savecnt][i][1] = last_pts[i][1] * 0.001;
-            verts[savecnt][i][2] = last_pts[i][2] * 0.001;
-            dist = hypot(verts[savecnt][i][0], verts[savecnt][i][1]);
-            if (dist > safe_area) {
-                colos[savecnt][i][1] = 0.0;
-                colos[savecnt][i][2] = 0.0;
-                if (hide_red) colos[savecnt][i][0] = 0.0;
-                else colos[savecnt][i][0] = 1.0;
-            }
-            else if (dist <= safe_area && dist > danger_area) {
-                colos[savecnt][i][0] = 0.0;
-                colos[savecnt][i][2] = 0.0;
-                if (hide_green) colos[savecnt][i][1] = 0.0;
-                else colos[savecnt][i][1] = 1.0;
-            }
-            else if (dist <= danger_area) {
-                colos[savecnt][i][0] = 0.0;
-                colos[savecnt][i][1] = 0.0;
-                if (hide_blue) colos[savecnt][i][2] = 0.0;
-                else colos[savecnt][i][2] = 1.0;
-            }
-            else
+            vector<vector<double>> last_pts = logs->LSM_pts[(lsm->processcnt - 2) % lsm->buffersize];
+            //vector<vector<double>> last_pts = logs->LSM_pts[0];
+            for (size_t i = 0; i < last_pts.size(); i++)
             {
-                colos[savecnt][i][0] = 1.0;
-                colos[savecnt][i][1] = 1.0;
-                colos[savecnt][i][2] = 1.0;
+                //vertices.emplace(last_pts[i]*0.001);
+                verts[savecnt][i][0] = last_pts[i][0] * 0.001;
+                verts[savecnt][i][1] = last_pts[i][1] * 0.001;
+                verts[savecnt][i][2] = last_pts[i][2] * 0.001;
+                dist = hypot(verts[savecnt][i][0], verts[savecnt][i][1]);
+                if (dist > safe_area) {
+                    colos[savecnt][i][1] = 0.0;
+                    colos[savecnt][i][2] = 0.0;
+                    if (hide_red) colos[savecnt][i][0] = 0.0;
+                    else colos[savecnt][i][0] = 1.0;
+                }
+                else if (dist <= safe_area && dist > danger_area) {
+                    colos[savecnt][i][0] = 0.0;
+                    colos[savecnt][i][2] = 0.0;
+                    if (hide_green) colos[savecnt][i][1] = 0.0;
+                    else colos[savecnt][i][1] = 1.0;
+                }
+                else if (dist <= danger_area) {
+                    colos[savecnt][i][0] = 0.0;
+                    colos[savecnt][i][1] = 0.0;
+                    if (hide_blue) colos[savecnt][i][2] = 0.0;
+                    else colos[savecnt][i][2] = 1.0;
+                }
+                else
+                {
+                    colos[savecnt][i][0] = 1.0;
+                    colos[savecnt][i][1] = 1.0;
+                    colos[savecnt][i][2] = 1.0;
+                }
             }
+            savecnt = (savecnt + 1) % maxvertsize;
         }
-        savecnt = (savecnt + 1) % maxvertsize;
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -231,7 +234,7 @@ void drawGL(LSM *lsm, Logs *logs, bool* flg) {
         //シェーダプログラムの開始
         glUseProgram(gl2Program);
         glUniformMatrix4fv(matlocation, 1, GL_FALSE, &mvp[0][0]); //シェーダプログラムの開始の後にシェーダプログラム内のMVP行列を更新
-        
+
         //点群の位置と色を更新
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         //glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices_example), vertices_example); //VBO内の点群の位置の更新
