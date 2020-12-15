@@ -41,12 +41,12 @@ namespace fs = std::filesystem;
 
 //グローバル変数
 /// カメラパラメータ
-int width = 896;
-int height = 896;
-float fps = 1000.0;
-float exposuretime = 912.0;
-int offsetx = 480;
-int offsety = 92;
+const int width = 896;
+const int height = 896;
+const float fps = 1000.0;
+const float exposuretime = 912.0;
+const int offsetx = 480;
+const int offsety = 92;
 /// 画像に関する変数
 cv::Mat in_img_now;
 vector<cv::Mat> in_imgs;
@@ -82,13 +82,14 @@ long long detectfailcnt = 0;
 double phi, lambda, u, v, w;
 cv::Rect roi_lsm(960 - 430, 540 - 430, 430 * 2, 430 * 2);
 cv::Rect roi_ref;
+cv::Rect roi_laser;
 vector<double> rps;
-float mono_thr = 240.0;
-cv::Scalar color_thr_min(0, 0, 150);
-cv::Scalar color_thr_max(256, 256, 256);
+const float mono_thr = 240.0;
+const cv::Scalar color_thr_min(0, 0, 150);
+const cv::Scalar color_thr_max(256, 256, 256);
 vector<cv::Point> refpts;
-int colorstep=width*3, colorelem =3;
-int monostep = width, monoelem = 1;
+const int colorstep=width*3, colorelem =3;
+const int monostep = width, monoelem = 1;
 double refmass, refmomx, refmomy;
 int refx, refy;
 const int rstart = 104, rends=432;
@@ -106,8 +107,10 @@ double taketime = 0, lsmtime = 0, artime = 0, showtime = 0;
 double lsmtime_a, lsmtime_b, lsmtime_c, lsmtime_d;
 /// 光切断の別パターンの計算
 unsigned int r_calc;
-//vector<double> lsmmass_r(rends - rstart, 0), lsmmomx_r(rends - rstart, 0), lsmmomy_r(rends - rstart, 0);
 double lsmmass_r[rends - rstart] = { 0 }, lsmmomx_r[rends - rstart] = { 0 }, lsmmomy_r[rends - rstart] = { 0 };
+int roi_laser_minx=width, roi_laser_maxx=0, roi_laser_miny=height, roi_laser_maxy=0;
+const int roi_laser_margin = 30;
+cv::Point laser_pts(0,0);
 
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
@@ -187,6 +190,7 @@ int main() {
 	lsm.mask_lsm = zero.clone();
 	cv::circle(lsm.mask_lsm, cv::Point((int)width/2, (int)height/2), 430, cv::Scalar::all(255), -1);
 	cv::circle(lsm.mask_lsm, cv::Point((int)lsm.ref_center[0], (int)lsm.ref_center[1]), (int)(lsm.ref_radius)+20, cv::Scalar::all(0), -1);
+	roi_laser = cv::Rect(0, 0, width, height);
 
 #ifdef SAVE_IMGS_
 	//取得画像を格納するVectorの作成
@@ -504,7 +508,7 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 	/*QueryPerformanceCounter(&lsmend);
 	lsmtime_a = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 	cout << "CalcLSM() getimg time: " << lsmtime_a << endl;*/
-	if (lsm->in_img.data!=NULL)
+	if (lsm->in_img.data!=NULL && (int)lsm->in_img.data[0]!=255)
 	{
 		//参照面の輝度重心の検出
 		lsm->in_img(roi_ref).copyTo(lsm->ref_arc, lsm->mask_refarc(roi_ref));
@@ -537,7 +541,7 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 #ifdef OUT_COLOR_
-		cv::inRange(lsm->lsm_laser, color_thr_min, color_thr_max, lsm->lsm_laser_ranged);
+		cv::inRange(lsm->lsm_laser(roi_laser), color_thr_min, color_thr_max, lsm->lsm_laser_ranged);
 		/*QueryPerformanceCounter(&lsmend);
 		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
@@ -546,34 +550,37 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 		//ここで同心円状に輝度重心を取得
-		//deg = atan2(lsm->rp[1] - lsm->ref_center[1], lsm->rp[0] - lsm->ref_center[0]);
-		//for (int r = rstart; r < rends; r++)
-		//{
-		//	lsmmass = 0, lsmmomx = 0, lsmmomy = 0;
-		//	forend = (unsigned int)(M_PI * 2 * r * dtheta / 360);
-		//	for (size_t j = 0; j < forend; j++)
-		//	{
-		//		cogx = (unsigned int)(width / 2 + (double)r * cos((double)j / r + deg - dtheta / 2 / 180 * M_PI));
-		//		cogy = (unsigned int)(height / 2 + (double)r * sin((double)j / r + deg - dtheta / 2 / 180 * M_PI));
-		//		if ((int)lsm->lsm_laser_ranged.data[cogy * monostep + cogx * monoelem] > 0)
-		//		{
-		//			lsmmass += lsm->lsm_laser.data[cogy * colorstep + cogx * colorelem + 2];
-		//			lsmmomx += (double)lsm->lsm_laser.data[cogy * colorstep + cogx * colorelem + 2] * cogx;
-		//			lsmmomy += (double)lsm->lsm_laser.data[cogy * colorstep + cogx * colorelem + 2] * cogy;
-		//		}
-		//	}
-		//	if (lsmmass > 0) { lsm->bps.emplace_back(cv::Point(lsmmomx / lsmmass, lsmmomy / lsmmass)); }
-		//}
-		for (const auto& pts: lsm->allbps)
+		roi_laser_minx = width, roi_laser_maxx = 0, roi_laser_miny = height, roi_laser_maxy = 0;
+		for (const auto& pts : lsm->allbps)
 		{
-			r_calc = (unsigned int)hypot(pts.x - lsm->ref_center[0], pts.y - lsm->ref_center[1]);
-			if (r_calc<rends-rstart)
+			laser_pts.x = pts.x + roi_laser.x;
+			laser_pts.y = pts.y + roi_laser.y;
+			r_calc = (unsigned int)hypot(laser_pts.x - lsm->ref_center[0], laser_pts.y - lsm->ref_center[1]);
+			if (roi_laser_maxx < laser_pts.x) roi_laser_maxx = laser_pts.x;
+			if (roi_laser_minx > laser_pts.x) roi_laser_minx = laser_pts.x;
+			if (roi_laser_maxy < laser_pts.y) roi_laser_maxy = laser_pts.y;
+			if (roi_laser_miny > laser_pts.y) roi_laser_miny = laser_pts.y;
+			if (r_calc < rends - rstart)
 			{
-				lsmmass_r[r_calc] += lsm->lsm_laser.data[pts.y * colorstep + pts.x * colorelem + 2];
-				lsmmomx_r[r_calc] += (double)lsm->lsm_laser.data[pts.y * colorstep + pts.x * colorelem + 2] * pts.x;
-				lsmmomy_r[r_calc] += (double)lsm->lsm_laser.data[pts.y * colorstep + pts.x * colorelem + 2] * pts.y;
-			}	
+				lsmmass_r[r_calc] += lsm->lsm_laser.data[laser_pts.y * colorstep + laser_pts.x * colorelem + 2];
+				lsmmomx_r[r_calc] += (double)lsm->lsm_laser.data[laser_pts.y * colorstep + laser_pts.x * colorelem + 2] * laser_pts.x;
+				lsmmomy_r[r_calc] += (double)lsm->lsm_laser.data[laser_pts.y * colorstep + laser_pts.x * colorelem + 2] * laser_pts.y;
+			}
 		}
+		if (roi_laser_maxx > width - roi_laser_margin) roi_laser_maxx = width;
+		else roi_laser_maxx += roi_laser_margin;
+		if (roi_laser_minx < roi_laser_margin) roi_laser_minx = 0;
+		else roi_laser_minx -= roi_laser_margin;
+		if (roi_laser_maxy > height - roi_laser_margin) roi_laser_maxy = height;
+		else roi_laser_maxy += roi_laser_margin;
+		if (roi_laser_miny < roi_laser_margin) roi_laser_miny = 0;
+		else roi_laser_miny -= roi_laser_margin;
+		roi_laser.x = roi_laser_minx;
+		roi_laser.width = roi_laser_maxx - roi_laser_minx;
+		roi_laser.y = roi_laser_miny;
+		roi_laser.height = roi_laser_maxy - roi_laser_miny;
+		
+
 		/*QueryPerformanceCounter(&lsmend);
 		lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 		cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
