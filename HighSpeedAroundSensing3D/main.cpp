@@ -138,7 +138,7 @@ int main() {
 	cam.connect(0);
 
 	//パラメータの設定
-	cout << "Set Camera Params..." << endl;
+	std::cout << "Set Camera Params..." << endl;
 	cam.setParam(paramTypeCamera::paramInt::WIDTH, width);
 	cam.setParam(paramTypeCamera::paramInt::HEIGHT, height);
 	cam.setParam(paramTypeKAYACoaXpress::paramInt::OffsetX, offsetx);
@@ -194,7 +194,7 @@ int main() {
 
 #ifdef SAVE_IMGS_
 	//取得画像を格納するVectorの作成
-	cout << "Set Mat Vector..." << endl;
+	std::cout << "Set Mat Vector..." << endl;
 	for (size_t i = 0; i < (int)(timeout)*fps + 100; i++)
 	{
 		in_imgs.push_back(zero.clone());
@@ -202,7 +202,7 @@ int main() {
 	}
 #endif // SAVE_IMGS_
 #ifndef SAVE_IMGS_
-	cout << "Set Mat Cycle Buffer..." << endl;
+	std::cout << "Set Mat Cycle Buffer..." << endl;
 	for (size_t i = 0; i < cyclebuffersize; i++)
 	{
 		in_imgs.push_back(zero.clone());
@@ -212,7 +212,7 @@ int main() {
 
 
 	//カメラ起動
-	cout << "Aroud 3D Sensing Start!" << endl;
+	std::cout << "Aroud 3D Sensing Start!" << endl;
 	cam.start();
 
 	//計測開始
@@ -296,7 +296,7 @@ int main() {
 	fr = fopen(logfile, "w");
 
 	/// Logの保存
-	cout << "Saving logs..." << endl;
+	std::cout << "Saving logs..." << endl;
 	for (size_t i = 0; i < logs.LSM_times.size(); i++)
 	{
 		if (logs.LSM_pts[i].size() > 10000) { continue; }//バグ取り
@@ -318,12 +318,12 @@ int main() {
 		if (logs.LSM_pts[i].size() == 0) { fprintf(fr, "%lf,", 0.0); }
 		fprintf(fr, "\n");
 	}
-	cout << "Logs finish!" << endl;
+	std::cout << "Logs finish!" << endl;
 	fclose(fr);
 
 	/// 画像を保存
 #ifdef SAVE_IMGS_
-	cout << "Saving imgs..." << endl;
+	std::cout << "Saving imgs..." << endl;
 	char picdir[256];
 	strftime(picdir, 256, "D:/Github_output/HighSpeedAroundSensing/HighSpeedAroundSensing3D/results/%y%m%d/%H%M%S/Pictures", &now);
 	if (!fs::create_directories(picdir)) { return 0; }
@@ -335,7 +335,7 @@ int main() {
 		sprintf(picturename, "%s%05d.png", picsubname, i);//png可逆圧縮
 		cv::imwrite(picturename, in_imgs[i]);
 	}
-	cout << "Imgs finished!" << endl;
+	std::cout << "Imgs finished!" << endl;
 #endif // SAVE_IMGS_
 
 #endif // SAVE_LOGS_
@@ -372,7 +372,7 @@ void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
 			taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
 		}
 		
-		//cout << "TakePicture() time: " << taketime << endl;
+		//std::cout << "TakePicture() time: " << taketime << endl;
 	}
 }
 
@@ -395,7 +395,7 @@ void ShowLogs(bool* flg) {
 		if (key == 'q') *flg = false;
 		/*QueryPerformanceCounter(&showend);
 		showtime = (double)(showend.QuadPart - showstart.QuadPart) / freq.QuadPart;
-		cout << "ShowLogs() time: " << showtime << endl;*/
+		std::cout << "ShowLogs() time: " << showtime << endl;*/
 	}
 }
 
@@ -409,7 +409,7 @@ void DetectAR(bool* flg) {
 	//Perspectiveカメラの内部パラメータを取得
 	string calib_dir = "PerspectiveCamCalibParams.xml";
 	cv::FileStorage calibxml(calib_dir, cv::FileStorage::READ);
-	if (!calibxml.isOpened()) cout << "calib xml cannot be opened..." << endl;
+	if (!calibxml.isOpened()) std::cout << "calib xml cannot be opened..." << endl;
 	cv::Mat K, D;
 	calibxml["K"] >> K;
 	calibxml["D"] >> D;
@@ -436,11 +436,11 @@ void DetectAR(bool* flg) {
 		else
 		{
 			detect_arid0_flgs.push_back(false);
-			cout << "FALSE" << endl;
+			std::cout << "FALSE" << endl;
 		}
 		/*QueryPerformanceCounter(&arend);
 		artime = (double)(arend.QuadPart - arstart.QuadPart) / freq.QuadPart;*/
-		//cout << "AR time:" << artime << endl;
+		//std::cout << "AR time:" << artime << endl;
 	}
 }
 
@@ -507,7 +507,7 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 	}
 	/*QueryPerformanceCounter(&lsmend);
 	lsmtime_a = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-	cout << "CalcLSM() getimg time: " << lsmtime_a << endl;*/
+	std::cout << "CalcLSM() getimg time: " << lsmtime_a << endl;*/
 	if (lsm->in_img.data!=NULL && (int)lsm->in_img.data[0]!=255)
 	{
 		//参照面の輝度重心の検出
@@ -516,7 +516,7 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 		cv::inRange(lsm->ref_arc, color_thr_min, color_thr_max, lsm->ref_arc_ranged);
 		cv::findNonZero(lsm->ref_arc_ranged, refpts);
 		refmass = 0, refmomx = 0, refmomy = 0;
-		if (refpts.size()!=0)
+		if (refpts.size() != 0)
 		{
 			for (size_t i = 0; i < refpts.size(); i++)
 			{
@@ -535,24 +535,37 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 #endif // OUT_MONO_
 			/*QueryPerformanceCounter(&lsmend);
 			lsmtime_b = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-			cout << "CalcLSM() calcrefpt time: " << lsmtime_b - lsmtime_a << endl;*/
+			std::cout << "CalcLSM() calcrefpt time: " << lsmtime_b - lsmtime_a << endl;*/
+			//レーザ平面の法線ベクトルの計算
+			lsm->plane_nml[0] = lsm->pa[0] + lsm->pa[1] * lsm->rp[0] + lsm->pa[2] * lsm->rp[1] + lsm->pa[3] * pow(lsm->rp[0], 2)
+				+ lsm->pa[4] * lsm->rp[0] * lsm->rp[1] + lsm->pa[5] * pow(lsm->rp[1], 2) + lsm->pa[6] * pow(lsm->rp[0], 3)
+				+ lsm->pa[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pa[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
+				+ lsm->pa[9] * pow(lsm->rp[1], 3);
+			lsm->plane_nml[1] = lsm->pb[0] + lsm->pb[1] * lsm->rp[0] + lsm->pb[2] * lsm->rp[1] + lsm->pb[3] * pow(lsm->rp[0], 2)
+				+ lsm->pb[4] * lsm->rp[0] * lsm->rp[1] + lsm->pb[5] * pow(lsm->rp[1], 2) + lsm->pb[6] * pow(lsm->rp[0], 3)
+				+ lsm->pb[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pb[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
+				+ lsm->pb[9] * pow(lsm->rp[1], 3);
+			lsm->plane_nml[2] = lsm->pc[0] + lsm->pc[1] * lsm->rp[0] + lsm->pc[2] * lsm->rp[1] + lsm->pc[3] * pow(lsm->rp[0], 2)
+				+ lsm->pc[4] * lsm->rp[0] * lsm->rp[1] + lsm->pc[5] * pow(lsm->rp[1], 2) + lsm->pc[6] * pow(lsm->rp[0], 3)
+				+ lsm->pc[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pc[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
+				+ lsm->pc[9] * pow(lsm->rp[1], 3);
 
 			//ラインレーザの輝点座標を検出
 			lsm->in_img.copyTo(lsm->lsm_laser, lsm->mask_lsm);
 			/*QueryPerformanceCounter(&lsmend);
 			lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-			cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
+			std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 #ifdef OUT_COLOR_
 			cv::inRange(lsm->lsm_laser(roi_laser), color_thr_min, color_thr_max, lsm->lsm_laser_ranged);
 			/*QueryPerformanceCounter(&lsmend);
 			lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-			cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
+			std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 			cv::findNonZero(lsm->lsm_laser_ranged, lsm->allbps);
 			/*QueryPerformanceCounter(&lsmend);
 			lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-			cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
+			std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 			//ここで同心円状に輝度重心を取得
-			if (lsm->allbps.size()!=0)
+			if (lsm->allbps.size() != 0)
 			{
 				roi_laser_minx = width, roi_laser_maxx = 0, roi_laser_miny = height, roi_laser_maxy = 0;
 				for (const auto& pts : lsm->allbps)
@@ -584,21 +597,37 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 				roi_laser.y = roi_laser_miny;
 				roi_laser.height = roi_laser_maxy - roi_laser_miny;
 
-
 				/*QueryPerformanceCounter(&lsmend);
 				lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-				cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
+				std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 				for (int rs = 0; rs < rends - rstart; rs++)
 				{
 					if (lsmmass_r[rs] > 0)
 					{
-						lsm->bps.emplace_back(cv::Point(lsmmomx_r[rs] / lsmmass_r[rs], lsmmomy_r[rs] / lsmmass_r[rs]));
+						lsm->bp.x = lsmmomx_r[rs] / lsmmass_r[rs];
+						lsm->bp.y = lsmmomy_r[rs] / lsmmass_r[rs];
 						lsmmass_r[rs] = 0, lsmmomx_r[rs] = 0, lsmmomy_r[rs] = 0;
+
+						//理想ピクセル座標系に変換
+						idpix.x = lsm->det * ((lsm->bp.x - lsm->distortion[0]) - lsm->stretch_mat[1] * (lsm->bp.y - lsm->distortion[1]));
+						idpix.y = lsm->det * (-lsm->stretch_mat[2] * (lsm->bp.x - lsm->distortion[0]) + lsm->stretch_mat[0] * (lsm->bp.y - lsm->distortion[1]));
+
+						//理想ピクセル座標->直線の式とレーザ平面から輝点三次元座標の計算
+						u = idpix.x;
+						v = idpix.y;
+						phi = hypot(u, v);
+						w = lsm->map_coefficient[0] + lsm->map_coefficient[1] * pow(phi, 2) +
+							lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
+						lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
+						calcpt[0] = lambda * u;
+						//calcpt[1] = lambda * v + 100*sin(lsm->processcnt*0.0099); //デバッグ用
+						calcpt[1] = lambda * v;
+						calcpt[2] = lambda * w;
 					}
 				}
 				/*QueryPerformanceCounter(&lsmend);
 				lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-				cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
+				std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 #endif // OUT_COLOR_
 #ifdef OUT_MONO_
 				cv::threshold(lsm->lsm_laser, lsm->lsm_laser, mono_thr, 255, cv::THRESH_BINARY);
@@ -607,55 +636,17 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 #endif // OUT_MONO_
 				/*QueryPerformanceCounter(&lsmend);
 				lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-				cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
+				std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 
-				//レーザ平面の法線ベクトルの計算
-				lsm->plane_nml[0] = lsm->pa[0] + lsm->pa[1] * lsm->rp[0] + lsm->pa[2] * lsm->rp[1] + lsm->pa[3] * pow(lsm->rp[0], 2)
-					+ lsm->pa[4] * lsm->rp[0] * lsm->rp[1] + lsm->pa[5] * pow(lsm->rp[1], 2) + lsm->pa[6] * pow(lsm->rp[0], 3)
-					+ lsm->pa[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pa[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
-					+ lsm->pa[9] * pow(lsm->rp[1], 3);
-				lsm->plane_nml[1] = lsm->pb[0] + lsm->pb[1] * lsm->rp[0] + lsm->pb[2] * lsm->rp[1] + lsm->pb[3] * pow(lsm->rp[0], 2)
-					+ lsm->pb[4] * lsm->rp[0] * lsm->rp[1] + lsm->pb[5] * pow(lsm->rp[1], 2) + lsm->pb[6] * pow(lsm->rp[0], 3)
-					+ lsm->pb[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pb[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
-					+ lsm->pb[9] * pow(lsm->rp[1], 3);
-				lsm->plane_nml[2] = lsm->pc[0] + lsm->pc[1] * lsm->rp[0] + lsm->pc[2] * lsm->rp[1] + lsm->pc[3] * pow(lsm->rp[0], 2)
-					+ lsm->pc[4] * lsm->rp[0] * lsm->rp[1] + lsm->pc[5] * pow(lsm->rp[1], 2) + lsm->pc[6] * pow(lsm->rp[0], 3)
-					+ lsm->pc[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pc[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
-					+ lsm->pc[9] * pow(lsm->rp[1], 3);
-
-				//理想ピクセル座標系に変換
-				for (size_t i = 0; i < lsm->bps.size(); i++)
-				{
-					idpix.x = lsm->det * ((lsm->bps[i].x - lsm->distortion[0]) - lsm->stretch_mat[1] * (lsm->bps[i].y - lsm->distortion[1]));
-					idpix.y = lsm->det * (-lsm->stretch_mat[2] * (lsm->bps[i].x - lsm->distortion[0]) + lsm->stretch_mat[0] * (lsm->bps[i].y - lsm->distortion[1]));
-					lsm->idpixs.emplace_back(idpix);
-				}
-
-				//理想ピクセル座標->直線の式とレーザ平面から輝点三次元座標の計算
-				for (size_t i = 0; i < lsm->idpixs.size(); i++)
-				{
-					u = lsm->idpixs[i].x;
-					v = lsm->idpixs[i].y;
-					phi = hypot(u, v);
-					w = lsm->map_coefficient[0] + lsm->map_coefficient[1] * pow(phi, 2) +
-						lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
-					lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
-					//lsm->campts.emplace_back((cv::Mat_<double>(1, 3) << lambda * u, lambda* v, lambda* w));
-					calcpt[0] = lambda * u;
-					//calcpt[1] = lambda * v + 100*sin(lsm->processcnt*0.0099);
-					calcpt[1] = lambda * v;
-					calcpt[2] = lambda * w;
-					lsm->campts.emplace_back(calcpt);
-				}
 				QueryPerformanceCounter(&lsmend);
 				lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-				/*cout << "CalcLSM() calc3dpts time: " << lsmtime-lsmtime_c << endl;*/
-				cout << "CalcLSM() total time: " << lsmtime << endl;
+				/*std::cout << "CalcLSM() calc3dpts time: " << lsmtime-lsmtime_c << endl;*/
+				std::cout << "CalcLSM() total time: " << lsmtime << endl;
 				logs->LSM_pts.emplace_back(lsm->campts);
 				rps = { lsm->rp[0],lsm->rp[1] };
 				logs->LSM_rps.emplace_back(rps);
 				lsm->processcnt++;
-			}	
+			}
 		}
 	}
 	return 0;

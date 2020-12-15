@@ -117,7 +117,7 @@ void drawGL(LSM *lsm, Logs *logs, bool* flg) {
     //頂点バッファオブジェクト
     glGenBuffers(1, &vbo);//vbp作成
     glBindBuffer(GL_ARRAY_BUFFER, vbo);//vboのバインド，これからの処理の対象
-    cout << sizeof(verts) << endl;
+    std::cout << sizeof(verts) << endl;
     //glBufferData(GL_ARRAY_BUFFER, sizeof(vertices_example), nullptr, GL_DYNAMIC_DRAW);//vboのデータ領域の確保
     glBufferData(GL_ARRAY_BUFFER, sizeof(verts), nullptr, GL_DYNAMIC_DRAW);
     glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, 0, 0);//vertex shader内の引数の指定indexに合うように変更する
@@ -182,6 +182,12 @@ void drawGL(LSM *lsm, Logs *logs, bool* flg) {
                     colos[savecnt][i][1] = 0.0;
                     if (hide_blue) colos[savecnt][i][2] = 0.0;
                     else colos[savecnt][i][2] = 1.0;
+                }
+                else if (dist <= 0)
+                {
+                    colos[savecnt][i][0] = 0.0;
+                    colos[savecnt][i][1] = 0.0;
+                    colos[savecnt][i][2] = 0.0;
                 }
                 else
                 {
@@ -250,7 +256,7 @@ void drawGL(LSM *lsm, Logs *logs, bool* flg) {
         //ここまでの時間計測
         QueryPerformanceCounter(&glend);
         gltime = (double)(glend.QuadPart - glstart.QuadPart) / glfreq.QuadPart;
-        cout << "openGL time: " << gltime << endl;
+        std::cout << "openGL time: " << gltime << endl;
 
         //start imgui
         ImGui_ImplOpenGL3_NewFrame();
@@ -277,8 +283,6 @@ void drawGL(LSM *lsm, Logs *logs, bool* flg) {
 
 
         glfwSwapBuffers(window);//ダブルバッファの入れ替え，これを行うことで画面が一部更新したもので一部更新されていないなどのがたつきをなくせる
-
-        
     }
 
     //vao,vboの消去
