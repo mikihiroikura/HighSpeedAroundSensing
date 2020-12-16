@@ -28,8 +28,8 @@ static GLuint vertShader, fragShader, gl2Program;
 
 //vbo
 GLuint vbo, cbo, vao;
-float vertices[100][100][3];
-float colors[100][100][3];
+float vertices[100][300][3];
+float colors[100][300][3];
 
 //imgui
 float rotate_x = 0.0, rotate_y = 0.0;
@@ -120,7 +120,7 @@ int main() {
     //positionの初期化
     for (size_t i = 0; i < 100; i++)
     {
-        for (size_t j = 0; j < 100; j++)
+        for (size_t j = 0; j < 300; j++)
         {
             vertices[i][j][0] = (float)i * 0.01-100*0.01/2;
             vertices[i][j][1] = 0;
@@ -174,7 +174,7 @@ int main() {
         //点群の位置と色の更新
         for (size_t i = 0; i < 100; i++)
         {
-            for (size_t j = 0; j < 100; j++)
+            for (size_t j = 0; j < 300; j++)
             {
                 vertices[i][j][0] = (float)i * 0.01 - 100 * 0.01 / 2;
                 vertices[i][j][1] = sin((float)i + Time) * cos((float)j + Time);

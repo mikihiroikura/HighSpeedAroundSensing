@@ -226,7 +226,7 @@ int main() {
 
 	//Threadの作成
 	/// 1000fpsで画像を格納し続けるスレッド
-	thread thr1(TakePicture, &cam, &flg, &lsm);
+	//thread thr1(TakePicture, &cam, &flg, &lsm);
 	/// 現在の画像をPCに出力して見えるようするスレッド
 	//thread thr2(ShowLogs, &flg);
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
@@ -236,11 +236,23 @@ int main() {
 	/// OpenGLで点群を表示するスレッド
 	//thread thr5(drawGL_part, &flg);
 	
-
+	cv::Mat temp = zero.clone();
 	//メインループ
 	/// 取得された画像から光切断法で三次元位置を計算する
 	while (flg)
 	{
+		takepicid = in_imgs_saveid % cyclebuffersize;
+		QueryPerformanceCounter(&takestart);
+		cam.captureFrame(temp.data);
+		{
+			//cv::AutoLock lock(mutex);
+			in_imgs[takepicid] = temp.clone();
+			//in_img_now = temp.clone();
+		}
+		in_imgs_saveid++;
+		QueryPerformanceCounter(&takeend);
+		taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
+		std::cout << "TakePicture() time: " << taketime << endl;
 		//光切断の高度の更新
 		if (in_imgs_saveid > 3)
 		{
@@ -273,7 +285,7 @@ int main() {
 	}
 
 	//スレッドの停止
-	if (thr1.joinable())thr1.join();
+	//if (thr1.joinable())thr1.join();
 	//if (thr2.joinable())thr2.join();
 	//if (thr3.joinable())thr3.join();
 	//if (thr4.joinable())thr4.join();

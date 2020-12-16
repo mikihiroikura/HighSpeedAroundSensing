@@ -40,10 +40,11 @@ queue<vector<float>> colors;
 vector<float> color;
 vector<cv::Mat> vertices_vec;
 const int maxvertsize = 100;
+const int maxpointsize = 300;
 double safe_area = 1.0, danger_area = 0.5;
 double dist;
-double verts[maxvertsize][300][3] = {0};
-float colos[maxvertsize][300][3] = {0};
+double verts[maxvertsize][maxpointsize][3] = {0};
+float colos[maxvertsize][maxpointsize][3] = {0};
 int savecnt = 0;
 
 //時間計測用変数
@@ -250,7 +251,7 @@ void drawGL(LSM *lsm, Logs *logs, bool* flg) {
         glBindBuffer(GL_ARRAY_BUFFER, cbo);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(colos), colos);//VBO内の色を更新
         glBindVertexArray(vao);//VBOでの点群位置と色更新をまとめたVAOをバインドして実行
-        glDrawArrays(GL_POINTS, 0, 100 * 100);//実際の描画
+        glDrawArrays(GL_POINTS, 0, maxvertsize * maxpointsize);//実際の描画
         glBindVertexArray(0);//VBOのアンバインド
 
         glfwPollEvents(); //マウスイベントを取り出し記録
@@ -573,7 +574,7 @@ void update_pts(vector<vector<double>> pts) {
     glBindBuffer(GL_ARRAY_BUFFER, cbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(colos), colos);//VBO内の色を更新
     glBindVertexArray(vao);//VBOでの点群位置と色更新をまとめたVAOをバインドして実行
-    glDrawArrays(GL_POINTS, 0, 100 * 100);//実際の描画
+    glDrawArrays(GL_POINTS, 0, maxvertsize * maxpointsize);//実際の描画
     glBindVertexArray(0);//VBOのアンバインド
 
     glfwSwapBuffers(window);//ダブルバッファの入れ替え，これを行うことで画面が一部更新したもので一部更新されていないなどのがたつきをなくせる
@@ -778,7 +779,7 @@ void drawGL_one(vector<vector<double>> pts) {
     glBindBuffer(GL_ARRAY_BUFFER, cbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(colos), colos);//VBO内の色を更新
     glBindVertexArray(vao);//VBOでの点群位置と色更新をまとめたVAOをバインドして実行
-    glDrawArrays(GL_POINTS, 0, 100 * 100);//実際の描画
+    glDrawArrays(GL_POINTS, 0, maxvertsize * maxpointsize);//実際の描画
     glBindVertexArray(0);//VBOのアンバインド
 
     glfwPollEvents(); //マウスイベントを取り出し記録
