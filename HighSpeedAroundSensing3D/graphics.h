@@ -17,6 +17,11 @@
 #include "params.h"
 
 extern void drawGL(LSM* lsm, Logs* logs, bool* flg);
+extern void update_pts(vector<vector<double>> pts);
+extern void drawGL_part(bool* flg);
+extern void drawGL_one(vector<vector<double>> pts);
+extern void finishGL();
+extern void initGL();
 
 
 #endif // GRAPHICS_H

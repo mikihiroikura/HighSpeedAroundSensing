@@ -99,18 +99,21 @@ double dtheta = 30;
 double deg;
 vector<double> calcpt(3, 0);
 cv::Point2f idpix;
+unsigned int r_calc;
+double lsmmass_r[rends - rstart] = { 0 }, lsmmomx_r[rends - rstart] = { 0 }, lsmmomy_r[rends - rstart] = { 0 };
+int roi_laser_minx = width, roi_laser_maxx = 0, roi_laser_miny = height, roi_laser_maxy = 0;
+const int roi_laser_margin = 30;
+cv::Point laser_pts(0, 0);
+int roi_laser_outcnt = 0;
+
 /// ログに関する変数
 int cyclebuffersize = 10;
 //デバッグ用変数
 LARGE_INTEGER lsmstart, lsmend, takestart, takeend, arstart, arend, showstart, showend;
 double taketime = 0, lsmtime = 0, artime = 0, showtime = 0;
 double lsmtime_a, lsmtime_b, lsmtime_c, lsmtime_d;
-/// 光切断の別パターンの計算
-unsigned int r_calc;
-double lsmmass_r[rends - rstart] = { 0 }, lsmmomx_r[rends - rstart] = { 0 }, lsmmomy_r[rends - rstart] = { 0 };
-int roi_laser_minx=width, roi_laser_maxx=0, roi_laser_miny=height, roi_laser_maxy=0;
-const int roi_laser_margin = 30;
-cv::Point laser_pts(0,0);
+
+
 
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
@@ -210,6 +213,9 @@ int main() {
 	}
 #endif // !SAVE_IMGS_
 
+	//OpenGL初期化
+	initGL();
+
 
 	//カメラ起動
 	std::cout << "Aroud 3D Sensing Start!" << endl;
@@ -222,13 +228,13 @@ int main() {
 	/// 1000fpsで画像を格納し続けるスレッド
 	thread thr1(TakePicture, &cam, &flg, &lsm);
 	/// 現在の画像をPCに出力して見えるようするスレッド
-	thread thr2(ShowLogs, &flg);
+	//thread thr2(ShowLogs, &flg);
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
 	//thread thr3(DetectAR, &flg);
 	/// DDMotorにコマンドを送信するスレッド
 	//thread thr4(SendDDMotorCommand, & flg);
 	/// OpenGLで点群を表示するスレッド
-	thread thr5(drawGL, &lsm, &logs, &flg);
+	//thread thr5(drawGL_part, &flg);
 	
 
 	//メインループ
@@ -238,24 +244,21 @@ int main() {
 		//光切断の高度の更新
 		if (in_imgs_saveid > 3)
 		{
-			if (lsm.processflgs[in_imgs_saveid - 1])
-			{
-				CalcLSM(&lsm, &logs);
-				/*if (!QueryPerformanceCounter(&end)) { return 0; }
-				logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
-				logs.LSM_times.push_back(logtime);*/
-				/*logs.LSM_modes.push_back(mode);*/
+			CalcLSM(&lsm, &logs);
+			drawGL_one(lsm.campts);
+			/*if (!QueryPerformanceCounter(&end)) { return 0; }
+			logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+			logs.LSM_times.push_back(logtime);*/
+			/*logs.LSM_modes.push_back(mode);*/
 #ifndef SAVE_IMGS_ //IMGのログを残さないとき，ログ用のVectorの先頭を削除する
-				if (logs.LSM_pts.size()>cyclebuffersize)
-				{
-					/*logs.LSM_times.erase(logs.LSM_times.begin(), logs.LSM_times.begin() + 1);
-					logs.LSM_modes.erase(logs.LSM_modes.begin(), logs.LSM_modes.begin() + 1);*/
-					logs.LSM_pts.erase(logs.LSM_pts.begin(), logs.LSM_pts.begin() + 1);
-					logs.LSM_rps.erase(logs.LSM_rps.begin(), logs.LSM_rps.begin() + 1);
-				}
-#endif // SAVE_IMGS_
-
+			if (logs.LSM_pts.size() > cyclebuffersize)
+			{
+				/*logs.LSM_times.erase(logs.LSM_times.begin(), logs.LSM_times.begin() + 1);
+				logs.LSM_modes.erase(logs.LSM_modes.begin(), logs.LSM_modes.begin() + 1);*/
+				logs.LSM_pts.erase(logs.LSM_pts.begin(), logs.LSM_pts.begin() + 1);
+				logs.LSM_rps.erase(logs.LSM_rps.begin(), logs.LSM_rps.begin() + 1);
 			}
+#endif // SAVE_IMGS_
 		}
 		
 		
@@ -271,10 +274,13 @@ int main() {
 
 	//スレッドの停止
 	if (thr1.joinable())thr1.join();
-	if (thr2.joinable())thr2.join();
+	//if (thr2.joinable())thr2.join();
 	//if (thr3.joinable())thr3.join();
 	//if (thr4.joinable())thr4.join();
-	if (thr5.joinable())thr5.join();
+	//if (thr5.joinable())thr5.join();
+
+	//OpenGLの停止
+	finishGL();
 
 	//カメラの停止，RS232Cの切断
 	cam.stop();
@@ -366,13 +372,13 @@ void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
 		in_imgs_saveid++;
 		QueryPerformanceCounter(&takeend);
 		taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
-		while (taketime < 0.001)
-		{
-			QueryPerformanceCounter(&takeend);
-			taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
-		}
+		//while (taketime < 0.001)
+		//{
+		//	QueryPerformanceCounter(&takeend);
+		//	taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
+		//}
 		
-		//std::cout << "TakePicture() time: " << taketime << endl;
+		std::cout << "TakePicture() time: " << taketime << endl;
 	}
 }
 
@@ -567,6 +573,7 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 			//ここで同心円状に輝度重心を取得
 			if (lsm->allbps.size() != 0)
 			{
+				roi_laser_outcnt = 0;
 				roi_laser_minx = width, roi_laser_maxx = 0, roi_laser_miny = height, roi_laser_maxy = 0;
 				for (const auto& pts : lsm->allbps)
 				{
@@ -644,6 +651,17 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 				rps = { lsm->rp[0],lsm->rp[1] };
 				logs->LSM_rps.emplace_back(rps);
 				lsm->processcnt++;
+			}
+			else
+			{
+				roi_laser_outcnt++;
+				if (roi_laser_outcnt>10)
+				{
+					roi_laser.x = 0;
+					roi_laser.width = width;
+					roi_laser.y = 0;
+					roi_laser.height = height;
+				}
 			}
 		}
 	}
