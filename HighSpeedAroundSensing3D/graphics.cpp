@@ -813,6 +813,9 @@ void drawGL_one(vector<vector<double>> pts) {
 
 
     glfwSwapBuffers(window);//ダブルバッファの入れ替え，これを行うことで画面が一部更新したもので一部更新されていないなどのがたつきをなくせる
+    QueryPerformanceCounter(&glend);
+    gltime = (double)(glend.QuadPart - glstart.QuadPart) / glfreq.QuadPart;
+    std::cout << "openGL time: " << gltime << endl;
 }
 
 void finishGL() {

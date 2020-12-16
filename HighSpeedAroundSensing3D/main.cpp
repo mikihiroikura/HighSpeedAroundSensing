@@ -256,8 +256,16 @@ int main() {
 		//光切断の高度の更新
 		if (in_imgs_saveid > 3)
 		{
+			QueryPerformanceCounter(&start);
 			CalcLSM(&lsm, &logs);
+			QueryPerformanceCounter(&end);
+			logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+			std::cout << "CalcLSM() time: " << logtime << endl;
+			QueryPerformanceCounter(&start);
 			drawGL_one(lsm.campts);
+			QueryPerformanceCounter(&end);
+			logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+			std::cout << "drawGL() time: " << logtime << endl;
 			/*if (!QueryPerformanceCounter(&end)) { return 0; }
 			logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
 			logs.LSM_times.push_back(logtime);*/
@@ -265,10 +273,14 @@ int main() {
 #ifndef SAVE_IMGS_ //IMGのログを残さないとき，ログ用のVectorの先頭を削除する
 			if (logs.LSM_pts.size() > cyclebuffersize)
 			{
+				QueryPerformanceCounter(&start);
 				/*logs.LSM_times.erase(logs.LSM_times.begin(), logs.LSM_times.begin() + 1);
 				logs.LSM_modes.erase(logs.LSM_modes.begin(), logs.LSM_modes.begin() + 1);*/
 				logs.LSM_pts.erase(logs.LSM_pts.begin(), logs.LSM_pts.begin() + 1);
 				logs.LSM_rps.erase(logs.LSM_rps.begin(), logs.LSM_rps.begin() + 1);
+				QueryPerformanceCounter(&end);
+				logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+				std::cout << "LogErase time: " << logtime << endl;
 			}
 #endif // SAVE_IMGS_
 		}
@@ -658,7 +670,7 @@ int CalcLSM(LSM *lsm, Logs *logs) {
 				QueryPerformanceCounter(&lsmend);
 				lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 				/*std::cout << "CalcLSM() calc3dpts time: " << lsmtime-lsmtime_c << endl;*/
-				std::cout << "CalcLSM() total time: " << lsmtime << endl;
+				//std::cout << "CalcLSM() total time: " << lsmtime << endl;
 				logs->LSM_pts.emplace_back(lsm->campts);
 				rps = { lsm->rp[0],lsm->rp[1] };
 				logs->LSM_rps.emplace_back(rps);
