@@ -283,6 +283,17 @@ int main() {
 				std::cout << "LogErase time: " << logtime << endl;
 			}
 #endif // SAVE_IMGS_
+			QueryPerformanceCounter(&start);
+			if (in_imgs_saveid > 3)
+			{
+				//cv::AutoLock lock(mutex);
+				cv::imshow("img", in_imgs[(in_imgs_saveid - 3) % cyclebuffersize]);
+			}
+			int key = cv::waitKey(1);
+			if (key == 'q') flg = false;
+			QueryPerformanceCounter(&end);
+			logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+			std::cout << "Showimg() time: " << logtime << endl;
 		}
 		
 		
