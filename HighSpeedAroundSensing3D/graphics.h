@@ -17,7 +17,8 @@
 #include "params.h"
 
 extern void drawGL(LSM* lsm, Logs* logs, bool* flg);
-extern void drawGL_one(double* pts, int lsmshowid);
+extern void drawGL_one(double* pts, int* lsmshowid);
+extern void drawGL2(bool* flg, double* pts, int* lsmshowid);
 extern void finishGL();
 extern void initGL();
 

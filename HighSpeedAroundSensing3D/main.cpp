@@ -93,6 +93,7 @@ const int roi_laser_margin = 30;
 cv::Point laser_pts(0, 0);
 int roi_laser_outcnt = 0;
 int lsmcalcid = 0;
+int showglid = 0;
 
 /// ログに関する変数
 const int cyclebuffersize = 10;
@@ -115,6 +116,7 @@ namespace fs = std::filesystem;
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
 void ShowLogs(bool* flg);
+void ShowAllLogs(bool* flg, double* pts, int* lsmshowid);
 void DetectAR(bool* flg);
 void SendDDMotorCommand(bool* flg);
 int CalcLSM(LSM* lsm, Logs* logs, double* pts);
@@ -210,7 +212,7 @@ int main() {
 #endif // !SAVE_IMGS_
 
 	//OpenGL初期化
-	initGL();
+	//initGL();
 
 
 	//カメラ起動
@@ -222,73 +224,59 @@ int main() {
 
 	//Threadの作成
 	/// 1000fpsで画像を格納し続けるスレッド
-	//thread thr1(TakePicture, &cam, &flg, &lsm);
+	thread thr1(TakePicture, &cam, &flg, &lsm);
 	/// 現在の画像をPCに出力して見えるようするスレッド
-	//thread thr2(ShowLogs, &flg);
+	thread thr2(ShowAllLogs, &flg, logs.LSM_pts_cycle, &showglid);
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
 	//thread thr3(DetectAR, &flg);
 	/// DDMotorにコマンドを送信するスレッド
 	//thread thr4(SendDDMotorCommand, & flg);
 	/// OpenGLで点群を表示するスレッド
-	//thread thr5(drawGL_part, &flg);
+	//thread thr5(drawGL2, &flg, logs.LSM_pts_cycle, &showglid);
 	
 	cv::Mat temp = zero.clone();
 	//メインループ
 	/// 取得された画像から光切断法で三次元位置を計算する
 	while (flg)
 	{
-		takepicid = in_imgs_saveid % cyclebuffersize;
-		QueryPerformanceCounter(&takestart);
-		cam.captureFrame(in_imgs[takepicid].data);
-		//memcpy(in_imgs[takepicid].data, temp.data, height * width * 3);
-		lsm.processflgs[takepicid] = true;
-		in_imgs_saveid = (in_imgs_saveid + 1) % cyclebuffersize;
-		QueryPerformanceCounter(&takeend);
-		taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
-		std::cout << "TakePicture() time: " << taketime << endl;
+		//画像取得
+		//takepicid = in_imgs_saveid % cyclebuffersize;
+		//QueryPerformanceCounter(&takestart);
+		//cam.captureFrame(in_imgs[takepicid].data);
+		////memcpy(in_imgs[takepicid].data, temp.data, height * width * 3);
+		//lsm.processflgs[takepicid] = true;
+		//in_imgs_saveid = (in_imgs_saveid + 1) % cyclebuffersize;
+		//QueryPerformanceCounter(&takeend);
+		//taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
+		//std::cout << "TakePicture() time: " << taketime << endl;
+
 		//光切断の高度の更新
-		//if (in_imgs_saveid > 3)
-		//{
 		QueryPerformanceCounter(&start);
 		CalcLSM(&lsm, &logs, logs.LSM_pts_cycle);
 		QueryPerformanceCounter(&end);
 		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
 		std::cout << "CalcLSM() time: " << logtime << endl;
-		QueryPerformanceCounter(&start);
-		int showglid = (in_imgs_saveid - 2 + cyclebuffersize) % cyclebuffersize;
-		drawGL_one(logs.LSM_pts_cycle, showglid);
+
+		//OpenGLでの点群表示
+		/*QueryPerformanceCounter(&start);
+		showglid = (in_imgs_saveid - 2 + cyclebuffersize) % cyclebuffersize;
+		drawGL_one(logs.LSM_pts_cycle, &showglid);
 		QueryPerformanceCounter(&end);
 		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
-		std::cout << "drawGL() time: " << logtime << endl;
+		std::cout << "drawGL() time: " << logtime << endl;*/
 		/*if (!QueryPerformanceCounter(&end)) { return 0; }
 		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
 		logs.LSM_times.push_back(logtime);*/
 		/*logs.LSM_modes.push_back(mode);*/
-#ifndef SAVE_IMGS_ //IMGのログを残さないとき，ログ用のVectorの先頭を削除する
-		//if (logs.LSM_pts.size() > cyclebuffersize)
-		//{
-		//	QueryPerformanceCounter(&start);
-		//	/*logs.LSM_times.erase(logs.LSM_times.begin(), logs.LSM_times.begin() + 1);
-		//	logs.LSM_modes.erase(logs.LSM_modes.begin(), logs.LSM_modes.begin() + 1);*/
-		//	logs.LSM_pts.erase(logs.LSM_pts.begin(), logs.LSM_pts.begin() + 1);
-		//	logs.LSM_rps.erase(logs.LSM_rps.begin(), logs.LSM_rps.begin() + 1);
-		//	QueryPerformanceCounter(&end);
-		//	logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
-		//	std::cout << "LogErase time: " << logtime << endl;
-		//}
-#endif // SAVE_IMGS_
-		QueryPerformanceCounter(&start);
-		/*if (in_imgs_saveid > 3)
-		{*/
-			//cv::AutoLock lock(mutex);
+
+		//画像表示
+		/*QueryPerformanceCounter(&start);
 		cv::imshow("img", in_imgs[(in_imgs_saveid - 2 + cyclebuffersize) % cyclebuffersize]);
-		//}
 		int key = cv::waitKey(1);
 		if (key == 'q') flg = false;
 		QueryPerformanceCounter(&end);
 		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
-		std::cout << "Showimg() time: " << logtime << endl;
-		//}
+		std::cout << "Showimg() time: " << logtime << endl;*/
 		
 		
 		//時刻の更新
@@ -302,14 +290,14 @@ int main() {
 	}
 
 	//スレッドの停止
-	//if (thr1.joinable())thr1.join();
-	//if (thr2.joinable())thr2.join();
+	if (thr1.joinable())thr1.join();
+	if (thr2.joinable())thr2.join();
 	//if (thr3.joinable())thr3.join();
 	//if (thr4.joinable())thr4.join();
 	//if (thr5.joinable())thr5.join();
 
 	//OpenGLの停止
-	finishGL();
+	//finishGL();
 
 	//カメラの停止，RS232Cの切断
 	cam.stop();
@@ -385,13 +373,13 @@ void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
 	cv::Mat temp = zero.clone();
 	while (*flg)
 	{
+		QueryPerformanceCounter(&takestart);
 #ifdef SAVE_IMGS_
 		takepicid = in_imgs_saveid;
 #endif // SAVE_IMG
 #ifndef SAVE_IMGS_
 		takepicid = in_imgs_saveid % cyclebuffersize;
 #endif // !SAVE_IMGS
-		QueryPerformanceCounter(&takestart);
 		cam->captureFrame(in_imgs[takepicid].data);
 		//memcpy(in_imgs[takepicid].data, temp.data, height * width * 3);
 		lsm->processflgs[takepicid] = true;
@@ -412,23 +400,44 @@ void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
 void ShowLogs(bool* flg) {
 	while (*flg)
 	{
-		/*QueryPerformanceCounter(&showstart);*/
-		if (in_imgs_saveid>3)
-		{
-			//cv::AutoLock lock(mutex);
+		QueryPerformanceCounter(&showstart);
 #ifdef SAVE_IMGS
-			cv::imshow("img", in_imgs[in_imgs_saveid - 3]);
+		cv::imshow("img", in_imgs[in_imgs_saveid - 2]);
 #endif // SAVE_IMGS
 #ifndef SAVE_IMGS
-			cv::imshow("img", in_imgs[(in_imgs_saveid - 3) % cyclebuffersize]);
+		cv::imshow("img", in_imgs[(in_imgs_saveid - 2 + cyclebuffersize) % cyclebuffersize]);
 #endif // !SAVE_IMGS
-		}		
 		int key = cv::waitKey(1);
 		if (key == 'q') *flg = false;
-		/*QueryPerformanceCounter(&showend);
+		QueryPerformanceCounter(&showend);
 		showtime = (double)(showend.QuadPart - showstart.QuadPart) / freq.QuadPart;
-		std::cout << "ShowLogs() time: " << showtime << endl;*/
+		std::cout << "ShowLogs() time: " << showtime << endl;
 	}
+}
+
+//画像とOpenGLの点群全てを表示
+void ShowAllLogs(bool* flg, double* pts, int* lsmshowid) {
+	initGL();
+	while (*flg)
+	{
+		QueryPerformanceCounter(&showstart);
+#ifdef SAVE_IMGS
+		cv::imshow("img", in_imgs[in_imgs_saveid - 2]);
+#endif // SAVE_IMGS
+#ifndef SAVE_IMGS
+		cv::imshow("img", in_imgs[(in_imgs_saveid - 2 + cyclebuffersize) % cyclebuffersize]);
+#endif // !SAVE_IMGS
+		int key = cv::waitKey(1);
+		if (key == 'q') *flg = false;
+		
+		//OpenGL描画
+		drawGL_one(pts, lsmshowid);
+
+		QueryPerformanceCounter(&showend);
+		showtime = (double)(showend.QuadPart - showstart.QuadPart) / freq.QuadPart;
+		std::cout << "ShowAllLogs() time: " << showtime << endl;
+	}
+	finishGL();
 }
 
 //ARマーカの検出と位置姿勢推定
