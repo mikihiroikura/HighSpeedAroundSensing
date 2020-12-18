@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <opencv2/opencv.hpp>
+#include "RS232c.h"
 
 using namespace std;
 
@@ -46,6 +47,8 @@ struct Logs
 {
 	vector<double> LSM_times;
 	vector<vector<vector<double>>> LSM_pts;
+	//double LSM_pts_cycle[cyclebuffersize][rends - rstart][3] = {0};
+	double* LSM_pts_cycle;
 	vector<vector<double>> LSM_rps;
 	vector<char> LSM_modes;
 };
