@@ -386,11 +386,11 @@ void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
 		in_imgs_saveid = (in_imgs_saveid+1)%cyclebuffersize;
 		QueryPerformanceCounter(&takeend);
 		taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
-		//while (taketime < 0.001)
-		//{
-		//	QueryPerformanceCounter(&takeend);
-		//	taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
-		//}
+		while (taketime < 0.001)
+		{
+			QueryPerformanceCounter(&takeend);
+			taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
+		}
 		
 		std::cout << "TakePicture() time: " << taketime << endl;
 	}
@@ -531,10 +531,6 @@ void SendDDMotorCommand(bool* flg) {
 //Mainループでの光切断法による形状計測
 int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 	QueryPerformanceCounter(&lsmstart);
-	//変数のリセット
-	lsm->bps.clear();
-	lsm->idpixs.clear();
-	lsm->campts.clear();
 
 	//画像の格納
 	lsmcalcid = (in_imgs_saveid - 1 + cyclebuffersize) % cyclebuffersize;
@@ -682,8 +678,6 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 				lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 				std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 
-				QueryPerformanceCounter(&lsmend);
-				lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 				/*std::cout << "CalcLSM() calc3dpts time: " << lsmtime-lsmtime_c << endl;*/
 				//std::cout << "CalcLSM() total time: " << lsmtime << endl;
 				//logs->LSM_pts.emplace_back(lsm->campts);
@@ -705,5 +699,7 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 		}
 	}
 	lsm->processflgs[lsmcalcid] = false;
+	QueryPerformanceCounter(&lsmend);
+	lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 	return 0;
 }
