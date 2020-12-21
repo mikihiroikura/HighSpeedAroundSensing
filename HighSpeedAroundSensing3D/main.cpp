@@ -57,10 +57,8 @@ cv::Mutex mutex;
 long long processarcnt = 1;
 RS232c mbed;
 char command[256] = "";
-int rpm = 100;
+int rpm = 10;
 char mode = 'R';
-int initpulse = 100;
-int movepulse = 50;
 const int gearratio = 1000;
 const int rotpulse = 432000 / gearratio;
 #define READBUFFERSIZE 256
@@ -98,8 +96,8 @@ int showglid = 0;
 /// ログに関する変数
 const int cyclebuffersize = 10;
 //デバッグ用変数
-LARGE_INTEGER lsmstart, lsmend, takestart, takeend, arstart, arend, showstart, showend;
-double taketime = 0, lsmtime = 0, artime = 0, showtime = 0;
+LARGE_INTEGER lsmstart, lsmend, takestart, takeend, arstart, arend, showstart, showend, mbedstart, mbedstop;
+double taketime = 0, lsmtime = 0, artime = 0, showtime = 0, mbedtime = 0;
 double lsmtime_a, lsmtime_b, lsmtime_c, lsmtime_d;
 
 #pragma comment(lib,"KAYACoaXpressLib" LIB_EXT)
@@ -230,7 +228,7 @@ int main() {
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
 	//thread thr3(DetectAR, &flg);
 	/// DDMotorにコマンドを送信するスレッド
-	//thread thr4(SendDDMotorCommand, & flg);
+	thread thr4(SendDDMotorCommand, & flg);
 	/// OpenGLで点群を表示するスレッド
 	//thread thr5(drawGL2, &flg, logs.LSM_pts_cycle, &showglid);
 	
@@ -293,7 +291,7 @@ int main() {
 	if (thr1.joinable())thr1.join();
 	if (thr2.joinable())thr2.join();
 	//if (thr3.joinable())thr3.join();
-	//if (thr4.joinable())thr4.join();
+	if (thr4.joinable())thr4.join();
 	//if (thr5.joinable())thr5.join();
 
 	//OpenGLの停止
@@ -488,42 +486,28 @@ void DetectAR(bool* flg) {
 //DDMotorへのコマンド送信
 void SendDDMotorCommand(bool* flg) {
 	//動作開始のコマンド
-	snprintf(command, READBUFFERSIZE, "%c,%d,%d,%d,\r", mode, rpm, initpulse, movepulse);
+	snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
 	mbed.Send(command);
 	memset(command, '\0', READBUFFERSIZE);
+	
 	while (*flg)
 	{
-		if (detect_arid0_flgs.size()>processarcnt)
+		mbedtime = 0;
+		QueryPerformanceCounter(&mbedstart);
+		while (mbedtime < 2.0)
 		{
-			//ARマーカ検出したとき，局所計測
-			if (detect_arid0_flgs[processarcnt])
-			{
-				detectfailcnt = 0;
-				//ARマーカの方向計算
-				dir_arid0_rad = atan2(Tvec_id0[1], Tvec_id0[0]) + M_PI / 2;
-				initpulse = ((int)(dir_arid0_rad * 180 / M_PI / 360 * rotpulse) + rotpulse - movepulse / 2) % (rotpulse);
-				if (initpulse < 0) initpulse += rotpulse;
-				//コマンド送信
-				mode = 'L';
-				rpm = 200;
-			}
-			else// if(!detect_arid0_flgs[processarcnt]&& !detect_arid0_flgs[processarcnt-1])
-			{//ARマーカが2回連続ないとき，全周計測
-				detectfailcnt++;
-				if (detectfailcnt>10){ 
-					mode = 'R';
-					rpm = 500;
-				}
-			}
-			snprintf(command, READBUFFERSIZE, "%c,%d,%d,%d,\r", mode, rpm, initpulse, movepulse);
-			mbed.Send(command);
-			memset(command, '\0', READBUFFERSIZE);
-			processarcnt++;
+			QueryPerformanceCounter(&mbedstop);
+			mbedtime = (double)(mbedstop.QuadPart - mbedstart.QuadPart) / freq.QuadPart;
 		}
+		if (mode == 'R') mode = 'L';
+		else mode = 'R';
+		snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+		mbed.Send(command);
+		memset(command, '\0', READBUFFERSIZE);
 	}
 	//終了コマンド送信
 	mode = 'F';
-	snprintf(command, READBUFFERSIZE, "%c,%d,%d,%d,\r", mode, rpm, initpulse, movepulse);
+	snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
 	mbed.Send(command);
 	memset(command, '\0', READBUFFERSIZE);
 }
@@ -667,6 +651,8 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 						//*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 1) = lambda * v + 100 * sin(lsm->processcnt * 0.0099);
 						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 1) = lambda * v;
 						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 2) = lambda * w;
+
+						//ここで取得点群の距離を計算し，その結果をもとにDDMotorに対するフラグを立てる
 					}
 				}
 #endif // OUT_COLOR_
@@ -685,6 +671,14 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 				//rps = { lsm->rp[0],lsm->rp[1] };
 				//logs->LSM_rps.emplace_back(rps);
 				lsm->processcnt++;
+				//if (lsm->processcnt%2000==0)
+				//{
+				//	if (mode == 'R') mode = 'L';
+				//	else mode = 'R';
+				//	snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+				//	mbed.Send(command);
+				//	memset(command, '\0', READBUFFERSIZE);
+				//}
 			}
 			else
 			{
