@@ -92,6 +92,12 @@ cv::Point laser_pts(0, 0);
 int roi_laser_outcnt = 0;
 int lsmcalcid = 0;
 int showglid = 0;
+const double Dc = 800; //局所領域計測範囲切り替えの距離
+const int Nc = 50; //一つのラインレーザからDc以下の距離の点群の最小個数
+const int Cc = 10; //Dc以下の距離の点群の個数Nc以上の最小連続回数
+int distcnt = 0, objcnt = 0;
+bool laserdirchange = false;
+
 
 /// ログに関する変数
 const int cyclebuffersize = 10;
@@ -110,6 +116,7 @@ namespace fs = std::filesystem;
 //#define SAVE_IMGS_
 #define OUT_COLOR_
 //#define OUT_MONO_
+//#define AUTONOMOUS_SENSING_
 
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
@@ -170,6 +177,10 @@ int main() {
 
 	//MBEDのRS232接続
 	mbed.Connect("COM4", 115200, 8, NOPARITY, 0, 0, 0, 5000, 20000);
+	////動作開始のコマンド
+	//snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+	//mbed.Send(command);
+	//memset(command, '\0', READBUFFERSIZE);
 
 	//カラーORモノクロ
 #ifdef OUT_MONO_
@@ -300,6 +311,12 @@ int main() {
 	//カメラの停止，RS232Cの切断
 	cam.stop();
 	cam.disconnect();
+
+	////終了コマンド送信
+	//mode = 'F';
+	//snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+	//mbed.Send(command);
+	//memset(command, '\0', READBUFFERSIZE);
 
 	//計算した座標，取得画像の保存
 	/// Logファイルの作成
@@ -623,6 +640,9 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 				/*QueryPerformanceCounter(&lsmend);
 				lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 				std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
+#ifdef AUTONOMOUS_SENSING_
+				distcnt = 0;
+#endif // AUTONOMOUS_SENSING_
 				for (int rs = 0; rs < rends - rstart; rs++)
 				{
 					if (lsmmass_r[rs] > 0)
@@ -653,8 +673,27 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 2) = lambda * w;
 
 						//ここで取得点群の距離を計算し，その結果をもとにDDMotorに対するフラグを立てる
+#ifdef AUTONOMOUS_SENSING_
+						if (hypot(lambda * u, lambda * v) < Dc) distcnt++;
+#endif // AUTONOMOUS_SENSING_
 					}
 				}
+#ifdef AUTONOMOUS_SENSING_
+				if (distcnt >= Nc) objcnt++;//物体検出判定
+				else//物体検出できなかった
+				{
+					if (objcnt > Cc) {
+						//この時点で物体検出が連続Cc回の時，レーザ方向変更
+						if (mode == 'R') mode = 'L';
+						else mode = 'R';
+						snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+						mbed.Send(command);
+						memset(command, '\0', READBUFFERSIZE);
+					}
+					objcnt = 0;
+				}
+#endif // AUTONOMOUS_SENSING_
+
 #endif // OUT_COLOR_
 #ifdef OUT_MONO_
 				cv::threshold(lsm->lsm_laser, lsm->lsm_laser, mono_thr, 255, cv::THRESH_BINARY);
@@ -671,14 +710,6 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 				//rps = { lsm->rp[0],lsm->rp[1] };
 				//logs->LSM_rps.emplace_back(rps);
 				lsm->processcnt++;
-				//if (lsm->processcnt%2000==0)
-				//{
-				//	if (mode == 'R') mode = 'L';
-				//	else mode = 'R';
-				//	snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
-				//	mbed.Send(command);
-				//	memset(command, '\0', READBUFFERSIZE);
-				//}
 			}
 			else
 			{
