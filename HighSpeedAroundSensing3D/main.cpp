@@ -92,7 +92,7 @@ cv::Point laser_pts(0, 0);
 int roi_laser_outcnt = 0;
 int lsmcalcid = 0;
 int showglid = 0;
-const double Dc = 800; //局所領域計測範囲切り替えの距離
+const double Dc = 1200; //局所領域計測範囲切り替えの距離
 const int Nc = 50; //一つのラインレーザからDc以下の距離の点群の最小個数
 const int Cc = 10; //Dc以下の距離の点群の個数Nc以上の最小連続回数
 int distcnt = 0, objcnt = 0;
@@ -116,7 +116,7 @@ namespace fs = std::filesystem;
 //#define SAVE_IMGS_
 #define OUT_COLOR_
 //#define OUT_MONO_
-//#define AUTONOMOUS_SENSING_
+#define AUTONOMOUS_SENSING_
 
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
@@ -177,10 +177,10 @@ int main() {
 
 	//MBEDのRS232接続
 	mbed.Connect("COM4", 115200, 8, NOPARITY, 0, 0, 0, 5000, 20000);
-	////動作開始のコマンド
-	//snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
-	//mbed.Send(command);
-	//memset(command, '\0', READBUFFERSIZE);
+	//動作開始のコマンド
+	snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+	mbed.Send(command);
+	memset(command, '\0', READBUFFERSIZE);
 
 	//カラーORモノクロ
 #ifdef OUT_MONO_
@@ -239,7 +239,7 @@ int main() {
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
 	//thread thr3(DetectAR, &flg);
 	/// DDMotorにコマンドを送信するスレッド
-	thread thr4(SendDDMotorCommand, & flg);
+	//thread thr4(SendDDMotorCommand, & flg);
 	/// OpenGLで点群を表示するスレッド
 	//thread thr5(drawGL2, &flg, logs.LSM_pts_cycle, &showglid);
 	
@@ -302,7 +302,7 @@ int main() {
 	if (thr1.joinable())thr1.join();
 	if (thr2.joinable())thr2.join();
 	//if (thr3.joinable())thr3.join();
-	if (thr4.joinable())thr4.join();
+	//if (thr4.joinable())thr4.join();
 	//if (thr5.joinable())thr5.join();
 
 	//OpenGLの停止
@@ -312,11 +312,11 @@ int main() {
 	cam.stop();
 	cam.disconnect();
 
-	////終了コマンド送信
-	//mode = 'F';
-	//snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
-	//mbed.Send(command);
-	//memset(command, '\0', READBUFFERSIZE);
+	//終了コマンド送信
+	mode = 'F';
+	snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+	mbed.Send(command);
+	memset(command, '\0', READBUFFERSIZE);
 
 	//計算した座標，取得画像の保存
 	/// Logファイルの作成
