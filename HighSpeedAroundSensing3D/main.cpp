@@ -57,7 +57,7 @@ cv::Mutex mutex;
 long long processarcnt = 1;
 RS232c mbed;
 char command[256] = "";
-int rpm = 10;
+int rpm = 100;
 char mode = 'R';
 const int gearratio = 1000;
 const int rotpulse = 432000 / gearratio;
@@ -676,6 +676,12 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 #ifdef AUTONOMOUS_SENSING_
 						if (hypot(lambda * u, lambda * v) < Dc) distcnt++;
 #endif // AUTONOMOUS_SENSING_
+					}
+					else
+					{
+						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 0) = 0;
+						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 1) = 0;
+						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 2) = 0;
 					}
 				}
 #ifdef AUTONOMOUS_SENSING_

@@ -40,7 +40,7 @@ vector<float> color;
 vector<cv::Mat> vertices_vec;
 const int maxvertsize = 100;
 const int maxpointsize = 432-104;
-double safe_area = 1.0, danger_area = 0.5;
+double safe_area = 1.0, danger_area = 0.5, zero_area = 0.01;
 double dist;
 double verts[maxvertsize][maxpointsize][3] = {0};
 float colos[maxvertsize][maxpointsize][3] = {0};
@@ -458,13 +458,13 @@ void drawGL_one(double *pts, int *lsmshowid) {
             if (hide_green) colos[savecnt][i][1] = 0.0;
             else colos[savecnt][i][1] = 1.0;
         }
-        else if (dist <= danger_area) {
+        else if (dist <= danger_area && dist > zero_area) {
             colos[savecnt][i][0] = 0.0;
             colos[savecnt][i][1] = 0.0;
             if (hide_blue) colos[savecnt][i][2] = 0.0;
             else colos[savecnt][i][2] = 1.0;
         }
-        else if (dist <= 0)
+        else if (dist <= zero_area)
         {
             colos[savecnt][i][0] = 0.0;
             colos[savecnt][i][1] = 0.0;
