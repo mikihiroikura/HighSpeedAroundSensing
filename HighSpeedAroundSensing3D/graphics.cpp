@@ -40,7 +40,6 @@ vector<float> color;
 vector<cv::Mat> vertices_vec;
 const int maxvertsize = 100;
 const int maxpointsize = 432-104;
-double safe_area = 1.0, danger_area = 0.5, zero_area = 0.01;
 double dist;
 double verts[maxvertsize][maxpointsize][3] = {0};
 float colos[maxvertsize][maxpointsize][3] = {0};

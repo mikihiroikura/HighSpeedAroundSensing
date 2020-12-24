@@ -92,10 +92,12 @@ cv::Point laser_pts(0, 0);
 int roi_laser_outcnt = 0;
 int lsmcalcid = 0;
 int showglid = 0;
-const double Dc = 1200; //局所領域計測範囲切り替えの距離
-const int Nc = 50; //一つのラインレーザからDc以下の距離の点群の最小個数
+const double Dc = danger_area * 1000, Ac = safe_area * 1000; //局所領域計測範囲切り替えの距離
+const int Nc = 50; //一つのラインレーザからAc以下の距離の点群の最小個数
 const int Cc = 10; //Dc以下の距離の点群の個数Nc以上の最小連続回数
-int distcnt = 0, objcnt = 0;
+const int dangerthr = 10;
+int alertcnt = 0, dangercnt = 0, objcnt = 0, totaldanger = 0;
+int reciprocntdown = 3;
 bool objdetected = false;
 
 
@@ -641,7 +643,7 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 				lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 				std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 #ifdef AUTONOMOUS_SENSING_
-				distcnt = 0;
+				alertcnt = 0, dangercnt = 0;
 #endif // AUTONOMOUS_SENSING_
 				for (int rs = 0; rs < rends - rstart; rs++)
 				{
@@ -674,7 +676,8 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 
 						//ここで取得点群の距離を計算し，その結果をもとにDDMotorに対するフラグを立てる
 #ifdef AUTONOMOUS_SENSING_
-						if (hypot(lambda * u, lambda * v) < Dc) distcnt++;
+						if (hypot(lambda * u, lambda * v) < Ac) alertcnt++;
+						if (hypot(lambda * u, lambda * v) < Dc) dangercnt++;
 #endif // AUTONOMOUS_SENSING_
 					}
 					else
@@ -685,9 +688,10 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 					}
 				}
 #ifdef AUTONOMOUS_SENSING_
-				if (distcnt >= Nc) {
+				if (alertcnt >= Nc) {
 					//物体検出判定
 					objcnt++;
+					totaldanger += dangercnt;
 					objdetected = true;
 				}
 				else//物体検出できなかった
@@ -695,10 +699,18 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 					if (objdetected)
 					{//前フレームで物体検出がされていてかつ今フレームで物体未検出になった時
 						if (objcnt > Cc) {
-							//この時点で物体検出が連続Cc回の時，レーザ方向変更
-							if (mode == 'R') mode = 'L';
-							else mode = 'R';
-							rpm = 100;
+							//この時点で物体検出が連続Cc回の時
+							if (totaldanger < dangerthr) reciprocntdown--;
+							if (reciprocntdown > 0)
+							{
+								if (mode == 'R') mode = 'L';
+								else mode = 'R';
+								rpm = 100;
+							}
+							else {
+								rpm = 200;
+								reciprocntdown = 3;
+							}
 							snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
 							mbed.Send(command);
 							memset(command, '\0', READBUFFERSIZE);
@@ -706,13 +718,14 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 						else
 						{
 							rpm = 200;
+							reciprocntdown = 3;
 							snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
 							mbed.Send(command);
 							memset(command, '\0', READBUFFERSIZE);
 						}
 					}
 					objdetected = false;
-					objcnt = 0;
+					objcnt = 0, totaldanger = 0;
 				}
 #endif // AUTONOMOUS_SENSING_
 
