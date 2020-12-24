@@ -57,7 +57,7 @@ cv::Mutex mutex;
 long long processarcnt = 1;
 RS232c mbed;
 char command[256] = "";
-int rpm = 100;
+int rpm = 200;
 char mode = 'R';
 const int gearratio = 1000;
 const int rotpulse = 432000 / gearratio;
@@ -96,7 +96,7 @@ const double Dc = 1200; //局所領域計測範囲切り替えの距離
 const int Nc = 50; //一つのラインレーザからDc以下の距離の点群の最小個数
 const int Cc = 10; //Dc以下の距離の点群の個数Nc以上の最小連続回数
 int distcnt = 0, objcnt = 0;
-bool laserdirchange = false;
+bool objdetected = false;
 
 
 /// ログに関する変数
@@ -685,17 +685,33 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 					}
 				}
 #ifdef AUTONOMOUS_SENSING_
-				if (distcnt >= Nc) objcnt++;//物体検出判定
+				if (distcnt >= Nc) {
+					//物体検出判定
+					objcnt++;
+					objdetected = true;
+				}
 				else//物体検出できなかった
 				{
-					if (objcnt > Cc) {
-						//この時点で物体検出が連続Cc回の時，レーザ方向変更
-						if (mode == 'R') mode = 'L';
-						else mode = 'R';
-						snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
-						mbed.Send(command);
-						memset(command, '\0', READBUFFERSIZE);
+					if (objdetected)
+					{//前フレームで物体検出がされていてかつ今フレームで物体未検出になった時
+						if (objcnt > Cc) {
+							//この時点で物体検出が連続Cc回の時，レーザ方向変更
+							if (mode == 'R') mode = 'L';
+							else mode = 'R';
+							rpm = 100;
+							snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+							mbed.Send(command);
+							memset(command, '\0', READBUFFERSIZE);
+						}
+						else
+						{
+							rpm = 200;
+							snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+							mbed.Send(command);
+							memset(command, '\0', READBUFFERSIZE);
+						}
 					}
+					objdetected = false;
 					objcnt = 0;
 				}
 #endif // AUTONOMOUS_SENSING_

@@ -447,10 +447,10 @@ void drawGL_one(double *pts, int *lsmshowid) {
         verts[savecnt][i][2] = *(pts + *lsmshowid * i * 3 + 3 * i + 2) * 0.001;
         dist = hypot(verts[savecnt][i][0], verts[savecnt][i][1]);
         if (dist > safe_area) {
+            colos[savecnt][i][0] = 0.0;
             colos[savecnt][i][1] = 0.0;
-            colos[savecnt][i][2] = 0.0;
-            if (hide_red) colos[savecnt][i][0] = 0.0;
-            else colos[savecnt][i][0] = 1.0;
+            if (hide_blue) colos[savecnt][i][2] = 0.0;
+            else colos[savecnt][i][2] = 1.0;
         }
         else if (dist <= safe_area && dist > danger_area) {
             colos[savecnt][i][0] = 0.0;
@@ -459,10 +459,10 @@ void drawGL_one(double *pts, int *lsmshowid) {
             else colos[savecnt][i][1] = 1.0;
         }
         else if (dist <= danger_area && dist > zero_area) {
-            colos[savecnt][i][0] = 0.0;
             colos[savecnt][i][1] = 0.0;
-            if (hide_blue) colos[savecnt][i][2] = 0.0;
-            else colos[savecnt][i][2] = 1.0;
+            colos[savecnt][i][2] = 0.0;
+            if (hide_red) colos[savecnt][i][0] = 0.0;
+            else colos[savecnt][i][0] = 1.0;
         }
         else if (dist <= zero_area)
         {
