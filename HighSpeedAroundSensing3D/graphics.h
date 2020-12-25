@@ -22,7 +22,7 @@ extern void drawGL2(bool* flg, double* pts, int* lsmshowid);
 extern void finishGL();
 extern void initGL();
 
-const double safe_area = 1.5, danger_area = 1.0, zero_area = 0.01;
+const double safe_area = 1.5, danger_area = 0.2, zero_area = 0.01;
 
 
 #endif // GRAPHICS_H

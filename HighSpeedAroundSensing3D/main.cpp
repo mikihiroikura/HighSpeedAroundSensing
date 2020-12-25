@@ -715,14 +715,13 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 							mbed.Send(command);
 							memset(command, '\0', READBUFFERSIZE);
 						}
-						else
-						{
-							rpm = 200;
-							reciprocntdown = 3;
-							snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
-							mbed.Send(command);
-							memset(command, '\0', READBUFFERSIZE);
-						}
+						//else
+						//{
+						//	rpm = 200;
+						//	snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+						//	mbed.Send(command);
+						//	memset(command, '\0', READBUFFERSIZE);
+						//}
 					}
 					objdetected = false;
 					objcnt = 0, totaldanger = 0;
