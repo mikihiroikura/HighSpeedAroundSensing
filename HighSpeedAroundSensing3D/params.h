@@ -31,6 +31,11 @@ struct LSM
 	cv::Mat lsm_laser;
 	cv::Mat lsm_laser_ranged;
 
+	//画像ポインタ
+	uint8_t* ref_arc_src;
+	uint8_t* lsm_laser_src;
+
+
 	//パラメータ
 	long long processcnt;
 	int buffersize;

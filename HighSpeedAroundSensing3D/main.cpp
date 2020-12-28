@@ -559,11 +559,12 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 		refmass = 0, refmomx = 0, refmomy = 0;
 		if (refpts.size() != 0)
 		{
+			lsm->ref_arc_src = lsm->ref_arc.ptr<uint8_t>(0);
 			for (size_t i = 0; i < refpts.size(); i++)
 			{
-				refmass += (double)lsm->ref_arc.data[refpts[i].y * 66 * 3 + refpts[i].x * 3 + 2];
-				refmomx += (double)lsm->ref_arc.data[refpts[i].y * 66 * 3 + refpts[i].x * 3 + 2] * refpts[i].x;
-				refmomy += (double)lsm->ref_arc.data[refpts[i].y * 66 * 3 + refpts[i].x * 3 + 2] * refpts[i].y;
+				refmass += lsm->ref_arc_src[refpts[i].y * 66 * 3 + refpts[i].x * 3 + 2];
+				refmomx += (double)lsm->ref_arc_src[refpts[i].y * 66 * 3 + refpts[i].x * 3 + 2] * refpts[i].x;
+				refmomy += (double)lsm->ref_arc_src[refpts[i].y * 66 * 3 + refpts[i].x * 3 + 2] * refpts[i].y;
 			}
 			lsm->rp[0] = refmomx / refmass + roi_ref.x;
 			lsm->rp[1] = refmomy / refmass + roi_ref.y;
@@ -610,6 +611,7 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 			{
 				roi_laser_outcnt = 0;
 				roi_laser_minx = width, roi_laser_maxx = 0, roi_laser_miny = height, roi_laser_maxy = 0;
+				lsm->lsm_laser_src = lsm->lsm_laser.ptr<uint8_t>(0);
 				for (const auto& pts : lsm->allbps)
 				{
 					laser_pts.x = pts.x + roi_laser.x;
@@ -621,9 +623,9 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 					if (roi_laser_miny > laser_pts.y) roi_laser_miny = laser_pts.y;
 					if (r_calc < rends - rstart)
 					{
-						lsmmass_r[r_calc] += lsm->lsm_laser.data[laser_pts.y * colorstep + laser_pts.x * colorelem + 2];
-						lsmmomx_r[r_calc] += (double)lsm->lsm_laser.data[laser_pts.y * colorstep + laser_pts.x * colorelem + 2] * laser_pts.x;
-						lsmmomy_r[r_calc] += (double)lsm->lsm_laser.data[laser_pts.y * colorstep + laser_pts.x * colorelem + 2] * laser_pts.y;
+						lsmmass_r[r_calc] += lsm->lsm_laser_src[laser_pts.y * colorstep + laser_pts.x * colorelem + 2];
+						lsmmomx_r[r_calc] += (double)lsm->lsm_laser_src[laser_pts.y * colorstep + laser_pts.x * colorelem + 2] * laser_pts.x;
+						lsmmomy_r[r_calc] += (double)lsm->lsm_laser_src[laser_pts.y * colorstep + laser_pts.x * colorelem + 2] * laser_pts.y;
 					}
 				}
 				if (roi_laser_maxx > width - roi_laser_margin) roi_laser_maxx = width;
