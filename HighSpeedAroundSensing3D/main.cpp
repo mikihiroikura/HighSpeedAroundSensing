@@ -96,9 +96,11 @@ const double Dc = danger_area * 1000, Ac = safe_area * 1000; //‹ÇŠ—ÌˆæŒv‘ª”ÍˆÍ
 const int Nc = 50; //ˆê‚Â‚Ìƒ‰ƒCƒ“ƒŒ[ƒU‚©‚çAcˆÈ‰º‚Ì‹——£‚Ì“_ŒQ‚ÌÅ¬ŒÂ”
 const int Cc = 10; //DcˆÈ‰º‚Ì‹——£‚Ì“_ŒQ‚ÌŒÂ”NcˆÈã‚ÌÅ¬˜A‘±‰ñ”
 const int dangerthr = 10;
-int alertcnt = 0, dangercnt = 0, objcnt = 0, totaldanger = 0;
+int alertcnt = 0, dangercnt = 0, objcnt = 0, nonobjcnt = 0,totaldanger = 0;
 int reciprocntdown = 3;
 bool objdetected = false;
+bool detectenableflg = true;
+int detectenablecnt = 0;
 
 
 /// ƒƒO‚ÉŠÖ‚·‚é•Ï”
@@ -690,44 +692,66 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 					}
 				}
 #ifdef AUTONOMOUS_SENSING_
-				if (alertcnt >= Nc) {
-					//•¨‘ÌŒŸo”»’è
-					objcnt++;
-					totaldanger += dangercnt;
-					objdetected = true;
-				}
-				else//•¨‘ÌŒŸo‚Å‚«‚È‚©‚Á‚½
+				if (detectenableflg)
 				{
-					if (objdetected)
-					{//‘OƒtƒŒ[ƒ€‚Å•¨‘ÌŒŸo‚ª‚³‚ê‚Ä‚¢‚Ä‚©‚Â¡ƒtƒŒ[ƒ€‚Å•¨‘Ì–¢ŒŸo‚É‚È‚Á‚½
-						if (objcnt > Cc) {
-							//‚±‚Ì“_‚Å•¨‘ÌŒŸo‚ª˜A‘±Cc‰ñ‚Ì
-							if (totaldanger < dangerthr) reciprocntdown--;
-							if (reciprocntdown > 0)
-							{
-								if (mode == 'R') mode = 'L';
-								else mode = 'R';
-								rpm = 100;
-							}
-							else {
-								rpm = 200;
-								reciprocntdown = 3;
-							}
-							snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
-							mbed.Send(command);
-							memset(command, '\0', READBUFFERSIZE);
-						}
-						//else
-						//{
-						//	rpm = 200;
-						//	snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
-						//	mbed.Send(command);
-						//	memset(command, '\0', READBUFFERSIZE);
-						//}
+					if (alertcnt >= Nc) {
+						//•¨‘ÌŒŸo”»’è
+						objcnt++;
+						nonobjcnt = 0;
+						totaldanger += dangercnt;
+						objdetected = true;
 					}
-					objdetected = false;
-					objcnt = 0, totaldanger = 0;
+					else//•¨‘ÌŒŸo‚Å‚«‚È‚©‚Á‚½
+					{
+						if (objdetected)
+						{//‘OƒtƒŒ[ƒ€‚Å•¨‘ÌŒŸo‚ª‚³‚ê‚Ä‚¢‚Ä‚©‚Â¡ƒtƒŒ[ƒ€‚Å•¨‘Ì–¢ŒŸo‚É‚È‚Á‚½
+							if (objcnt > Cc) {
+								//‚±‚Ì“_‚Å•¨‘ÌŒŸo‚ª˜A‘±Cc‰ñ‚Ì
+								if (totaldanger < dangerthr) reciprocntdown--;
+								if (reciprocntdown > 0)
+								{
+									if (mode == 'R') mode = 'L';
+									else mode = 'R';
+									rpm = 100;
+								}
+								else {
+									rpm = 200;
+									reciprocntdown = 3;
+									detectenableflg = false;
+									detectenablecnt = 0;
+								}
+								snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+								mbed.Send(command);
+								memset(command, '\0', READBUFFERSIZE);
+							}
+							//else
+							//{
+							//	rpm = 200;
+							//	snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+							//	mbed.Send(command);
+							//	memset(command, '\0', READBUFFERSIZE);
+							//}
+						}
+						else
+						{//˜A‘±‚Å•¨‘Ì–¢ŒŸo‚É‚È‚Á‚½
+							nonobjcnt++;
+							if (nonobjcnt == 10) {//˜A‘±10‰ñ–Ú‚Årpm=200‚ÉC³‚·‚é
+								rpm = 200;
+								snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+								mbed.Send(command);
+								memset(command, '\0', READBUFFERSIZE);
+							}
+						}
+						objdetected = false;
+						objcnt = 0, totaldanger = 0;
+					}
 				}
+				else
+				{//ŒŸo->–¢ŒŸo‚É•Ï‰»‚µ‚½Œã˜A‘±100‰ñ‚ÍŒŸo”»’è‚ğs‚í‚È‚¢
+					detectenablecnt++;
+					if (detectenablecnt > 100) detectenableflg = true;
+				}
+				
 #endif // AUTONOMOUS_SENSING_
 
 #endif // OUT_COLOR_
