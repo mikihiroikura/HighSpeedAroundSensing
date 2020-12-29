@@ -12,6 +12,7 @@
 *.fig
 sample/FisheyeLaserCalib/debug/
 sample/ShowLSMLogs/csvs/
+util/lib
 
 # User-specific files
 *.suo
