@@ -545,7 +545,6 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 #endif // SAVE_IMGS_
 #ifndef SAVE_IMGS_
 		memcpy(lsm->in_img.data, in_imgs[lsmcalcid].data, height * width * 3);
-		//lsm->in_img = in_imgs[lsmcalcid].clone();
 #endif // !SAVE_IMGS_
 	}
 	/*QueryPerformanceCounter(&lsmend);
@@ -668,11 +667,6 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 						w = lsm->map_coefficient[0] + lsm->map_coefficient[1] * pow(phi, 2) +
 							lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
 						lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
-						//calcpt[0] = lambda * u;
-						////calcpt[1] = lambda * v + 100*sin(lsm->processcnt*0.0099); //デバッグ用
-						//calcpt[1] = lambda * v;
-						//calcpt[2] = lambda * w;
-						/*lsm->campts.emplace_back(calcpt);*/
 						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 0) = lambda * u;
 						//*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 1) = lambda * v + 100 * sin(lsm->processcnt * 0.0099);
 						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 1) = lambda * v;
@@ -724,13 +718,6 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 								mbed.Send(command);
 								memset(command, '\0', READBUFFERSIZE);
 							}
-							//else
-							//{
-							//	rpm = 200;
-							//	snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
-							//	mbed.Send(command);
-							//	memset(command, '\0', READBUFFERSIZE);
-							//}
 						}
 						else
 						{//連続で物体未検出になった時
