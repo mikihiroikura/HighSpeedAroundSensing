@@ -224,10 +224,6 @@ int main() {
 	}
 #endif // !SAVE_IMGS_
 
-	//OpenGL初期化
-	//initGL();
-
-
 	//カメラ起動
 	std::cout << "Aroud 3D Sensing Start!" << endl;
 	cam.start();
@@ -308,9 +304,6 @@ int main() {
 	//if (thr3.joinable())thr3.join();
 	//if (thr4.joinable())thr4.join();
 	//if (thr5.joinable())thr5.join();
-
-	//OpenGLの停止
-	//finishGL();
 
 	//カメラの停止，RS232Cの切断
 	cam.stop();
