@@ -41,7 +41,6 @@ int in_imgs_saveid = 0;
 cv::Mat full, zero;
 int takepicid = 0;
 /// 時間に関する変数
-int timeout = 10;
 LARGE_INTEGER freq, start;
 double logtime = 0;
 /// ARマーカに関する変数
@@ -77,7 +76,6 @@ const int colorstep = width * 3, colorelem = 3;
 const int monostep = width, monoelem = 1;
 double refmass, refmomx, refmomy;
 int refx, refy;
-const int rstart = 104, rends = 432;
 unsigned int forend, cogx, cogy;
 double lsmmass, lsmmomx, lsmmomy;
 double dtheta = 30;
@@ -105,6 +103,11 @@ int detectenablecnt = 0;
 
 /// ログに関する変数
 const int cyclebuffersize = 10;
+const int timeout = 30;
+const int log_img_fps = 40;
+const int log_img_finish_cnt = log_img_fps * timeout + 100;
+const int log_LSM_finish_cnt = fps * timeout + 100;
+int log_img_cnt = 0, log_lsm_cnt = 0;
 //デバッグ用変数
 LARGE_INTEGER lsmstart, lsmend, takestart, takeend, arstart, arend, showstart, showend, mbedstart, mbedstop;
 double taketime = 0, lsmtime = 0, artime = 0, showtime = 0, mbedtime = 0;
@@ -121,14 +124,15 @@ namespace fs = std::filesystem;
 #define OUT_COLOR_
 //#define OUT_MONO_
 #define AUTONOMOUS_SENSING_
+#define SHOW_PROCESSING_TIME_
 
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
 void ShowLogs(bool* flg);
-void ShowAllLogs(bool* flg, double* pts, int* lsmshowid);
+void ShowAllLogs(bool* flg, double* pts, int* lsmshowid, cv::Mat* imglog);
 void DetectAR(bool* flg);
 void SendDDMotorCommand(bool* flg);
-int CalcLSM(LSM* lsm, Logs* logs, double* pts);
+int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid);
 
 int main() {
 	//パラメータ
@@ -208,21 +212,25 @@ int main() {
 
 #ifdef SAVE_IMGS_
 	//取得画像を格納するVectorの作成
-	std::cout << "Set Mat Vector..." << endl;
-	for (size_t i = 0; i < (int)(timeout)*fps + 100; i++)
-	{
-		in_imgs.push_back(zero.clone());
-		lsm.processflgs.push_back(false);
-	}
+	std::cout << "Set Img Vector for logs....................";
+	for (size_t i = 0; i < log_img_finish_cnt; i++){logs.in_imgs_log.push_back(zero.clone());}
+	logs.in_imgs_log_ptr = logs.in_imgs_log.data();
+	cout << "OK!" << endl;
 #endif // SAVE_IMGS_
-#ifndef SAVE_IMGS_
+#ifdef SAVE_LOGS_
+	std::cout << "Set mode Vector and time Vector for logs...";
+	logs.LSM_times = (double*)malloc(sizeof(double) * log_LSM_finish_cnt);
+	logs.LSM_modes = (char*)malloc(sizeof(char) * log_LSM_finish_cnt);
+	logs.LSM_pts_logs = (double*)malloc(sizeof(double) * log_LSM_finish_cnt * (rends-rstart) * 3);
+	memset(logs.LSM_pts_logs, 0, sizeof(double) * log_LSM_finish_cnt * (rends - rstart) * 3);
+	cout << "OK!" << endl;
+#endif // SAVE_LOGS_
 	std::cout << "Set Mat Cycle Buffer..." << endl;
 	for (size_t i = 0; i < cyclebuffersize; i++)
 	{
 		in_imgs.push_back(zero.clone());
 		lsm.processflgs.push_back(false);
 	}
-#endif // !SAVE_IMGS_
 
 	//カメラ起動
 	std::cout << "Aroud 3D Sensing Start!" << endl;
@@ -235,7 +243,7 @@ int main() {
 	/// 1000fpsで画像を格納し続けるスレッド
 	thread thr1(TakePicture, &cam, &flg, &lsm);
 	/// 現在の画像をPCに出力して見えるようするスレッド
-	thread thr2(ShowAllLogs, &flg, logs.LSM_pts_cycle, &showglid);
+	thread thr2(ShowAllLogs, &flg, logs.LSM_pts_cycle, &showglid, logs.in_imgs_log_ptr);
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
 	//thread thr3(DetectAR, &flg);
 	/// DDMotorにコマンドを送信するスレッド
@@ -261,10 +269,12 @@ int main() {
 
 		//光切断の高度の更新
 		QueryPerformanceCounter(&start);
-		CalcLSM(&lsm, &logs, logs.LSM_pts_cycle);
+		CalcLSM(&lsm, &logs, logs.LSM_pts_cycle, logs.LSM_pts_logs, &log_lsm_cnt);
 		QueryPerformanceCounter(&end);
 		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+#ifdef SHOW_PROCESSING_TIME_
 		std::cout << "CalcLSM() time: " << logtime << endl;
+#endif // SHOW_PROCESSING_TIME_
 
 		//OpenGLでの点群表示
 		/*QueryPerformanceCounter(&start);
@@ -273,10 +283,6 @@ int main() {
 		QueryPerformanceCounter(&end);
 		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
 		std::cout << "drawGL() time: " << logtime << endl;*/
-		/*if (!QueryPerformanceCounter(&end)) { return 0; }
-		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
-		logs.LSM_times.push_back(logtime);*/
-		/*logs.LSM_modes.push_back(mode);*/
 
 		//画像表示
 		/*QueryPerformanceCounter(&start);
@@ -286,16 +292,14 @@ int main() {
 		QueryPerformanceCounter(&end);
 		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
 		std::cout << "Showimg() time: " << logtime << endl;*/
-		
-		
-		//時刻の更新
-		/*if (!QueryPerformanceCounter(&end)) { return 0; }
-		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;*/
-#ifdef SAVE_IMGS_
-		if (logtime > timeout) { flg = false; }
-#endif // SAVE_IMGS_
 
-		
+#ifdef SAVE_LOGS_
+		*(logs.LSM_times + log_lsm_cnt) = logtime;
+		*(logs.LSM_modes + log_lsm_cnt) = mode;
+		log_lsm_cnt++;
+		if (log_lsm_cnt > log_LSM_finish_cnt) flg = false;
+		if (logtime > timeout) { flg = false; }
+#endif // SAVE_LOGS_
 	}
 
 	//スレッドの停止
@@ -332,29 +336,31 @@ int main() {
 
 	/// Logの保存
 	std::cout << "Saving logs..." << endl;
-	for (size_t i = 0; i < logs.LSM_times.size(); i++)
+	for (size_t i = 0; i < log_img_cnt; i++)
 	{
-		if (logs.LSM_pts[i].size() > 10000) { continue; }//バグ取り
 		fprintf(fr, "%lf,", logs.LSM_times[i]);
-		fprintf(fr, "%lf,%lf,", logs.LSM_rps[i][0], logs.LSM_rps[i][1]);
 		if (logs.LSM_modes[i]=='L') { fprintf(fr, "%lf,", 1.0); }
 		else if (logs.LSM_modes[i] == 'R') { fprintf(fr, "%lf,", 0.0); }
 		fprintf(fr, "\n");
 
-		for (size_t j = 0; j < logs.LSM_pts[i].size(); j++) { fprintf(fr, "%lf,", logs.LSM_pts[i][j].at<double>(0, 0)); }
-		if (logs.LSM_pts[i].size() == 0) { fprintf(fr, "%lf,", 0.0); }
+		for (size_t j = 0; j < rends - rstart; j++) { 
+			if (*(logs.LSM_pts_logs + i * (rends - rstart) * 3 + j * 3 + 0) != 0) { fprintf(fr, "%lf,", *(logs.LSM_pts_logs + i * (rends - rstart) * 3 + j * 3 + 0)); }
+		}
 		fprintf(fr, "\n");
 
-		for (size_t j = 0; j < logs.LSM_pts[i].size(); j++) { fprintf(fr, "%lf,", logs.LSM_pts[i][j].at<double>(0, 1)); }
-		if (logs.LSM_pts[i].size() == 0) { fprintf(fr, "%lf,", 0.0); }
+		for (size_t j = 0; j < rends - rstart; j++) {
+			if (*(logs.LSM_pts_logs + i * (rends - rstart) * 3 + j * 3 + 1) != 0) { fprintf(fr, "%lf,", *(logs.LSM_pts_logs + i * (rends - rstart) * 3 + j * 3 + 1)); }
+		}
 		fprintf(fr, "\n");
 
-		for (size_t j = 0; j < logs.LSM_pts[i].size(); j++) { fprintf(fr, "%lf,", logs.LSM_pts[i][j].at<double>(0, 2)); }
-		if (logs.LSM_pts[i].size() == 0) { fprintf(fr, "%lf,", 0.0); }
+		for (size_t j = 0; j < rends - rstart; j++) {
+			if (*(logs.LSM_pts_logs + i * (rends - rstart) * 3 + j * 3 + 2) != 0) { fprintf(fr, "%lf,", *(logs.LSM_pts_logs + i * (rends - rstart) * 3 + j * 3 + 2)); }
+		}
 		fprintf(fr, "\n");
 	}
 	std::cout << "Logs finish!" << endl;
 	fclose(fr);
+#endif // SAVE_LOGS_
 
 	/// 画像を保存
 #ifdef SAVE_IMGS_
@@ -365,17 +371,21 @@ int main() {
 	char picturename[256];
 	char picsubname[256];
 	strftime(picsubname, 256, "D:/Github_output/HighSpeedAroundSensing/HighSpeedAroundSensing3D/results/%y%m%d/%H%M%S/Pictures/frame", &now);
-	for (int i = 0; i < in_imgs_saveid; i++)
+	for (int i = 0; i < log_img_cnt; i++)
 	{
 		sprintf(picturename, "%s%05d.png", picsubname, i);//png可逆圧縮
-		cv::imwrite(picturename, in_imgs[i]);
+		cv::imwrite(picturename, logs.in_imgs_log[i]);
 	}
 	std::cout << "Imgs finished!" << endl;
 #endif // SAVE_IMGS_
 
-#endif // SAVE_LOGS_
-
+	//動的メモリの開放
 	free(logs.LSM_pts_cycle);
+#ifdef SAVE_LOGS_
+	free(logs.LSM_modes);
+	free(logs.LSM_times);
+	free(logs.LSM_pts_logs);
+#endif // SAVE_LOGS_
 
 	return 0;
 }
@@ -386,14 +396,8 @@ void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
 	while (*flg)
 	{
 		QueryPerformanceCounter(&takestart);
-#ifdef SAVE_IMGS_
-		takepicid = in_imgs_saveid;
-#endif // SAVE_IMG
-#ifndef SAVE_IMGS_
 		takepicid = in_imgs_saveid % cyclebuffersize;
-#endif // !SAVE_IMGS
 		cam->captureFrame(in_imgs[takepicid].data);
-		//memcpy(in_imgs[takepicid].data, temp.data, height * width * 3);
 		lsm->processflgs[takepicid] = true;
 		in_imgs_saveid = (in_imgs_saveid+1)%cyclebuffersize;
 		QueryPerformanceCounter(&takeend);
@@ -403,8 +407,9 @@ void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
 			QueryPerformanceCounter(&takeend);
 			taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
 		}
-		
+#ifdef SHOW_PROCESSING_TIME_
 		std::cout << "TakePicture() time: " << taketime << endl;
+#endif // SHOW_PROCESSING_TIME_
 	}
 }
 
@@ -413,12 +418,7 @@ void ShowLogs(bool* flg) {
 	while (*flg)
 	{
 		QueryPerformanceCounter(&showstart);
-#ifdef SAVE_IMGS
-		cv::imshow("img", in_imgs[in_imgs_saveid - 2]);
-#endif // SAVE_IMGS
-#ifndef SAVE_IMGS
 		cv::imshow("img", in_imgs[(in_imgs_saveid - 2 + cyclebuffersize) % cyclebuffersize]);
-#endif // !SAVE_IMGS
 		int key = cv::waitKey(1);
 		if (key == 'q') *flg = false;
 		QueryPerformanceCounter(&showend);
@@ -428,26 +428,31 @@ void ShowLogs(bool* flg) {
 }
 
 //画像とOpenGLの点群全てを表示
-void ShowAllLogs(bool* flg, double* pts, int* lsmshowid) {
+void ShowAllLogs(bool* flg, double* pts, int* lsmshowid, cv::Mat* imglog) {
 	initGL();
 	while (*flg)
 	{
 		QueryPerformanceCounter(&showstart);
-#ifdef SAVE_IMGS
-		cv::imshow("img", in_imgs[in_imgs_saveid - 2]);
-#endif // SAVE_IMGS
-#ifndef SAVE_IMGS
+
+		//OpenCVで画像表示
 		cv::imshow("img", in_imgs[(in_imgs_saveid - 2 + cyclebuffersize) % cyclebuffersize]);
-#endif // !SAVE_IMGS
 		int key = cv::waitKey(1);
 		if (key == 'q') *flg = false;
 		
 		//OpenGL描画
 		drawGL_one(pts, lsmshowid);
 
+#ifdef SAVE_IMGS_
+		memcpy((imglog+log_img_cnt)->data, in_imgs[(in_imgs_saveid - 2 + cyclebuffersize) % cyclebuffersize].data, height * width * 3);
+		log_img_cnt++;
+		if (log_img_cnt > log_img_finish_cnt) *flg = false;
+#endif // SAVE_IMGS_
+
 		QueryPerformanceCounter(&showend);
 		showtime = (double)(showend.QuadPart - showstart.QuadPart) / freq.QuadPart;
+#ifdef SHOW_PROCESSING_TIME_
 		std::cout << "ShowAllLogs() time: " << showtime << endl;
+#endif // SHOW_PROCESSING_TIME_
 	}
 	finishGL();
 }
@@ -527,18 +532,13 @@ void SendDDMotorCommand(bool* flg) {
 }
 
 //Mainループでの光切断法による形状計測
-int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
+int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid) {
 	QueryPerformanceCounter(&lsmstart);
 
 	//画像の格納
 	lsmcalcid = (in_imgs_saveid - 1 + cyclebuffersize) % cyclebuffersize;
 	if (lsm->processflgs[lsmcalcid]){
-#ifdef SAVE_IMGS_
-		lsm->in_img = in_imgs[in_imgs_saveid - 1].clone();
-#endif // SAVE_IMGS_
-#ifndef SAVE_IMGS_
 		memcpy(lsm->in_img.data, in_imgs[lsmcalcid].data, height * width * 3);
-#endif // !SAVE_IMGS_
 	}
 	/*QueryPerformanceCounter(&lsmend);
 	lsmtime_a = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
@@ -660,10 +660,16 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 						w = lsm->map_coefficient[0] + lsm->map_coefficient[1] * pow(phi, 2) +
 							lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
 						lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
-						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 0) = lambda * u;
 						//*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 1) = lambda * v + 100 * sin(lsm->processcnt * 0.0099);
+						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 0) = lambda * u;
 						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 1) = lambda * v;
 						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 2) = lambda * w;
+#ifdef SAVE_LOGS_
+						*(logpts + (long long)*logid * rs * 3 + (long long)rs * 3 + 0) = lambda * u;
+						*(logpts + (long long)*logid * rs * 3 + (long long)rs * 3 + 1) = lambda * v;
+						*(logpts + (long long)*logid * rs * 3 + (long long)rs * 3 + 2) = lambda * w;
+#endif // SAVE_LOGS_
+
 
 						//ここで取得点群の距離を計算し，その結果をもとにDDMotorに対するフラグを立てる
 #ifdef AUTONOMOUS_SENSING_
@@ -678,6 +684,8 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 2) = 0;
 					}
 				}
+
+				//DDMotorの制御
 #ifdef AUTONOMOUS_SENSING_
 				if (detectenableflg)
 				{
@@ -730,8 +738,7 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 				{//検出->未検出に変化した後連続100回は検出判定を行わない
 					detectenablecnt++;
 					if (detectenablecnt > 100) detectenableflg = true;
-				}
-				
+				}			
 #endif // AUTONOMOUS_SENSING_
 
 #endif // OUT_COLOR_
@@ -765,7 +772,7 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts) {
 		}
 	}
 	lsm->processflgs[lsmcalcid] = false;
-	QueryPerformanceCounter(&lsmend);
-	lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+	//QueryPerformanceCounter(&lsmend);
+	//lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 	return 0;
 }

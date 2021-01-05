@@ -9,6 +9,7 @@
 #include <Windows.h>
 #include <omp.h>
 #include <thread>
+#include <string.h>
 
 #pragma warning(disable:4996)
 using namespace std;
@@ -229,6 +230,7 @@ int main() {
 	//	}
 
 	//}
+	free(myst.reis);
 
 	return 0;
 }

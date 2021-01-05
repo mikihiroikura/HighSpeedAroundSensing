@@ -39,7 +39,7 @@ queue<vector<float>> colors;
 vector<float> color;
 vector<cv::Mat> vertices_vec;
 const int maxvertsize = 100;
-const int maxpointsize = 432-104;
+const int maxpointsize = rends - rstart;
 double dist;
 double verts[maxvertsize][maxpointsize][3] = {0};
 float colos[maxvertsize][maxpointsize][3] = {0};

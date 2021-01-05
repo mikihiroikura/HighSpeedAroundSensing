@@ -21,6 +21,7 @@ extern void finishGL();
 extern void initGL();
 
 const double safe_area = 1.5, danger_area = 1.0, zero_area = 0.01;
+const int rstart = 104, rends = 432;
 
 //•\¦‚µ‚½‚¢î•ñ
 extern char mode; //DDMotor‚Ì§Œäƒ‚[ƒh

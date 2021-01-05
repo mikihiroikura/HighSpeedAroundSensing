@@ -50,12 +50,14 @@ struct LSM
 
 struct Logs
 {
-	vector<double> LSM_times;
 	vector<vector<vector<double>>> LSM_pts;
 	//double LSM_pts_cycle[cyclebuffersize][rends - rstart][3] = {0};
 	double* LSM_pts_cycle;
-	vector<vector<double>> LSM_rps;
-	vector<char> LSM_modes;
+	double* LSM_pts_logs;
+	char* LSM_modes;
+	double* LSM_times;
+	vector<cv::Mat> in_imgs_log;
+	cv::Mat* in_imgs_log_ptr;
 };
 
 #endif // !PARAMETER_H_
