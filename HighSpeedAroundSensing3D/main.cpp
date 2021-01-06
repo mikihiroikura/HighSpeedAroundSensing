@@ -63,6 +63,7 @@ const int rotpulse = 432000 / gearratio;
 #define READBUFFERSIZE 256
 long long detectfailcnt = 0;
 /// 光切断法計算用変数
+int lsm_success = 1;
 double phi, lambda, u, v, w;
 cv::Rect roi_lsm(960 - 430, 540 - 430, 430 * 2, 430 * 2);
 cv::Rect roi_ref;
@@ -124,7 +125,8 @@ namespace fs = std::filesystem;
 #define OUT_COLOR_
 //#define OUT_MONO_
 #define AUTONOMOUS_SENSING_
-#define SHOW_PROCESSING_TIME_
+//#define SHOW_PROCESSING_TIME_
+#define SHOW_IMGS_OPENGL_
 
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
@@ -225,35 +227,32 @@ int main() {
 	memset(logs.LSM_pts_logs, 0, sizeof(double) * log_LSM_finish_cnt * (rends - rstart) * 3);
 	cout << "OK!" << endl;
 #endif // SAVE_LOGS_
-	std::cout << "Set Mat Cycle Buffer..." << endl;
+	std::cout << "Set Mat Cycle Buffer.......................";
 	for (size_t i = 0; i < cyclebuffersize; i++)
 	{
 		in_imgs.push_back(zero.clone());
 		lsm.processflgs.push_back(false);
 	}
+	cout << "OK!" << endl;
 
 	//カメラ起動
 	std::cout << "Aroud 3D Sensing Start!" << endl;
 	cam.start();
 
-	//計測開始
-	if (!QueryPerformanceCounter(&start)) { return 0; }
-
 	//Threadの作成
 	/// 1000fpsで画像を格納し続けるスレッド
 	thread thr1(TakePicture, &cam, &flg, &lsm);
 	/// 現在の画像をPCに出力して見えるようするスレッド
+#ifdef SHOW_IMGS_OPENGL_
 	thread thr2(ShowAllLogs, &flg, logs.LSM_pts_cycle, &showglid, logs.in_imgs_log_ptr);
+#endif // SHOW_IMGS_OPENGL_
 	/// ARマーカを検出＆位置姿勢を計算するスレッド
-	//thread thr3(DetectAR, &flg);
-	/// DDMotorにコマンドを送信するスレッド
-	//thread thr4(SendDDMotorCommand, & flg);
-	/// OpenGLで点群を表示するスレッド
-	//thread thr5(drawGL2, &flg, logs.LSM_pts_cycle, &showglid);
-	
-	cv::Mat temp = zero.clone();
+	//thread thr3(DetectAR, &flg);	
+
 	//メインループ
 	/// 取得された画像から光切断法で三次元位置を計算する
+	//計測開始
+	if (!QueryPerformanceCounter(&start)) { return 0; }
 	while (flg)
 	{
 		//画像取得
@@ -268,13 +267,19 @@ int main() {
 		//std::cout << "TakePicture() time: " << taketime << endl;
 
 		//光切断の高度の更新
-		QueryPerformanceCounter(&start);
-		CalcLSM(&lsm, &logs, logs.LSM_pts_cycle, logs.LSM_pts_logs, &log_lsm_cnt);
-		QueryPerformanceCounter(&end);
-		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+		QueryPerformanceCounter(&lsmstart);
+		lsm_success = CalcLSM(&lsm, &logs, logs.LSM_pts_cycle, logs.LSM_pts_logs, &log_lsm_cnt);
+		QueryPerformanceCounter(&lsmend);
+		lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+		while (lsmtime < 0.001)
+		{
+			QueryPerformanceCounter(&lsmend);
+			lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
+		}
 #ifdef SHOW_PROCESSING_TIME_
-		std::cout << "CalcLSM() time: " << logtime << endl;
+		std::cout << "CalcLSM() time: " << lsmtime << endl;
 #endif // SHOW_PROCESSING_TIME_
+		
 
 		//OpenGLでの点群表示
 		/*QueryPerformanceCounter(&start);
@@ -294,9 +299,14 @@ int main() {
 		std::cout << "Showimg() time: " << logtime << endl;*/
 
 #ifdef SAVE_LOGS_
-		*(logs.LSM_times + log_lsm_cnt) = logtime;
-		*(logs.LSM_modes + log_lsm_cnt) = mode;
-		log_lsm_cnt++;
+		QueryPerformanceCounter(&end);
+		logtime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart;
+		if (lsm_success == 0)
+		{
+			*(logs.LSM_times + log_lsm_cnt) = logtime;
+			*(logs.LSM_modes + log_lsm_cnt) = mode;
+			log_lsm_cnt++;
+		}
 		if (log_lsm_cnt > log_LSM_finish_cnt) flg = false;
 		if (logtime > timeout) { flg = false; }
 #endif // SAVE_LOGS_
@@ -304,10 +314,10 @@ int main() {
 
 	//スレッドの停止
 	if (thr1.joinable())thr1.join();
+#ifdef SHOW_IMGS_OPENGL_
 	if (thr2.joinable())thr2.join();
+#endif // SHOW_IMGS_OPENGL_
 	//if (thr3.joinable())thr3.join();
-	//if (thr4.joinable())thr4.join();
-	//if (thr5.joinable())thr5.join();
 
 	//カメラの停止，RS232Cの切断
 	cam.stop();
@@ -336,7 +346,7 @@ int main() {
 
 	/// Logの保存
 	std::cout << "Saving logs..." << endl;
-	for (size_t i = 0; i < log_img_cnt; i++)
+	for (size_t i = 0; i < log_lsm_cnt; i++)
 	{
 		fprintf(fr, "%lf,", logs.LSM_times[i]);
 		if (logs.LSM_modes[i]=='L') { fprintf(fr, "%lf,", 1.0); }
@@ -533,8 +543,6 @@ void SendDDMotorCommand(bool* flg) {
 
 //Mainループでの光切断法による形状計測
 int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid) {
-	QueryPerformanceCounter(&lsmstart);
-
 	//画像の格納
 	lsmcalcid = (in_imgs_saveid - 1 + cyclebuffersize) % cyclebuffersize;
 	if (lsm->processflgs[lsmcalcid]){
@@ -661,13 +669,13 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid) {
 							lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
 						lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
 						//*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 1) = lambda * v + 100 * sin(lsm->processcnt * 0.0099);
-						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 0) = lambda * u;
-						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 1) = lambda * v;
-						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 2) = lambda * w;
+						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = lambda * u;
+						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = lambda * v;
+						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = lambda * w;
 #ifdef SAVE_LOGS_
-						*(logpts + (long long)*logid * rs * 3 + (long long)rs * 3 + 0) = lambda * u;
-						*(logpts + (long long)*logid * rs * 3 + (long long)rs * 3 + 1) = lambda * v;
-						*(logpts + (long long)*logid * rs * 3 + (long long)rs * 3 + 2) = lambda * w;
+						*(logpts + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = lambda * u;
+						*(logpts + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = lambda * v;
+						*(logpts + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = lambda * w;
 #endif // SAVE_LOGS_
 
 
@@ -679,9 +687,9 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid) {
 					}
 					else
 					{
-						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 0) = 0;
-						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 1) = 0;
-						*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 2) = 0;
+						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = 0;
+						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = 0;
+						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = 0;
 					}
 				}
 
@@ -771,6 +779,7 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid) {
 			}
 		}
 	}
+	else return 1;
 	lsm->processflgs[lsmcalcid] = false;
 	//QueryPerformanceCounter(&lsmend);
 	//lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;

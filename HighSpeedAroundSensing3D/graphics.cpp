@@ -166,7 +166,6 @@ void initGL() {
     //頂点バッファオブジェクト
     glGenBuffers(1, &vbo);//vbp作成
     glBindBuffer(GL_ARRAY_BUFFER, vbo);//vboのバインド，これからの処理の対象
-    std::cout << sizeof(verts) << endl;
     //glBufferData(GL_ARRAY_BUFFER, sizeof(vertices_example), nullptr, GL_DYNAMIC_DRAW);//vboのデータ領域の確保
     glBufferData(GL_ARRAY_BUFFER, sizeof(verts), nullptr, GL_DYNAMIC_DRAW);
     glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, 0, 0);//vertex shader内の引数の指定indexに合うように変更する
