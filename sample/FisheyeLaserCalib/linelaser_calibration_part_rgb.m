@@ -1,6 +1,9 @@
 function linelaser_calibration_part_rgb(linelaser_file_no,Opt, plane, refs)
 %linelaser_calibration_part 自分でCalibrationする平面を決められる
-%   
+%引数：linelaser_file_no: 呼び出す動画の番号
+%引数：Opt: レーザ平面計算時に外れ値を取り除く最適化をかけるか(0，1)
+%引数：plane: レーザ平面を計算するかどうか(0，1)
+%引数：refs: 参照面の輝点を計算するかどうか(0，1)
     %.matファイルから変数群の呼び出し  
     load fishparams.mat fisheyeParams
     load setup_rgb.mat linelaser_folder laser_step squareSize laser_time_margin ...
