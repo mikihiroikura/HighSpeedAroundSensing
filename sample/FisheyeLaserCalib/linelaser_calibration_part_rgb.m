@@ -8,7 +8,7 @@ function linelaser_calibration_part_rgb(linelaser_file_no,Opt, plane, refs)
     load fishparams.mat fisheyeParams
     load setup_rgb.mat linelaser_folder laser_step squareSize laser_time_margin ...
     margin bright_r_thr ref_circle_radi ref_r_thr ref_arcwidth linelaser_file_num
-    load linelaserparams.mat All_planeparams All_refPoints ref_center ref_radi All_cameraPoints All_fvals All_PointsCnts ref_arcwidth
+    load linelaserparams.mat All_planeparams All_refPoints ref_center ref_radi All_cameraPoints All_fvals All_PointsCnts
 
     if plane
         %画像群呼び出し
@@ -136,6 +136,19 @@ function linelaser_calibration_part_rgb(linelaser_file_no,Opt, plane, refs)
 
         %結果の保存
         All_planeparams(k,:) = opt_planeparams;
+        All_PointsID = [0;All_PointsCnts(1)];
+        for i = 2:23
+            All_PointsID = [All_PointsID;All_PointsCnts(i)+All_PointsID(i)];
+        end
+        All_cameraPoints(1+All_PointsID(k):All_PointsID(k+1),:) = [];
+        if k==1
+            All_cameraPoints = vertcat(OnePlane_cameraPoints, All_cameraPoints);
+        elseif k==23
+            All_cameraPoints = vertcat(All_cameraPoints, OnePlane_cameraPoints);
+        else
+            All_cameraPoints = vertcat(vertcat(All_cameraPoints(1:All_PointsID(k),:), OnePlane_cameraPoints), All_cameraPoints(All_PointsID(k)+1:end,:));
+        end
+        All_PointsCnts(k) = size(OnePlane_cameraPoints,1);
         save linelaserparams.mat All_planeparams All_refPoints ref_center ref_radi All_cameraPoints All_fvals All_PointsCnts
     end
     if refs
