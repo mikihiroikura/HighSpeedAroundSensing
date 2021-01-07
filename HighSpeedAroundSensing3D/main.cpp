@@ -120,8 +120,8 @@ using namespace std;
 namespace fs = std::filesystem;
 
 //DEFINEŒQ
-//#define SAVE_LOGS_
-//#define SAVE_IMGS_
+#define SAVE_LOGS_
+#define SAVE_IMGS_
 #define OUT_COLOR_
 //#define OUT_MONO_
 #define AUTONOMOUS_SENSING_
@@ -460,6 +460,11 @@ void ShowAllLogs(bool* flg, double* pts, int* lsmshowid, cv::Mat* imglog) {
 
 		QueryPerformanceCounter(&showend);
 		showtime = (double)(showend.QuadPart - showstart.QuadPart) / freq.QuadPart;
+		while (showtime < 0.033)
+		{
+			QueryPerformanceCounter(&showend);
+			showtime = (double)(showend.QuadPart - showstart.QuadPart) / freq.QuadPart;
+		}
 #ifdef SHOW_PROCESSING_TIME_
 		std::cout << "ShowAllLogs() time: " << showtime << endl;
 #endif // SHOW_PROCESSING_TIME_
