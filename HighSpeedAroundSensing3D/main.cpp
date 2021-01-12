@@ -134,7 +134,7 @@ void ShowLogs(bool* flg);
 void ShowAllLogs(bool* flg, double* pts, int* lsmshowid, cv::Mat* imglog);
 void DetectAR(bool* flg);
 void SendDDMotorCommand(bool* flg);
-int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid);
+int CalcLSM(LSM* lsm, Logs* logs, int* logid);
 
 int main() {
 	//パラメータ
@@ -225,6 +225,15 @@ int main() {
 	logs.LSM_modes = (char*)malloc(sizeof(char) * log_LSM_finish_cnt);
 	logs.LSM_pts_logs = (double*)malloc(sizeof(double) * log_LSM_finish_cnt * (rends-rstart) * 3);
 	memset(logs.LSM_pts_logs, 0, sizeof(double) * log_LSM_finish_cnt * (rends - rstart) * 3);
+	logs.LSM_rp_logs = (float*)malloc(sizeof(float) * log_LSM_finish_cnt * 2);
+	memset(logs.LSM_rp_logs, 0, sizeof(float) * log_LSM_finish_cnt * 2);
+	logs.LSM_detectenableflgs = (bool*)malloc(sizeof(bool) * log_LSM_finish_cnt);
+	logs.LSM_objdetectedflgs = (bool*)malloc(sizeof(bool) * log_LSM_finish_cnt);
+	logs.LSM_reciprocnts = (int*)malloc(sizeof(int) * log_LSM_finish_cnt);
+	logs.LSM_rpms = (int*)malloc(sizeof(int) * log_LSM_finish_cnt);
+	memset(logs.LSM_rpms, -1, sizeof(int) * log_LSM_finish_cnt);
+	logs.LSM_alertcnts = (int*)malloc(sizeof(int) * log_LSM_finish_cnt);
+	logs.LSM_dangercnts = (int*)malloc(sizeof(int) * log_LSM_finish_cnt);
 	cout << "OK!" << endl;
 #endif // SAVE_LOGS_
 	std::cout << "Set Mat Cycle Buffer.......................";
@@ -268,7 +277,7 @@ int main() {
 
 		//光切断の高度の更新
 		QueryPerformanceCounter(&lsmstart);
-		lsm_success = CalcLSM(&lsm, &logs, logs.LSM_pts_cycle, logs.LSM_pts_logs, &log_lsm_cnt);
+		lsm_success = CalcLSM(&lsm, &logs, &log_lsm_cnt);
 		QueryPerformanceCounter(&lsmend);
 		lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 		while (lsmtime < 0.001)
@@ -351,6 +360,19 @@ int main() {
 		fprintf(fr, "%lf,", logs.LSM_times[i]);
 		if (logs.LSM_modes[i]=='L') { fprintf(fr, "%lf,", 1.0); }
 		else if (logs.LSM_modes[i] == 'R') { fprintf(fr, "%lf,", 0.0); }
+		for (size_t j = 0; j < 2; j++)
+		{
+			if (*(logs.LSM_rp_logs + i * 2 + j) != 0) { fprintf(fr, "%f,", *(logs.LSM_rp_logs + i * 2 + j)); }
+		}
+		if (*(logs.LSM_rpms + i) != -1)
+		{
+			fprintf(fr, "%d,", *(logs.LSM_detectenableflgs+ i));
+			fprintf(fr, "%d,", *(logs.LSM_objdetectedflgs + i));
+			fprintf(fr, "%d,", *(logs.LSM_reciprocnts + i));
+			fprintf(fr, "%d,", *(logs.LSM_rpms + i));
+			fprintf(fr, "%d,", *(logs.LSM_alertcnts + i));
+			fprintf(fr, "%d,", *(logs.LSM_dangercnts + i));
+		}
 		fprintf(fr, "\n");
 
 		for (size_t j = 0; j < rends - rstart; j++) { 
@@ -547,7 +569,7 @@ void SendDDMotorCommand(bool* flg) {
 }
 
 //Mainループでの光切断法による形状計測
-int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid) {
+int CalcLSM(LSM* lsm, Logs* logs, int* logid) {
 	//画像の格納
 	lsmcalcid = (in_imgs_saveid - 1 + cyclebuffersize) % cyclebuffersize;
 	if (lsm->processflgs[lsmcalcid]){
@@ -582,6 +604,11 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid) {
 			lsm->rp[0] = mu.m10 / mu.m00 + roi_ref.x;
 			lsm->rp[1] = mu.m01 / mu.m00 + roi_ref.y;
 #endif // OUT_MONO_
+#ifdef SAVE_LOGS_
+			*(logs->LSM_rp_logs + (long long)*logid * 2 + 0) = lsm->rp[0];
+			*(logs->LSM_rp_logs + (long long)*logid * 2 + 1) = lsm->rp[1];
+#endif // SAVE_LOGS_
+
 			/*QueryPerformanceCounter(&lsmend);
 			lsmtime_b = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 			std::cout << "CalcLSM() calcrefpt time: " << lsmtime_b - lsmtime_a << endl;*/
@@ -674,13 +701,13 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid) {
 							lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
 						lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
 						//*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 1) = lambda * v + 100 * sin(lsm->processcnt * 0.0099);
-						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = lambda * u;
-						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = lambda * v;
-						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = lambda * w;
+						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = lambda * u;
+						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = lambda * v;
+						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = lambda * w;
 #ifdef SAVE_LOGS_
-						*(logpts + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = lambda * u;
-						*(logpts + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = lambda * v;
-						*(logpts + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = lambda * w;
+						*(logs->LSM_pts_logs + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = lambda * u;
+						*(logs->LSM_pts_logs + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = lambda * v;
+						*(logs->LSM_pts_logs + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = lambda * w;
 #endif // SAVE_LOGS_
 
 
@@ -692,9 +719,9 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid) {
 					}
 					else
 					{
-						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = 0;
-						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = 0;
-						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = 0;
+						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = 0;
+						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = 0;
+						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = 0;
 					}
 				}
 
@@ -751,7 +778,16 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid) {
 				{//検出->未検出に変化した後連続100回は検出判定を行わない
 					detectenablecnt++;
 					if (detectenablecnt > 100) detectenableflg = true;
-				}			
+				}
+#ifdef SAVE_LOGS_
+				*(logs->LSM_detectenableflgs + *logid) = detectenableflg;
+				*(logs->LSM_objdetectedflgs + *logid) = objdetected;
+				*(logs->LSM_reciprocnts + *logid) = reciprocntdown;
+				*(logs->LSM_rpms + *logid) = rpm;
+				*(logs->LSM_alertcnts + *logid) = alertcnt;
+				*(logs->LSM_dangercnts + *logid) = dangercnt;
+#endif // SAVE_LOGS_
+
 #endif // AUTONOMOUS_SENSING_
 
 #endif // OUT_COLOR_

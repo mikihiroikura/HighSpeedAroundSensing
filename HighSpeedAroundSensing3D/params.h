@@ -56,6 +56,13 @@ struct Logs
 	double* LSM_pts_logs;
 	char* LSM_modes;
 	double* LSM_times;
+	float* LSM_rp_logs;
+	bool* LSM_detectenableflgs;
+	bool* LSM_objdetectedflgs;
+	int* LSM_reciprocnts;
+	int* LSM_rpms;
+	int* LSM_alertcnts;
+	int* LSM_dangercnts;
 	vector<cv::Mat> in_imgs_log;
 	cv::Mat* in_imgs_log_ptr;
 };
