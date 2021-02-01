@@ -50,7 +50,7 @@ bool hide_blue;
 float Time = 0;
 float pointsize = 2.5;
 glm::mat4 mvp, Model, View, Projection;
-GLint matlocation;
+GLint matlocation = -10;
 
 //ŠÔŒv‘ª—p•Ï”
 LARGE_INTEGER glstart, glend, glfreq;
