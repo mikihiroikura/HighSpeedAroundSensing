@@ -56,7 +56,7 @@ cv::Mutex mutex;
 long long processarcnt = 1;
 RS232c mbed;
 char command[256] = "";
-int rpm = 200;
+int rpm = 500;
 char mode = 'R';
 const int gearratio = 1000;
 const int rotpulse = 432000 / gearratio;
@@ -121,7 +121,7 @@ namespace fs = std::filesystem;
 
 //DEFINEŒQ
 #define SAVE_LOGS_
-#define SAVE_IMGS_
+//#define SAVE_IMGS_
 #define OUT_COLOR_
 //#define OUT_MONO_
 #define AUTONOMOUS_SENSING_
@@ -225,6 +225,13 @@ int main() {
 	logs.LSM_modes = (char*)malloc(sizeof(char) * log_LSM_finish_cnt);
 	logs.LSM_pts_logs = (double*)malloc(sizeof(double) * log_LSM_finish_cnt * (rends-rstart) * 3);
 	memset(logs.LSM_pts_logs, 0, sizeof(double) * log_LSM_finish_cnt * (rends - rstart) * 3);
+	logs.LSM_detectedenableflg = (bool*)malloc(sizeof(bool) * log_LSM_finish_cnt);
+	logs.LSM_objdetectedflg = (bool*)malloc(sizeof(bool) * log_LSM_finish_cnt);
+	logs.LSM_reciprocntdown = (int*)malloc(sizeof(int) * log_LSM_finish_cnt);
+	logs.LSM_alertcnt = (int*)malloc(sizeof(int) * log_LSM_finish_cnt);
+	logs.LSM_dangercnt = (int*)malloc(sizeof(int) * log_LSM_finish_cnt);
+	logs.LSM_rpm = (int*)malloc(sizeof(int) * log_LSM_finish_cnt);
+	logs.LSM_laserplane_nml = (double*)malloc(sizeof(double) * log_LSM_finish_cnt * 3);
 	cout << "OK!" << endl;
 #endif // SAVE_LOGS_
 	std::cout << "Set Mat Cycle Buffer.......................";
@@ -305,6 +312,13 @@ int main() {
 		{
 			*(logs.LSM_times + log_lsm_cnt) = logtime;
 			*(logs.LSM_modes + log_lsm_cnt) = mode;
+			*(logs.LSM_detectedenableflg + log_lsm_cnt) = detectenableflg;
+			*(logs.LSM_objdetectedflg + log_lsm_cnt) = objdetected;
+			*(logs.LSM_reciprocntdown + log_lsm_cnt) = reciprocntdown;
+			*(logs.LSM_alertcnt + log_lsm_cnt) = alertcnt;
+			*(logs.LSM_dangercnt + log_lsm_cnt) = dangercnt;
+			*(logs.LSM_rpm + log_lsm_cnt) = rpm;
+			memcpy(logs.LSM_laserplane_nml + log_lsm_cnt, &lsm.plane_nml, sizeof(double) * 3);
 			log_lsm_cnt++;
 		}
 		if (log_lsm_cnt > log_LSM_finish_cnt) flg = false;
@@ -351,6 +365,18 @@ int main() {
 		fprintf(fr, "%lf,", logs.LSM_times[i]);
 		if (logs.LSM_modes[i]=='L') { fprintf(fr, "%lf,", 1.0); }
 		else if (logs.LSM_modes[i] == 'R') { fprintf(fr, "%lf,", 0.0); }
+		if (logs.LSM_detectedenableflg[i]) { fprintf(fr, "%lf,", 1.0); }
+		else { fprintf(fr, "%lf,", 0.0); }
+		if (logs.LSM_objdetectedflg[i]) { fprintf(fr, "%lf,", 1.0); }
+		else { fprintf(fr, "%lf,", 0.0); }
+		fprintf(fr, "%d,", logs.LSM_reciprocntdown[i]);
+		fprintf(fr, "%d,", logs.LSM_alertcnt[i]);
+		fprintf(fr, "%d,", logs.LSM_dangercnt[i]);
+		fprintf(fr, "%d,", logs.LSM_rpm[i]);
+		for (size_t j = 0; j < 3; j++)
+		{
+			fprintf(fr, "%lf,", *(logs.LSM_laserplane_nml + i * 3 + j));
+		}
 		fprintf(fr, "\n");
 
 		for (size_t j = 0; j < rends - rstart; j++) { 
@@ -395,6 +421,13 @@ int main() {
 	free(logs.LSM_modes);
 	free(logs.LSM_times);
 	free(logs.LSM_pts_logs);
+	free(logs.LSM_detectedenableflg);
+	free(logs.LSM_objdetectedflg);
+	free(logs.LSM_reciprocntdown);
+	free(logs.LSM_alertcnt);
+	free(logs.LSM_dangercnt);
+	free(logs.LSM_rpm);
+	free(logs.LSM_laserplane_nml);
 #endif // SAVE_LOGS_
 
 	return 0;
@@ -723,7 +756,7 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid) {
 									rpm = 100;
 								}
 								else {
-									rpm = 200;
+									rpm = 500;
 									reciprocntdown = 3;
 									detectenableflg = false;
 									detectenablecnt = 0;
@@ -737,7 +770,7 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid) {
 						{//˜A‘±‚Å•¨‘Ì–¢ŒŸo‚É‚È‚Á‚½Žž
 							nonobjcnt++;
 							if (nonobjcnt == 10) {//˜A‘±10‰ñ–Ú‚Årpm=200‚ÉC³‚·‚é
-								rpm = 200;
+								rpm = 500;
 								snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
 								mbed.Send(command);
 								memset(command, '\0', READBUFFERSIZE);
