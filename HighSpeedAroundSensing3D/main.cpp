@@ -134,7 +134,7 @@ void ShowLogs(bool* flg);
 void ShowAllLogs(bool* flg, double* pts, int* lsmshowid, cv::Mat* imglog);
 void DetectAR(bool* flg);
 void SendDDMotorCommand(bool* flg);
-int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid);
+int CalcLSM(LSM* lsm, Logs* logs, int* logid);
 
 int main() {
 	//パラメータ
@@ -275,7 +275,7 @@ int main() {
 
 		//光切断の高度の更新
 		QueryPerformanceCounter(&lsmstart);
-		lsm_success = CalcLSM(&lsm, &logs, logs.LSM_pts_cycle, logs.LSM_pts_logs, &log_lsm_cnt);
+		lsm_success = CalcLSM(&lsm, &logs, &log_lsm_cnt);
 		QueryPerformanceCounter(&lsmend);
 		lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 		while (lsmtime < 0.001)
@@ -580,7 +580,7 @@ void SendDDMotorCommand(bool* flg) {
 }
 
 //Mainループでの光切断法による形状計測
-int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid) {
+int CalcLSM(LSM* lsm, Logs* logs, int* logid) {
 	//画像の格納
 	lsmcalcid = (in_imgs_saveid - 1 + cyclebuffersize) % cyclebuffersize;
 	if (lsm->processflgs[lsmcalcid]){
@@ -707,13 +707,13 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid) {
 							lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
 						lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
 						//*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 1) = lambda * v + 100 * sin(lsm->processcnt * 0.0099);
-						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = lambda * u;
-						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = lambda * v;
-						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = lambda * w;
+						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = lambda * u;
+						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = lambda * v;
+						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = lambda * w;
 #ifdef SAVE_LOGS_
-						*(logpts + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = lambda * u;
-						*(logpts + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = lambda * v;
-						*(logpts + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = lambda * w;
+						*(logs->LSM_pts_logs + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = lambda * u;
+						*(logs->LSM_pts_logs + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = lambda * v;
+						*(logs->LSM_pts_logs + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = lambda * w;
 #endif // SAVE_LOGS_
 
 
@@ -725,9 +725,9 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid) {
 					}
 					else
 					{
-						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = 0;
-						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = 0;
-						*(pts + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = 0;
+						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = 0;
+						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = 0;
+						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = 0;
 					}
 				}
 
@@ -784,7 +784,8 @@ int CalcLSM(LSM* lsm, Logs* logs, double* pts, double* logpts, int* logid) {
 				{//検出->未検出に変化した後連続100回は検出判定を行わない
 					detectenablecnt++;
 					if (detectenablecnt > 100) detectenableflg = true;
-				}			
+				}
+
 #endif // AUTONOMOUS_SENSING_
 
 #endif // OUT_COLOR_
