@@ -100,6 +100,9 @@ int reciprocntdown = 3;
 bool objdetected = false;
 bool detectenableflg = true;
 int detectenablecnt = 0;
+int detectunablecnt = 100;
+int contnonobjcnt = 10;
+bool rotmode = false;
 
 
 /// ログに関する変数
@@ -232,6 +235,8 @@ int main() {
 	logs.LSM_dangercnt = (int*)malloc(sizeof(int) * log_LSM_finish_cnt);
 	logs.LSM_rpm = (int*)malloc(sizeof(int) * log_LSM_finish_cnt);
 	logs.LSM_laserplane_nml = (double*)malloc(sizeof(double) * log_LSM_finish_cnt * 3);
+	logs.LSM_rps = (double*)malloc(sizeof(double) * log_LSM_finish_cnt * 2);
+	logs.LSM_rotmodes = (bool*)malloc(sizeof(bool) * log_LSM_finish_cnt);
 	cout << "OK!" << endl;
 #endif // SAVE_LOGS_
 	std::cout << "Set Mat Cycle Buffer.......................";
@@ -319,6 +324,8 @@ int main() {
 			*(logs.LSM_dangercnt + log_lsm_cnt) = dangercnt;
 			*(logs.LSM_rpm + log_lsm_cnt) = rpm;
 			memcpy(logs.LSM_laserplane_nml + log_lsm_cnt, &lsm.plane_nml, sizeof(double) * 3);
+			memcpy(logs.LSM_rps + log_lsm_cnt, &lsm.rp, sizeof(double) * 2);
+			*(logs.LSM_rotmodes + log_lsm_cnt) = rotmode;
 			log_lsm_cnt++;
 		}
 		if (log_lsm_cnt > log_LSM_finish_cnt) flg = false;
@@ -377,6 +384,12 @@ int main() {
 		{
 			fprintf(fr, "%lf,", *(logs.LSM_laserplane_nml + i * 3 + j));
 		}
+		for (size_t j = 0; j < 2; j++)
+		{
+			fprintf(fr, "%lf,", *(logs.LSM_rps + i * 2 + j));
+		}
+		if (logs.LSM_rotmodes[i]) { fprintf(fr, "%lf,", 1.0); }
+		else { fprintf(fr, "%lf,", 0.0); }
 		fprintf(fr, "\n");
 
 		for (size_t j = 0; j < rends - rstart; j++) { 
@@ -428,6 +441,8 @@ int main() {
 	free(logs.LSM_dangercnt);
 	free(logs.LSM_rpm);
 	free(logs.LSM_laserplane_nml);
+	free(logs.LSM_rps);
+	free(logs.LSM_rotmodes);
 #endif // SAVE_LOGS_
 
 	return 0;
@@ -749,6 +764,7 @@ int CalcLSM(LSM* lsm, Logs* logs, int* logid) {
 							if (objcnt > Cc) {
 								//この時点で物体検出が連続Cc回の時
 								if (totaldanger < dangerthr) reciprocntdown--;
+								else rotmode = true;
 								if (reciprocntdown > 0)
 								{
 									if (mode == 'R') mode = 'L';
@@ -757,6 +773,7 @@ int CalcLSM(LSM* lsm, Logs* logs, int* logid) {
 								}
 								else {
 									rpm = 500;
+									rotmode = false;
 									reciprocntdown = 3;
 									detectenableflg = false;
 									detectenablecnt = 0;
@@ -769,8 +786,9 @@ int CalcLSM(LSM* lsm, Logs* logs, int* logid) {
 						else
 						{//連続で物体未検出になった時
 							nonobjcnt++;
-							if (nonobjcnt == 10) {//連続10回目でrpm=200に修正する
+							if (nonobjcnt == contnonobjcnt) {//連続10回目でrpm=200に修正する
 								rpm = 500;
+								rotmode = false;
 								snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
 								mbed.Send(command);
 								memset(command, '\0', READBUFFERSIZE);
@@ -783,7 +801,7 @@ int CalcLSM(LSM* lsm, Logs* logs, int* logid) {
 				else
 				{//検出->未検出に変化した後連続100回は検出判定を行わない
 					detectenablecnt++;
-					if (detectenablecnt > 100) detectenableflg = true;
+					if (detectenablecnt > detectunablecnt) detectenableflg = true;
 				}
 
 #endif // AUTONOMOUS_SENSING_
