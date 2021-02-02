@@ -395,16 +395,19 @@ int main() {
 		for (size_t j = 0; j < rends - rstart; j++) { 
 			if (*(logs.LSM_pts_logs + i * (rends - rstart) * 3 + j * 3 + 0) != 0) { fprintf(fr, "%lf,", *(logs.LSM_pts_logs + i * (rends - rstart) * 3 + j * 3 + 0)); }
 		}
+		if (*(logs.LSM_pts_logs + i * (rends - rstart) * 3 + 0) == 0) { fprintf(fr, "%lf,", 0.0); }
 		fprintf(fr, "\n");
 
 		for (size_t j = 0; j < rends - rstart; j++) {
 			if (*(logs.LSM_pts_logs + i * (rends - rstart) * 3 + j * 3 + 1) != 0) { fprintf(fr, "%lf,", *(logs.LSM_pts_logs + i * (rends - rstart) * 3 + j * 3 + 1)); }
 		}
+		if (*(logs.LSM_pts_logs + i * (rends - rstart) * 3 + 1) == 0) { fprintf(fr, "%lf,", 0.0); }
 		fprintf(fr, "\n");
 
 		for (size_t j = 0; j < rends - rstart; j++) {
 			if (*(logs.LSM_pts_logs + i * (rends - rstart) * 3 + j * 3 + 2) != 0) { fprintf(fr, "%lf,", *(logs.LSM_pts_logs + i * (rends - rstart) * 3 + j * 3 + 2)); }
 		}
+		if (*(logs.LSM_pts_logs + i * (rends - rstart) * 3 + 2) == 0) { fprintf(fr, "%lf,", 0.0); }
 		fprintf(fr, "\n");
 	}
 	std::cout << "Logs finish!" << endl;
