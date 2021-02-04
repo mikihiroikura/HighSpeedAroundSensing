@@ -54,7 +54,7 @@ struct Logs
 	//double LSM_pts_cycle[cyclebuffersize][rends - rstart][3] = {0};
 	double* LSM_pts_cycle;
 	double* LSM_pts_logs;
-	char* LSM_modes;
+	char* LSM_rotdir;
 	double* LSM_times;
 	bool* LSM_detectedenableflg;
 	bool* LSM_objdetectedflg;

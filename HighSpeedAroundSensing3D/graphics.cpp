@@ -309,7 +309,7 @@ void drawGL_one(double *pts, int *lsmshowid) {
     ImGui::SetNextWindowSize(ImVec2(320, 300), ImGuiCond_Once);
     ImGui::Begin("Logs and Parameters");
     //ImGui::Text("Processing time %.3f ms", gltime * 1000);
-    ImGui::Text("DDMotor mode  :  %c", mode);
+    ImGui::Text("DDMotor rotdir  :  %c", rotdir);
     ImGui::Text("Rotation speed:  %d", rpm);
     hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem); //IMGUI上のWindowでのカーソル処理時のフラグを立てる
     ImGui::Checkbox("Hide Red", &hide_red);

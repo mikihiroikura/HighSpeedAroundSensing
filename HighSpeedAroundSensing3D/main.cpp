@@ -57,7 +57,7 @@ long long processarcnt = 1;
 RS232c mbed;
 char command[256] = "";
 int rpm = 500;
-char mode = 'R';
+char rotdir = 'R';
 const int gearratio = 1000;
 const int rotpulse = 432000 / gearratio;
 #define READBUFFERSIZE 256
@@ -191,7 +191,7 @@ int main() {
 	//MBEDのRS232接続
 	mbed.Connect("COM4", 115200, 8, NOPARITY, 0, 0, 0, 5000, 20000);
 	//動作開始のコマンド
-	snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+	snprintf(command, READBUFFERSIZE, "%c,%d,\r", rotdir, rpm);
 	mbed.Send(command);
 	memset(command, '\0', READBUFFERSIZE);
 
@@ -225,7 +225,7 @@ int main() {
 #ifdef SAVE_LOGS_
 	std::cout << "Set mode Vector and time Vector for logs...";
 	logs.LSM_times = (double*)malloc(sizeof(double) * log_LSM_finish_cnt);
-	logs.LSM_modes = (char*)malloc(sizeof(char) * log_LSM_finish_cnt);
+	logs.LSM_rotdir = (char*)malloc(sizeof(char) * log_LSM_finish_cnt);
 	logs.LSM_pts_logs = (double*)malloc(sizeof(double) * log_LSM_finish_cnt * (rends-rstart) * 3);
 	memset(logs.LSM_pts_logs, 0, sizeof(double) * log_LSM_finish_cnt * (rends - rstart) * 3);
 	logs.LSM_detectedenableflg = (bool*)malloc(sizeof(bool) * log_LSM_finish_cnt);
@@ -316,7 +316,7 @@ int main() {
 		if (lsm_success == 0)
 		{
 			*(logs.LSM_times + log_lsm_cnt) = logtime;
-			*(logs.LSM_modes + log_lsm_cnt) = mode;
+			*(logs.LSM_rotdir + log_lsm_cnt) = rotdir;
 			*(logs.LSM_detectedenableflg + log_lsm_cnt) = detectenableflg;
 			*(logs.LSM_objdetectedflg + log_lsm_cnt) = objdetected;
 			*(logs.LSM_reciprocntdown + log_lsm_cnt) = reciprocntdown;
@@ -345,8 +345,8 @@ int main() {
 	cam.disconnect();
 
 	//終了コマンド送信
-	mode = 'F';
-	snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+	rotdir = 'F';
+	snprintf(command, READBUFFERSIZE, "%c,%d,\r", rotdir, rpm);
 	mbed.Send(command);
 	memset(command, '\0', READBUFFERSIZE);
 
@@ -370,8 +370,8 @@ int main() {
 	for (size_t i = 0; i < log_lsm_cnt; i++)
 	{
 		fprintf(fr, "%lf,", logs.LSM_times[i]);
-		if (logs.LSM_modes[i]=='L') { fprintf(fr, "%lf,", 1.0); }
-		else if (logs.LSM_modes[i] == 'R') { fprintf(fr, "%lf,", 0.0); }
+		if (logs.LSM_rotdir[i]=='L') { fprintf(fr, "%lf,", 1.0); }
+		else if (logs.LSM_rotdir[i] == 'R') { fprintf(fr, "%lf,", 0.0); }
 		if (logs.LSM_detectedenableflg[i]) { fprintf(fr, "%lf,", 1.0); }
 		else { fprintf(fr, "%lf,", 0.0); }
 		if (logs.LSM_objdetectedflg[i]) { fprintf(fr, "%lf,", 1.0); }
@@ -434,7 +434,7 @@ int main() {
 	//動的メモリの開放
 	free(logs.LSM_pts_cycle);
 #ifdef SAVE_LOGS_
-	free(logs.LSM_modes);
+	free(logs.LSM_rotdir);
 	free(logs.LSM_times);
 	free(logs.LSM_pts_logs);
 	free(logs.LSM_detectedenableflg);
@@ -571,7 +571,7 @@ void DetectAR(bool* flg) {
 //DDMotorへのコマンド送信
 void SendDDMotorCommand(bool* flg) {
 	//動作開始のコマンド
-	snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+	snprintf(command, READBUFFERSIZE, "%c,%d,\r", rotdir, rpm);
 	mbed.Send(command);
 	memset(command, '\0', READBUFFERSIZE);
 	
@@ -584,15 +584,15 @@ void SendDDMotorCommand(bool* flg) {
 			QueryPerformanceCounter(&mbedstop);
 			mbedtime = (double)(mbedstop.QuadPart - mbedstart.QuadPart) / freq.QuadPart;
 		}
-		if (mode == 'R') mode = 'L';
-		else mode = 'R';
-		snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+		if (rotdir == 'R') rotdir = 'L';
+		else rotdir = 'R';
+		snprintf(command, READBUFFERSIZE, "%c,%d,\r", rotdir, rpm);
 		mbed.Send(command);
 		memset(command, '\0', READBUFFERSIZE);
 	}
 	//終了コマンド送信
-	mode = 'F';
-	snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+	rotdir = 'F';
+	snprintf(command, READBUFFERSIZE, "%c,%d,\r", rotdir, rpm);
 	mbed.Send(command);
 	memset(command, '\0', READBUFFERSIZE);
 }
@@ -770,8 +770,8 @@ int CalcLSM(LSM* lsm, Logs* logs, int* logid) {
 								else rotmode = true;
 								if (reciprocntdown > 0)
 								{
-									if (mode == 'R') mode = 'L';
-									else mode = 'R';
+									if (rotdir == 'R') rotdir = 'L';
+									else rotdir = 'R';
 									rpm = 100;
 								}
 								else {
@@ -781,7 +781,7 @@ int CalcLSM(LSM* lsm, Logs* logs, int* logid) {
 									detectenableflg = false;
 									detectenablecnt = 0;
 								}
-								snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+								snprintf(command, READBUFFERSIZE, "%c,%d,\r", rotdir, rpm);
 								mbed.Send(command);
 								memset(command, '\0', READBUFFERSIZE);
 							}
@@ -792,7 +792,7 @@ int CalcLSM(LSM* lsm, Logs* logs, int* logid) {
 							if (nonobjcnt == contnonobjcnt) {//連続10回目でrpm=200に修正する
 								rpm = 500;
 								rotmode = false;
-								snprintf(command, READBUFFERSIZE, "%c,%d,\r", mode, rpm);
+								snprintf(command, READBUFFERSIZE, "%c,%d,\r", rotdir, rpm);
 								mbed.Send(command);
 								memset(command, '\0', READBUFFERSIZE);
 							}

@@ -24,7 +24,7 @@ const double safe_area = 1.5, danger_area = 1.0, zero_area = 0.01;
 const int rstart = 104, rends = 432;
 
 //表示したい情報
-extern char mode; //DDMotorの制御モード
+extern char rotdir; //DDMotorの制御モード
 extern int rpm; //DDMotorの回転数
 
 
