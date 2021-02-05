@@ -235,7 +235,7 @@ int main() {
 	logs.LSM_dangercnt = (int*)malloc(sizeof(int) * log_LSM_finish_cnt);
 	logs.LSM_rpm = (int*)malloc(sizeof(int) * log_LSM_finish_cnt);
 	logs.LSM_laserplane_nml = (double*)malloc(sizeof(double) * log_LSM_finish_cnt * 3);
-	logs.LSM_rps = (double*)malloc(sizeof(double) * log_LSM_finish_cnt * 2);
+	logs.LSM_rps = (float*)malloc(sizeof(float) * log_LSM_finish_cnt * 2);
 	logs.LSM_rotmodes = (bool*)malloc(sizeof(bool) * log_LSM_finish_cnt);
 	cout << "OK!" << endl;
 #endif // SAVE_LOGS_
@@ -324,7 +324,7 @@ int main() {
 			*(logs.LSM_dangercnt + log_lsm_cnt) = dangercnt;
 			*(logs.LSM_rpm + log_lsm_cnt) = rpm;
 			memcpy(logs.LSM_laserplane_nml + log_lsm_cnt, &lsm.plane_nml, sizeof(double) * 3);
-			memcpy(logs.LSM_rps + log_lsm_cnt, &lsm.rp, sizeof(double) * 2);
+			memcpy(logs.LSM_rps + log_lsm_cnt, &lsm.rp, sizeof(float) * 2);
 			*(logs.LSM_rotmodes + log_lsm_cnt) = rotmode;
 			log_lsm_cnt++;
 		}
@@ -386,7 +386,7 @@ int main() {
 		}
 		for (size_t j = 0; j < 2; j++)
 		{
-			fprintf(fr, "%lf,", *(logs.LSM_rps + i * 2 + j));
+			fprintf(fr, "%f,", *(logs.LSM_rps + i * 2 + j));
 		}
 		if (logs.LSM_rotmodes[i]) { fprintf(fr, "%lf,", 1.0); }
 		else { fprintf(fr, "%lf,", 0.0); }
@@ -775,7 +775,7 @@ int CalcLSM(LSM* lsm, Logs* logs, int* logid) {
 									rpm = 100;
 								}
 								else {
-									rpm = 500;
+									rpm = 200;
 									rotmode = false;
 									reciprocntdown = 3;
 									detectenableflg = false;
@@ -790,7 +790,7 @@ int CalcLSM(LSM* lsm, Logs* logs, int* logid) {
 						{//˜A‘±‚Å•¨‘Ì–¢ŒŸo‚É‚È‚Á‚½Žž
 							nonobjcnt++;
 							if (nonobjcnt == contnonobjcnt) {//˜A‘±10‰ñ–Ú‚Årpm=200‚ÉC³‚·‚é
-								rpm = 500;
+								rpm = 200;
 								rotmode = false;
 								snprintf(command, READBUFFERSIZE, "%c,%d,\r", rotdir, rpm);
 								mbed.Send(command);

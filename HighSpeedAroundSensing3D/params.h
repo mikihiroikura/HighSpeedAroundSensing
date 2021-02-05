@@ -63,7 +63,7 @@ struct Logs
 	int* LSM_dangercnt;
 	int* LSM_rpm;
 	double* LSM_laserplane_nml;
-	double* LSM_rps;
+	float* LSM_rps;
 	bool* LSM_rotmodes;
 	vector<cv::Mat> in_imgs_log;
 	cv::Mat* in_imgs_log_ptr;
