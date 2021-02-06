@@ -15,6 +15,15 @@
 using namespace std;
 
 int main() {
+	double rei[10];
+	double rei1[2] = { 100, 10 };
+	memcpy(rei + 2, rei1, sizeof(double) * 2);
+	for (size_t j = 0; j < 2; j++)
+	{
+		printf("%lf,", *(rei + 1 * 2 + j));
+	}
+
+
 	LARGE_INTEGER freq, start, end;
 	double logtime = 0;
 	string video_dir = "202011251655_video.mp4";
@@ -230,7 +239,6 @@ int main() {
 	//	}
 
 	//}
-	free(myst.reis);
 
 	return 0;
 }

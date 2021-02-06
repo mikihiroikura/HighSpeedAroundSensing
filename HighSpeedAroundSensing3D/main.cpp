@@ -89,7 +89,7 @@ int roi_laser_minx = width, roi_laser_maxx = 0, roi_laser_miny = height, roi_las
 const int roi_laser_margin = 30;
 cv::Point laser_pts(0, 0);
 int roi_laser_outcnt = 0;
-int lsmcalcid = 0;
+long long lsmcalcid = 0;
 int showglid = 0;
 const double Dc = danger_area * 1000, Ac = safe_area * 1000; //局所領域計測範囲切り替えの距離
 const int Nc = 50; //一つのラインレーザからAc以下の距離の点群の最小個数
@@ -111,7 +111,7 @@ const int timeout = 30;
 const int log_img_fps = 40;
 const int log_img_finish_cnt = log_img_fps * timeout + 100;
 const int log_LSM_finish_cnt = fps * timeout + 100;
-int log_img_cnt = 0, log_lsm_cnt = 0;
+long long log_img_cnt = 0, log_lsm_cnt = 0;
 //デバッグ用変数
 LARGE_INTEGER lsmstart, lsmend, takestart, takeend, arstart, arend, showstart, showend, mbedstart, mbedstop;
 double taketime = 0, lsmtime = 0, artime = 0, showtime = 0, mbedtime = 0;
@@ -137,7 +137,7 @@ void ShowLogs(bool* flg);
 void ShowAllLogs(bool* flg, double* pts, int* lsmshowid, cv::Mat* imglog);
 void DetectAR(bool* flg);
 void SendDDMotorCommand(bool* flg);
-int CalcLSM(LSM* lsm, Logs* logs, int* logid);
+int CalcLSM(LSM* lsm, Logs* logs, long long* logid);
 
 int main() {
 	//パラメータ
@@ -323,8 +323,8 @@ int main() {
 			*(logs.LSM_alertcnt + log_lsm_cnt) = alertcnt;
 			*(logs.LSM_dangercnt + log_lsm_cnt) = dangercnt;
 			*(logs.LSM_rpm + log_lsm_cnt) = rpm;
-			memcpy(logs.LSM_laserplane_nml + log_lsm_cnt, &lsm.plane_nml, sizeof(double) * 3);
-			memcpy(logs.LSM_rps + log_lsm_cnt, &lsm.rp, sizeof(float) * 2);
+			memcpy(logs.LSM_laserplane_nml + log_lsm_cnt * 3, &lsm.plane_nml, sizeof(double) * 3);
+			memcpy(logs.LSM_rps + log_lsm_cnt * 2, &lsm.rp, sizeof(float) * 2);
 			*(logs.LSM_rotmodes + log_lsm_cnt) = rotmode;
 			log_lsm_cnt++;
 		}
@@ -598,7 +598,7 @@ void SendDDMotorCommand(bool* flg) {
 }
 
 //Mainループでの光切断法による形状計測
-int CalcLSM(LSM* lsm, Logs* logs, int* logid) {
+int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 	//画像の格納
 	lsmcalcid = (in_imgs_saveid - 1 + cyclebuffersize) % cyclebuffersize;
 	if (lsm->processflgs[lsmcalcid]){
@@ -705,7 +705,7 @@ int CalcLSM(LSM* lsm, Logs* logs, int* logid) {
 #ifdef AUTONOMOUS_SENSING_
 				alertcnt = 0, dangercnt = 0;
 #endif // AUTONOMOUS_SENSING_
-				for (int rs = 0; rs < rends - rstart; rs++)
+				for (long long rs = 0; rs < rends - rstart; rs++)
 				{
 					if (lsmmass_r[rs] > 0)
 					{
@@ -725,13 +725,13 @@ int CalcLSM(LSM* lsm, Logs* logs, int* logid) {
 							lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
 						lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
 						//*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 1) = lambda * v + 100 * sin(lsm->processcnt * 0.0099);
-						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = lambda * u;
-						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = lambda * v;
-						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = lambda * w;
+						*(logs->LSM_pts_cycle + lsmcalcid * (rends - rstart) * 3 + rs * 3 + 0) = lambda * u;
+						*(logs->LSM_pts_cycle + lsmcalcid * (rends - rstart) * 3 + rs * 3 + 1) = lambda * v;
+						*(logs->LSM_pts_cycle + lsmcalcid * (rends - rstart) * 3 + rs * 3 + 2) = lambda * w;
 #ifdef SAVE_LOGS_
-						*(logs->LSM_pts_logs + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = lambda * u;
-						*(logs->LSM_pts_logs + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = lambda * v;
-						*(logs->LSM_pts_logs + (long long)*logid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = lambda * w;
+						*(logs->LSM_pts_logs + *logid * (rends - rstart) * 3 + rs * 3 + 0) = lambda * u;
+						*(logs->LSM_pts_logs + *logid * (rends - rstart) * 3 + rs * 3 + 1) = lambda * v;
+						*(logs->LSM_pts_logs + *logid * (rends - rstart) * 3 + rs * 3 + 2) = lambda * w;
 #endif // SAVE_LOGS_
 
 
@@ -743,9 +743,9 @@ int CalcLSM(LSM* lsm, Logs* logs, int* logid) {
 					}
 					else
 					{
-						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 0) = 0;
-						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 1) = 0;
-						*(logs->LSM_pts_cycle + (long long)lsmcalcid * (rends - rstart) * 3 + (long long)rs * 3 + 2) = 0;
+						*(logs->LSM_pts_cycle + lsmcalcid * (rends - rstart) * 3 + rs * 3 + 0) = 0;
+						*(logs->LSM_pts_cycle + lsmcalcid * (rends - rstart) * 3 + rs * 3 + 1) = 0;
+						*(logs->LSM_pts_cycle + lsmcalcid * (rends - rstart) * 3 + rs * 3 + 2) = 0;
 					}
 				}
 
