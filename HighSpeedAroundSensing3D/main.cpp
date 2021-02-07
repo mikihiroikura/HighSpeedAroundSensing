@@ -103,7 +103,12 @@ int detectenablecnt = 0;
 int detectunablecnt = 100;
 int contnonobjcnt = 10;//この回数分だけ連続で未検出判定ならば，全周囲計測に戻す
 bool rotmode = false;//回転モード True:往復運動　False：全周囲
-
+/// 単軸ロボットに関する変数
+RS232c axisrobot;
+#define READBUFFERSIZE 256
+char replybuf[READBUFFERSIZE];
+char axisrobmodes[][10] = { "@SRVO", "@START", "@ORG" };
+char axisrobcommand[READBUFFERSIZE] = "";
 
 /// ログに関する変数
 const int cyclebuffersize = 10;
@@ -130,6 +135,7 @@ namespace fs = std::filesystem;
 #define AUTONOMOUS_SENSING_
 //#define SHOW_PROCESSING_TIME_
 #define SHOW_IMGS_OPENGL_
+#define MOVE_AXISROBOT_
 
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
@@ -138,6 +144,8 @@ void ShowAllLogs(bool* flg, double* pts, int* lsmshowid, cv::Mat* imglog);
 void DetectAR(bool* flg);
 void SendDDMotorCommand(bool* flg);
 int CalcLSM(LSM* lsm, Logs* logs, long long* logid);
+void Read_Reply_toEND(RS232c* robot);
+void ControlAxisRobot(RS232c* robot, bool* flg);
 
 int main() {
 	//パラメータ
@@ -247,6 +255,29 @@ int main() {
 	}
 	cout << "OK!" << endl;
 
+	//単軸ロボットとの通信確保
+#ifdef MOVE_AXISROBOT_
+	std::cout << "Set commection to AXIS ROBOT...............";
+	if (!axisrobot.Connect("COM6", 38400, 8, ODDPARITY, 0, 0, 0, 20000, 20000)) {
+		cout << "No connect" << endl;
+		return 1;
+	}
+	std::cout << "OK!" << endl;
+	
+	snprintf(axisrobcommand, READBUFFERSIZE, "%s%d.1\r\n", axisrobmodes[0], 1);
+	axisrobot.Send(axisrobcommand);
+	memset(axisrobcommand, '\0', READBUFFERSIZE);
+	Read_Reply_toEND(&axisrobot);
+	std::cout << "SERVO ON" << endl;
+	snprintf(axisrobcommand, READBUFFERSIZE, "%s.1\r\n", axisrobmodes[2]);
+	axisrobot.Send(axisrobcommand);
+	cout << "ORG START" << endl;
+	memset(axisrobcommand, '\0', READBUFFERSIZE);
+	Read_Reply_toEND(&axisrobot);
+	std::cout << "ORG STOP" << endl;
+#endif // MOVE_AXISROBOT_
+
+
 	//カメラ起動
 	std::cout << "Aroud 3D Sensing Start!" << endl;
 	cam.start();
@@ -258,8 +289,10 @@ int main() {
 #ifdef SHOW_IMGS_OPENGL_
 	thread thr2(ShowAllLogs, &flg, logs.LSM_pts_cycle, &showglid, logs.in_imgs_log_ptr);
 #endif // SHOW_IMGS_OPENGL_
-	/// ARマーカを検出＆位置姿勢を計算するスレッド
-	//thread thr3(DetectAR, &flg);	
+#ifdef MOVE_AXISROBOT_
+	thread thr3(ControlAxisRobot, &axisrobot, &flg);
+#endif // MOVE_AXISROBOT_
+
 
 	//メインループ
 	/// 取得された画像から光切断法で三次元位置を計算する
@@ -338,11 +371,20 @@ int main() {
 #ifdef SHOW_IMGS_OPENGL_
 	if (thr2.joinable())thr2.join();
 #endif // SHOW_IMGS_OPENGL_
-	//if (thr3.joinable())thr3.join();
+#ifdef MOVE_AXISROBOT_
+	if (thr3.joinable())thr3.join();
+#endif // MOVE_AXISROBOT_
 
 	//カメラの停止，RS232Cの切断
 	cam.stop();
 	cam.disconnect();
+
+	//単軸ロボットの停止
+	snprintf(axisrobcommand, READBUFFERSIZE, "%s%d.1\r\n", axisrobmodes[0], 0);
+	axisrobot.Send(axisrobcommand);
+	Read_Reply_toEND(&axisrobot);
+	memset(axisrobcommand, '\0', READBUFFERSIZE);
+	cout << "SERVO OFF" << endl;
 
 	//終了コマンド送信
 	rotdir = 'F';
@@ -844,4 +886,41 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 	//QueryPerformanceCounter(&lsmend);
 	//lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 	return 0;
+}
+
+void Read_Reply_toEND(RS232c* robot) {
+	char bufreply[256];
+	while (true)
+	{
+		robot->Read_CRLF(bufreply, 256);
+		if (bufreply[0] == 'E' || bufreply[0] == 'O') {
+			break;
+		}
+	}
+}
+
+void ControlAxisRobot(RS232c* robot, bool* flg) {
+	srand(time(NULL));
+	int axisspeed = 100;
+	int axisposition = 200000;
+	int initaxispos = 600;
+	char controlcommand[READBUFFERSIZE];
+	while (*flg)
+	{
+		//位置と速度のランダム設定
+		if (initaxispos == 600) initaxispos = 0;
+		else if (initaxispos == 0) initaxispos = 600;
+		axisposition = (initaxispos + rand() % 100 + 1) * 100; //0~100 or 600~700
+		axisspeed = (rand() % 10 + 1) * 10; //10~100で10刻み
+
+		//コマンド送信
+		snprintf(controlcommand, READBUFFERSIZE, "@S_17.1=%d\r\n", axisspeed);
+		robot->Send(controlcommand);
+		memset(controlcommand, '\0', READBUFFERSIZE);
+		Read_Reply_toEND(robot);
+		snprintf(controlcommand, READBUFFERSIZE, "@START17#P%d.1\r\n", axisposition);
+		robot->Send(controlcommand);
+		memset(controlcommand, '\0', READBUFFERSIZE);
+		Read_Reply_toEND(robot);
+	}
 }
