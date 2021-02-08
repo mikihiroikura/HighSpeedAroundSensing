@@ -135,7 +135,7 @@ namespace fs = std::filesystem;
 #define AUTONOMOUS_SENSING_
 //#define SHOW_PROCESSING_TIME_
 #define SHOW_IMGS_OPENGL_
-//#define MOVE_AXISROBOT_
+#define MOVE_AXISROBOT_
 
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
@@ -146,6 +146,7 @@ void SendDDMotorCommand(bool* flg);
 int CalcLSM(LSM* lsm, Logs* logs, long long* logid);
 void Read_Reply_toEND(RS232c* robot);
 void ControlAxisRobot(RS232c* robot, bool* flg);
+void wait_QueryPerformance(double finishtime, LARGE_INTEGER freq);
 
 int main() {
 	//パラメータ
@@ -195,13 +196,6 @@ int main() {
 	fscanf(flaser, "%lf,", &lsm.ref_arcwidth);
 	fclose(flaser);
 	lsm.det = 1 / (lsm.stretch_mat[0] - lsm.stretch_mat[1] * lsm.stretch_mat[2]);
-
-	//MBEDのRS232接続
-	mbed.Connect("COM4", 115200, 8, NOPARITY, 0, 0, 0, 5000, 20000);
-	//動作開始のコマンド
-	snprintf(command, READBUFFERSIZE, "%c,%d,\r", rotdir, rpm);
-	mbed.Send(command);
-	memset(command, '\0', READBUFFERSIZE);
 
 	//カラーORモノクロ
 #ifdef OUT_MONO_
@@ -269,6 +263,7 @@ int main() {
 	memset(axisrobcommand, '\0', READBUFFERSIZE);
 	Read_Reply_toEND(&axisrobot);
 	std::cout << "SERVO ON" << endl;
+	wait_QueryPerformance(0.1, freq);
 	snprintf(axisrobcommand, READBUFFERSIZE, "%s.1\r\n", axisrobmodes[2]);
 	axisrobot.Send(axisrobcommand);
 	cout << "ORG START" << endl;
@@ -277,6 +272,12 @@ int main() {
 	std::cout << "ORG STOP" << endl;
 #endif // MOVE_AXISROBOT_
 
+	//MBEDのRS232接続
+	mbed.Connect("COM4", 115200, 8, NOPARITY, 0, 0, 0, 5000, 20000);
+	//動作開始のコマンド
+	snprintf(command, READBUFFERSIZE, "%c,%d,\r", rotdir, rpm);
+	mbed.Send(command);
+	memset(command, '\0', READBUFFERSIZE);
 
 	//カメラ起動
 	std::cout << "Aroud 3D Sensing Start!" << endl;
@@ -913,6 +914,7 @@ void ControlAxisRobot(RS232c* robot, bool* flg) {
 		//位置と速度のランダム設定
 		if (initaxispos == 600) initaxispos = 0;
 		else if (initaxispos == 0) initaxispos = 600;
+		else initaxispos = 0;
 		axisposition = (initaxispos + rand() % 100 + 1) * 100; //0~100 or 600~700
 		axisspeed = (rand() % 10 + 1) * 10; //10~100で10刻み
 
@@ -925,5 +927,16 @@ void ControlAxisRobot(RS232c* robot, bool* flg) {
 		robot->Send(controlcommand);
 		memset(controlcommand, '\0', READBUFFERSIZE);
 		Read_Reply_toEND(robot);
+	}
+}
+
+void wait_QueryPerformance(double finishtime, LARGE_INTEGER freq) {
+	LARGE_INTEGER waitstart, waitstop;
+	double waittime = 0;
+	QueryPerformanceCounter(&waitstart);
+	while (waittime < finishtime)
+	{
+		QueryPerformanceCounter(&waitstop);
+		waittime = (double)(waitstop.QuadPart - waitstart.QuadPart) / freq.QuadPart;
 	}
 }

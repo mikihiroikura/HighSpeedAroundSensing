@@ -49,31 +49,56 @@ int main(int argc, char* argv[]) {
 	srand(time(NULL));
 	int pointno = -1, pointno_old = -1;
 	//wait_QueryPerformance(0.1, freq);
-	for (size_t i = 0; i < 5; i++)
-	{
-		while (pointno == pointno_old) {
-			pointno = rand() % 15 + 1;
-		}
-		snprintf(command, READBUFFERSIZE, "%s%d.1\r\n", modes[1], pointno);
-		axisrobot.Send(command);
-		/*axisrobot.Read_CRLF(buf, 256);
-		axisrobot.Read_CRLF(buf, 256);
-		while (true)
-		{
-			axisrobot.Send("@?D18.1\r\n");
-			axisrobot.Read_CRLF(reply, 256);
-			if (reply[0] == 'D' && reply[6] == '0') break;
-			axisrobot.Read_CRLF(reply, 256);
-			if (reply[0] == 'D' && reply[6] == '0') break;
-		}*/
-		Read_Reply_toEND(&axisrobot);
-		pointno_old = pointno;
-	}
+	//for (size_t i = 0; i < 5; i++)
+	//{
+	//	while (pointno == pointno_old) {
+	//		pointno = rand() % 15 + 1;
+	//	}
+	//	snprintf(command, READBUFFERSIZE, "%s%d.1\r\n", modes[1], pointno);
+	//	axisrobot.Send(command);
+	//	/*axisrobot.Read_CRLF(buf, 256);
+	//	axisrobot.Read_CRLF(buf, 256);
+	//	while (true)
+	//	{
+	//		axisrobot.Send("@?D18.1\r\n");
+	//		axisrobot.Read_CRLF(reply, 256);
+	//		if (reply[0] == 'D' && reply[6] == '0') break;
+	//		axisrobot.Read_CRLF(reply, 256);
+	//		if (reply[0] == 'D' && reply[6] == '0') break;
+	//	}*/
+	//	Read_Reply_toEND(&axisrobot);
+	//	pointno_old = pointno;
+	//}
 
-	comresult = axisrobot.Send("@S_17.1=30\r\n");
-	Read_Reply_toEND(&axisrobot);
-	comresult = axisrobot.Send("@START17#P20000.1\r\n");
-	Read_Reply_toEND(&axisrobot);
+	srand(time(NULL));
+	int axisspeed = 100;
+	int axisposition = 200000;
+	int initaxispos = 600;
+	char controlcommand[READBUFFERSIZE];
+	//位置と速度のランダム設定
+	for (size_t i = 0; i < 11; i++)
+	{
+		if (initaxispos == 600) initaxispos = 0;
+		else if (initaxispos == 0) initaxispos = 600;
+		axisposition = (initaxispos + rand() % 100 + 1) * 100; //0~100 or 600~700
+		axisspeed = (rand() % 10 + 1) * 10; //10~100で10刻み
+
+		//コマンド送信
+		snprintf(controlcommand, READBUFFERSIZE, "@S_17.1=%d\r\n", axisspeed);
+		axisrobot.Send(controlcommand);
+		memset(controlcommand, '\0', READBUFFERSIZE);
+		Read_Reply_toEND(&axisrobot);
+		snprintf(controlcommand, READBUFFERSIZE, "@START17#P%d.1\r\n", axisposition);
+		axisrobot.Send(controlcommand);
+		memset(controlcommand, '\0', READBUFFERSIZE);
+		Read_Reply_toEND(&axisrobot);
+	}
+	
+
+	//comresult = axisrobot.Send("@S_17.1=30\r\n");
+	//Read_Reply_toEND(&axisrobot);
+	//comresult = axisrobot.Send("@START17#P20000.1\r\n");
+	//Read_Reply_toEND(&axisrobot);
 
 	snprintf(command, READBUFFERSIZE, "%s%d.1\r\n", modes[0], 0);
 	axisrobot.Send(command);
