@@ -101,7 +101,7 @@ bool objdetected = false;//物体検出判定
 bool detectenableflg = true;//物体検出可能フラグ
 int detectenablecnt = 0;
 int detectunablecnt = 100;
-int contnonobjcnt = 10;//この回数分だけ連続で未検出判定ならば，全周囲計測に戻す
+int contnonobjcnt = 100;//この回数分だけ連続で未検出判定ならば，全周囲計測に戻す
 bool rotmode = false;//回転モード True:往復運動　False：全周囲
 /// 単軸ロボットに関する変数
 RS232c axisrobot;
@@ -135,7 +135,7 @@ namespace fs = std::filesystem;
 #define AUTONOMOUS_SENSING_
 //#define SHOW_PROCESSING_TIME_
 #define SHOW_IMGS_OPENGL_
-#define MOVE_AXISROBOT_
+//#define MOVE_AXISROBOT_
 
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
@@ -380,11 +380,14 @@ int main() {
 	cam.disconnect();
 
 	//単軸ロボットの停止
+#ifdef MOVE_AXISROBOT_
 	snprintf(axisrobcommand, READBUFFERSIZE, "%s%d.1\r\n", axisrobmodes[0], 0);
 	axisrobot.Send(axisrobcommand);
 	Read_Reply_toEND(&axisrobot);
 	memset(axisrobcommand, '\0', READBUFFERSIZE);
 	cout << "SERVO OFF" << endl;
+#endif // MOVE_AXISROBOT_
+
 
 	//終了コマンド送信
 	rotdir = 'F';
@@ -706,6 +709,9 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 			/*QueryPerformanceCounter(&lsmend);
 			lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 			std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
+#ifdef AUTONOMOUS_SENSING_
+			alertcnt = 0, dangercnt = 0;
+#endif // AUTONOMOUS_SENSING_
 			//ここで同心円状に輝度重心を取得
 			if (lsm->allbps.size() != 0)
 			{
@@ -744,9 +750,7 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 				/*QueryPerformanceCounter(&lsmend);
 				lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 				std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
-#ifdef AUTONOMOUS_SENSING_
-				alertcnt = 0, dangercnt = 0;
-#endif // AUTONOMOUS_SENSING_
+
 				for (long long rs = 0; rs < rends - rstart; rs++)
 				{
 					if (lsmmass_r[rs] > 0)
@@ -791,66 +795,6 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 					}
 				}
 
-				//DDMotorの制御
-#ifdef AUTONOMOUS_SENSING_
-				if (detectenableflg)
-				{
-					if (alertcnt >= Nc) {
-						//物体検出判定
-						objcnt++;
-						nonobjcnt = 0;
-						totaldanger += dangercnt;
-						objdetected = true;
-					}
-					else//物体検出できなかった
-					{
-						if (objdetected)
-						{//前フレームで物体検出がされていてかつ今フレームで物体未検出になった時
-							if (objcnt > Cc) {
-								//この時点で物体検出が連続Cc回の時
-								if (totaldanger < dangerthr) reciprocntdown--;
-								else rotmode = true;
-								if (reciprocntdown > 0)
-								{
-									if (rotdir == 'R') rotdir = 'L';
-									else rotdir = 'R';
-									rpm = 100;
-								}
-								else {
-									rpm = 200;
-									rotmode = false;
-									reciprocntdown = 3;
-									detectenableflg = false;
-									detectenablecnt = 0;
-								}
-								snprintf(command, READBUFFERSIZE, "%c,%d,\r", rotdir, rpm);
-								mbed.Send(command);
-								memset(command, '\0', READBUFFERSIZE);
-							}
-						}
-						else
-						{//連続で物体未検出になった時
-							nonobjcnt++;
-							if (nonobjcnt == contnonobjcnt) {//連続10回目でrpm=200に修正する
-								rpm = 200;
-								rotmode = false;
-								snprintf(command, READBUFFERSIZE, "%c,%d,\r", rotdir, rpm);
-								mbed.Send(command);
-								memset(command, '\0', READBUFFERSIZE);
-							}
-						}
-						objdetected = false;
-						objcnt = 0, totaldanger = 0;
-					}
-				}
-				else
-				{//検出->未検出に変化した後連続100回は検出判定を行わない
-					detectenablecnt++;
-					if (detectenablecnt > detectunablecnt) detectenableflg = true;
-				}
-
-#endif // AUTONOMOUS_SENSING_
-
 #endif // OUT_COLOR_
 #ifdef OUT_MONO_
 				cv::threshold(lsm->lsm_laser, lsm->lsm_laser, mono_thr, 255, cv::THRESH_BINARY);
@@ -879,6 +823,65 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 					roi_laser.height = height;
 				}
 			}
+			//DDMotorの制御
+#ifdef AUTONOMOUS_SENSING_
+			if (detectenableflg)
+			{
+				if (alertcnt >= Nc) {
+					//物体検出判定
+					objcnt++;
+					nonobjcnt = 0;
+					totaldanger += dangercnt;
+					objdetected = true;
+				}
+				else//物体検出できなかった
+				{
+					if (objdetected)
+					{//前フレームで物体検出がされていてかつ今フレームで物体未検出になった時
+						if (objcnt > Cc) {
+							//この時点で物体検出が連続Cc回の時
+							if (totaldanger < dangerthr) reciprocntdown--;
+							else rotmode = true;
+							if (reciprocntdown > 0)
+							{
+								if (rotdir == 'R') rotdir = 'L';
+								else rotdir = 'R';
+								rpm = 100;
+							}
+							else {
+								rpm = 200;
+								rotmode = false;
+								reciprocntdown = 3;
+								detectenableflg = false;
+								detectenablecnt = 0;
+							}
+							snprintf(command, READBUFFERSIZE, "%c,%d,\r", rotdir, rpm);
+							mbed.Send(command);
+							memset(command, '\0', READBUFFERSIZE);
+						}
+					}
+					else
+					{//連続で物体未検出になった時
+						nonobjcnt++;
+						if (nonobjcnt == contnonobjcnt) {//連続10回目でrpm=200に修正する
+							rpm = 200;
+							rotmode = false;
+							snprintf(command, READBUFFERSIZE, "%c,%d,\r", rotdir, rpm);
+							mbed.Send(command);
+							memset(command, '\0', READBUFFERSIZE);
+						}
+					}
+					objdetected = false;
+					objcnt = 0, totaldanger = 0;
+						}
+					}
+			else
+			{//検出->未検出に変化した後連続100回は検出判定を行わない
+				detectenablecnt++;
+				if (detectenablecnt > detectunablecnt) detectenableflg = true;
+			}
+
+#endif // AUTONOMOUS_SENSING_
 		}
 	}
 	else return 1;
