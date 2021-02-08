@@ -56,7 +56,7 @@ cv::Mutex mutex;
 long long processarcnt = 1;
 RS232c mbed;
 char command[256] = "";
-int rpm = 200;
+int rpm = 500;
 char rotdir = 'R';
 const int gearratio = 1000;
 const int rotpulse = 432000 / gearratio;
@@ -93,14 +93,14 @@ long long lsmcalcid = 0;
 int showglid = 0;
 const double Dc = danger_area * 1000, Ac = safe_area * 1000; //局所領域計測範囲切り替えの距離
 const int Nc = 50; //一つのラインレーザからAc以下の距離の点群の最小個数
-const int Cc = 10; //Dc以下の距離の点群の個数Nc以上の最小連続回数
+const int Cc = 5; //Dc以下の距離の点群の個数Nc以上の最小連続回数
 const int dangerthr = 10;//危険領域の判定点数の閾値
 int alertcnt = 0, dangercnt = 0, objcnt = 0, nonobjcnt = 0,totaldanger = 0;
 int reciprocntdown = 3;
 bool objdetected = false;//物体検出判定
 bool detectenableflg = true;//物体検出可能フラグ
 int detectenablecnt = 0;
-int detectunablecnt = 100;
+int detectunablecnt = 30;
 int contnonobjcnt = 100;//この回数分だけ連続で未検出判定ならば，全周囲計測に戻す
 bool rotmode = false;//回転モード True:往復運動　False：全周囲
 /// 単軸ロボットに関する変数
@@ -145,8 +145,8 @@ void DetectAR(bool* flg);
 void SendDDMotorCommand(bool* flg);
 int CalcLSM(LSM* lsm, Logs* logs, long long* logid);
 void Read_Reply_toEND(RS232c* robot);
-void ControlAxisRobot(RS232c* robot, bool* flg);
 void wait_QueryPerformance(double finishtime, LARGE_INTEGER freq);
+void ControlAxisRobot(RS232c* robot, bool* flg);
 
 int main() {
 	//パラメータ
@@ -850,7 +850,7 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 								rpm = 100;
 							}
 							else {
-								rpm = 200;
+								rpm = 500;
 								rotmode = false;
 								reciprocntdown = 3;
 								detectenableflg = false;
@@ -903,7 +903,7 @@ void Read_Reply_toEND(RS232c* robot) {
 	}
 }
 
-void ControlAxisRobot(RS232c* robot, bool* flg) {
+void ControlAxisRobot(RS232c* robot, bool* flg){
 	srand(time(NULL));
 	int axisspeed = 100;
 	int axisposition = 200000;
