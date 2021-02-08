@@ -56,12 +56,25 @@ cv::Mutex mutex;
 long long processarcnt = 1;
 RS232c mbed;
 char command[256] = "";
-int rpm = 500;
 char rotdir = 'R';
 const int gearratio = 1000;
 const int rotpulse = 432000 / gearratio;
 #define READBUFFERSIZE 256
 long long detectfailcnt = 0;
+const int rotaterpm = 500, reciprorpm = 200;
+int rpm = rotaterpm;
+const double Dc = danger_area * 1000, Ac = safe_area * 1000; //局所領域計測範囲切り替えの距離
+const int Nc = 50; //一つのラインレーザからAc以下の距離の点群の最小個数
+const int Cc = 5; //Dc以下の距離の点群の個数Nc以上の最小連続回数
+const int dangerthr = 10;//危険領域の判定点数の閾値
+int alertcnt = 0, dangercnt = 0, objcnt = 0, nonobjcnt = 0, totaldanger = 0;
+int reciprocntdown = 3;
+bool objdetected = false;//物体検出判定
+bool detectenableflg = true;//物体検出可能フラグ
+int detectenablecnt = 0;
+int detectunablecnt = 30;
+int contnonobjcnt = 100;//この回数分だけ連続で未検出判定ならば，全周囲計測に戻す
+bool rotmode = false;//回転モード True:往復運動　False：全周囲
 /// 光切断法計算用変数
 int lsm_success = 1;
 double phi, lambda, u, v, w;
@@ -91,24 +104,14 @@ cv::Point laser_pts(0, 0);
 int roi_laser_outcnt = 0;
 long long lsmcalcid = 0;
 int showglid = 0;
-const double Dc = danger_area * 1000, Ac = safe_area * 1000; //局所領域計測範囲切り替えの距離
-const int Nc = 50; //一つのラインレーザからAc以下の距離の点群の最小個数
-const int Cc = 5; //Dc以下の距離の点群の個数Nc以上の最小連続回数
-const int dangerthr = 10;//危険領域の判定点数の閾値
-int alertcnt = 0, dangercnt = 0, objcnt = 0, nonobjcnt = 0,totaldanger = 0;
-int reciprocntdown = 3;
-bool objdetected = false;//物体検出判定
-bool detectenableflg = true;//物体検出可能フラグ
-int detectenablecnt = 0;
-int detectunablecnt = 30;
-int contnonobjcnt = 100;//この回数分だけ連続で未検出判定ならば，全周囲計測に戻す
-bool rotmode = false;//回転モード True:往復運動　False：全周囲
 /// 単軸ロボットに関する変数
 RS232c axisrobot;
 #define READBUFFERSIZE 256
 char replybuf[READBUFFERSIZE];
 char axisrobmodes[][10] = { "@SRVO", "@START", "@ORG" };
 char axisrobcommand[READBUFFERSIZE] = "";
+const int initaxisstart = 0, initaxisend = 600;
+const int posunits = 100, speedunits = 10;
 
 /// ログに関する変数
 const int cyclebuffersize = 10;
@@ -844,13 +847,13 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 							if (totaldanger < dangerthr) reciprocntdown--;
 							else rotmode = true;
 							if (reciprocntdown > 0)
-							{
+							{//往復回数があるとき
 								if (rotdir == 'R') rotdir = 'L';
 								else rotdir = 'R';
-								rpm = 100;
+								rpm = reciprorpm;
 							}
-							else {
-								rpm = 500;
+							else {//往復終了の時
+								rpm = rotaterpm;
 								rotmode = false;
 								reciprocntdown = 3;
 								detectenableflg = false;
@@ -864,8 +867,8 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 					else
 					{//連続で物体未検出になった時
 						nonobjcnt++;
-						if (nonobjcnt == contnonobjcnt) {//連続10回目でrpm=200に修正する
-							rpm = 200;
+						if (nonobjcnt == contnonobjcnt) {//連続Cont回目で全周囲計測に変更する
+							rpm = rotaterpm;
 							rotmode = false;
 							snprintf(command, READBUFFERSIZE, "%c,%d,\r", rotdir, rpm);
 							mbed.Send(command);
@@ -912,11 +915,11 @@ void ControlAxisRobot(RS232c* robot, bool* flg){
 	while (*flg)
 	{
 		//位置と速度のランダム設定
-		if (initaxispos == 600) initaxispos = 0;
-		else if (initaxispos == 0) initaxispos = 600;
-		else initaxispos = 0;
-		axisposition = (initaxispos + rand() % 100 + 1) * 100; //0~100 or 600~700
-		axisspeed = (rand() % 10 + 1) * 10; //10~100で10刻み
+		if (initaxispos == initaxisend) initaxispos = initaxisstart;
+		else if (initaxispos == initaxisstart) initaxispos = initaxisend;
+		else initaxispos = initaxisstart;
+		axisposition = (initaxispos + rand() % posunits+ 1) * 100; //0~100 or 600~700
+		axisspeed = (rand() % speedunits + 1) * 10; //10~100で10刻み
 
 		//コマンド送信
 		snprintf(controlcommand, READBUFFERSIZE, "@S_17.1=%d\r\n", axisspeed);
