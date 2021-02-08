@@ -64,7 +64,7 @@ long long detectfailcnt = 0;
 const int rotaterpm = 500, reciprorpm = 200;
 int rpm = rotaterpm;
 const double Dc = danger_area * 1000, Ac = safe_area * 1000; //局所領域計測範囲切り替えの距離
-const int Nc = 50; //一つのラインレーザからAc以下の距離の点群の最小個数
+const int Nc = 20; //一つのラインレーザからAc以下の距離の点群の最小個数
 const int Cc = 5; //Dc以下の距離の点群の個数Nc以上の最小連続回数
 const int dangerthr = 10;//危険領域の判定点数の閾値
 int alertcnt = 0, dangercnt = 0, objcnt = 0, nonobjcnt = 0, totaldanger = 0;
@@ -842,7 +842,7 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 				{
 					if (objdetected)
 					{//前フレームで物体検出がされていてかつ今フレームで物体未検出になった時
-						if (objcnt > Cc) {
+						if (objcnt > Cc) {//連続でCc回物体検出判定されていれば
 							//この時点で物体検出が連続Cc回の時
 							if (totaldanger < dangerthr) reciprocntdown--;
 							else rotmode = true;
