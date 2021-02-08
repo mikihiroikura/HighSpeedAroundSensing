@@ -1,10 +1,10 @@
 %CSVの読み取り
-M =csvread('csvs/210201212150_LSM_result.csv');
+M =csvread('csvs/210208173910_LSM_result.csv');
 Times = M(1:4:end,1);
 Xs = M(2:4:end,:);
 Ys = M(3:4:end,:);
 Zs = M(4:4:end,:);
-ref_center = [938.469081,492.666857];
+ref_center = [446.34703,401.28674];
 LSM_rotdir = M(1:4:end,2);
 LSM_detectedenablefig = M(1:4:end,3);
 LSM_objdetectedflg = M(1:4:end,4);
@@ -41,7 +41,7 @@ open(v)
 dirid = 1;
 hold off
 for i=1:size(Times,1)
-    scatter3(Xs(i,(Xs(i,:)~=0)),Ys(i,(Xs(i,:)~=0)),Zs(i,(Xs(i,:)~=0)),[], colormap(ColorMat(i,(Xs(i,:)~=0),:)));
+    scatter3(Xs(i,(Xs(i,:)~=0)),Ys(i,(Xs(i,:)~=0)),Zs(i,(Xs(i,:)~=0)),[], colormap(ColorMat(i,(Xs(i,:)~=0),:),:));
     xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
     ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
     zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
