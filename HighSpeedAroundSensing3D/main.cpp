@@ -873,8 +873,8 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 					}
 					objdetected = false;
 					objcnt = 0, totaldanger = 0;
-						}
-					}
+				}
+			}
 			else
 			{//検出->未検出に変化した後連続100回は検出判定を行わない
 				detectenablecnt++;
