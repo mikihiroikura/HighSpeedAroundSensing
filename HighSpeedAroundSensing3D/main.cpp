@@ -89,12 +89,6 @@ vector<cv::Point> refpts;
 const int colorstep = width * 3, colorelem = 3;
 const int monostep = width, monoelem = 1;
 double refmass, refmomx, refmomy;
-int refx, refy;
-unsigned int forend, cogx, cogy;
-double lsmmass, lsmmomx, lsmmomy;
-double dtheta = 30;
-double deg;
-vector<double> calcpt(3, 0);
 cv::Point2f idpix;
 unsigned int r_calc;
 double lsmmass_r[rends - rstart] = { 0 }, lsmmomx_r[rends - rstart] = { 0 }, lsmmomy_r[rends - rstart] = { 0 };
@@ -131,14 +125,14 @@ using namespace std;
 namespace fs = std::filesystem;
 
 //DEFINE群
-#define SAVE_LOGS_
+//#define SAVE_LOGS_
 //#define SAVE_IMGS_
 #define OUT_COLOR_
 //#define OUT_MONO_
 #define AUTONOMOUS_SENSING_
 //#define SHOW_PROCESSING_TIME_
 #define SHOW_IMGS_OPENGL_
-#define MOVE_AXISROBOT_
+//#define MOVE_AXISROBOT_
 
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
