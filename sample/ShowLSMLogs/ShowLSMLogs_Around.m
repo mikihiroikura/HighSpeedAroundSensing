@@ -1,5 +1,5 @@
 %CSVの読み取り
-M =csvread('csvs/210210183407_LSM_result.csv');
+M =csvread('csvs/210210183407_LSM_result_axis600_localsensing.csv');
 Times = M(1:4:end,1);
 Xs = M(2:4:end,:);
 Ys = M(3:4:end,:);
@@ -31,6 +31,13 @@ colormap = [1 0 0
 dirs = refpts - ref_center;
 rads = atan2(dirs(:,2),dirs(:,1));
 
+%デバッグ:時空間分解能計算
+difftime = [];
+Pointcnt = [];
+Ranges = [];
+Timeold = 0;
+drads = 0;
+
 
 %動画と画像の保存先指定
 format = 'yyyymmddHHMM';
@@ -41,7 +48,12 @@ open(v)
 dirid = 1;
 hold off
 idold = 1;
-for i=1:size(Times,1)
+for i=2:size(Times,1)
+    if abs(rads(i)-rads(i-1)) > 5
+        drads =drads - abs(rads(i)-rads(i-1)) + 2 * pi;
+    else
+        drads =drads + abs(rads(i)-rads(i-1));
+    end
     %ここから計測モードによってどれだけHold onするか決める
     if LSM_rotmode(i) == 1.0%局所領域計測時
         if LSM_rotdir(i) ~= LSM_rotdir(i-1)%回転方向が変化したとき
@@ -65,6 +77,12 @@ for i=1:size(Times,1)
             dirid = dirid +1;
             hold off
             idold = i;
+            %時空間分解能計算
+            Pointcnt = [Pointcnt;sum(sum(Xsp~=0))];
+            difftime =[difftime;Times(i)-Timeold];
+            Ranges = [Ranges; drads];
+            drads = 0;
+            Timeold = Times(i);
         end
     else%全周計測時
         if LSM_rotdir(i) == 0%右回転
@@ -72,7 +90,8 @@ for i=1:size(Times,1)
                 Xsp = Xs(idold:i,:);
                 Ysp = Ys(idold:i,:);
                 Zsp = Zs(idold:i,:);
-                scatter3(Xsp((Xsp~=0)),Ysp((Xsp~=0)),Zsp((Xsp~=0)),[], colormap(ColorMat(Xsp~=0),:));
+                ColorMatsp = ColorMat(idold:i,:);
+                scatter3(Xsp(Xsp~=0),Ysp(Xsp~=0),Zsp(Xsp~=0),[], colormap(ColorMatsp(Xsp~=0),:));
                 xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
                 ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
                 zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
@@ -85,13 +104,20 @@ for i=1:size(Times,1)
                 dirid = dirid +1;
                 hold off
                 idold = i;
+                %時空間分解能計算
+                Pointcnt = [Pointcnt;sum(sum(Xsp~=0))];
+                difftime =[difftime;Times(i)-Timeold];
+                Ranges = [Ranges; drads];
+                drads = 0;
+                Timeold = Times(i);
             end
         else%左回転
             if rads(i) < 0 && rads(i-1) > 0 %方向ベクトルが+X軸を超えた時
                 Xsp = Xs(idold:i,:);
                 Ysp = Ys(idold:i,:);
                 Zsp = Zs(idold:i,:);
-                scatter3(Xsp((Xsp~=0)),Ysp((Xsp~=0)),Zsp((Xsp~=0)),[], colormap(ColorMat(Xsp~=0),:));
+                ColorMatsp = ColorMat(idold:i,:);
+                scatter3(Xsp(Xsp~=0),Ysp(Xsp~=0),Zsp(Xsp~=0),[], colormap(ColorMatsp(Xsp~=0),:));
                 xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
                 ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
                 zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
@@ -104,6 +130,12 @@ for i=1:size(Times,1)
                 dirid = dirid +1;
                 hold off
                 idold = i;
+                %時空間分解能計算
+                Pointcnt = [Pointcnt;sum(sum(Xsp~=0))];
+                difftime =[difftime;Times(i)-Timeold];
+                Ranges = [Ranges; drads];
+                drads = 0;
+                Timeold = Times(i);
             end
         end
     end
@@ -113,22 +145,3 @@ close(v);
 
 %デバッグ
 %空間分解能の計算
-% deg = 10;
-% ar = 2;
-% Xc = Xs(dirchangeid(ar):dirchangeid(ar+1),:);
-% Yc = Ys(dirchangeid(ar):dirchangeid(ar+1),:);
-% Zc = Zs(dirchangeid(ar):dirchangeid(ar+1),:);
-% normar = (Xc.^2+Yc.^2).^0.5;
-% cosar = -Yc./normar;
-% numar = sum(sum(cosar>cos(deg2rad(deg))));
-% lo = 77;
-% Xl = Xs(dirchangeid(lo):dirchangeid(lo+1),:);
-% Yl = Ys(dirchangeid(lo):dirchangeid(lo+1),:);
-% Zl = Zs(dirchangeid(lo):dirchangeid(lo+1),:);
-% normlo = (Xl.^2+Yl.^2).^0.5;
-% coslo = -Yl./normlo;
-% numlo = sum(sum(coslo>cos(deg2rad(deg))));
-% Tdif = Times(dirchangeid);
-% Tscan = Tdif(2:end)-Tdif(1:end-1);
-% hz_ar = 1/(sum(Tscan(6:14))/9);
-% hz_lo = 1/(sum(Tscan(16:65))/50);
