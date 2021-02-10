@@ -125,8 +125,8 @@ using namespace std;
 namespace fs = std::filesystem;
 
 //DEFINEŒQ
-//#define SAVE_LOGS_
-//#define SAVE_IMGS_
+#define SAVE_LOGS_
+#define SAVE_IMGS_
 #define OUT_COLOR_
 //#define OUT_MONO_
 #define AUTONOMOUS_SENSING_

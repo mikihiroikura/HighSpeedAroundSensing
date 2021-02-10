@@ -1,5 +1,5 @@
 %CSVの読み取り
-M =csvread('csvs/210208173910_LSM_result.csv');
+M =csvread('csvs/210210183407_LSM_result.csv');
 Times = M(1:4:end,1);
 Xs = M(2:4:end,:);
 Ys = M(3:4:end,:);
@@ -19,7 +19,7 @@ LSM_rotmode = M(1:4:end,14);
 %点群の距離ごとに色を指定
 Ac = 1500;
 Dc = 1000;
-dist = (Xs.^2 + Ys.^2 + Zs.^2).^0.5;
+dist = (Xs.^2 + Ys.^2).^0.5;
 ColorMat = int8(ones(size(dist)));
 ColorMat = ColorMat + int8(dist > Ac);
 ColorMat = ColorMat + int8(dist > Dc);
@@ -40,19 +40,22 @@ v = VideoWriter(strcat(imgfolder,'/LSM_result'),'MPEG-4');
 open(v)
 dirid = 1;
 hold off
+idold = 1;
 for i=1:size(Times,1)
-    scatter3(Xs(i,(Xs(i,:)~=0)),Ys(i,(Xs(i,:)~=0)),Zs(i,(Xs(i,:)~=0)),[], colormap(ColorMat(i,(Xs(i,:)~=0),:),:));
-    xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
-    ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
-    zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
-%     xlim([-2000 1000]);
-%     ylim([-1500 1000]);
-%     zlim([-0 2000]);
-    daspect([1 1 1]);
-    hold on
     %ここから計測モードによってどれだけHold onするか決める
     if LSM_rotmode(i) == 1.0%局所領域計測時
         if LSM_rotdir(i) ~= LSM_rotdir(i-1)%回転方向が変化したとき
+            Xsp = Xs(idold:i,:);
+            Ysp = Ys(idold:i,:);
+            Zsp = Zs(idold:i,:);
+            ColorMatsp = ColorMat(idold:i,:);
+            scatter3(Xsp(Xsp~=0),Ysp(Xsp~=0),Zsp(Xsp~=0),[], colormap(ColorMatsp(Xsp~=0),:));
+            xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
+            ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
+            zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
+        %     xlim([-2000 1000]);
+        %     ylim([-1500 1000]);
+        %     zlim([-0 2000]);
             title(['Time[s]: ',num2str(Times(i,1))]);
             daspect([1 1 1]);
             frame =getframe(gcf);
@@ -61,10 +64,18 @@ for i=1:size(Times,1)
             saveas(gcf,imgfile);
             dirid = dirid +1;
             hold off
+            idold = i;
         end
     else%全周計測時
         if LSM_rotdir(i) == 0%右回転
             if rads(i) > 0 && rads(i-1) < 0 %方向ベクトルが+X軸を超えた時
+                Xsp = Xs(idold:i,:);
+                Ysp = Ys(idold:i,:);
+                Zsp = Zs(idold:i,:);
+                scatter3(Xsp((Xsp~=0)),Ysp((Xsp~=0)),Zsp((Xsp~=0)),[], colormap(ColorMat(Xsp~=0),:));
+                xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
+                ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
+                zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
                 title(['Time[s]: ',num2str(Times(i,1))]);
                 daspect([1 1 1]);
                 frame =getframe(gcf);
@@ -73,9 +84,17 @@ for i=1:size(Times,1)
                 saveas(gcf,imgfile);
                 dirid = dirid +1;
                 hold off
+                idold = i;
             end
         else%左回転
             if rads(i) < 0 && rads(i-1) > 0 %方向ベクトルが+X軸を超えた時
+                Xsp = Xs(idold:i,:);
+                Ysp = Ys(idold:i,:);
+                Zsp = Zs(idold:i,:);
+                scatter3(Xsp((Xsp~=0)),Ysp((Xsp~=0)),Zsp((Xsp~=0)),[], colormap(ColorMat(Xsp~=0),:));
+                xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
+                ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
+                zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
                 title(['Time[s]: ',num2str(Times(i,1))]);
                 daspect([1 1 1]);
                 frame =getframe(gcf);
@@ -84,6 +103,7 @@ for i=1:size(Times,1)
                 saveas(gcf,imgfile);
                 dirid = dirid +1;
                 hold off
+                idold = i;
             end
         end
     end
