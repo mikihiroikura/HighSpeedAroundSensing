@@ -1,5 +1,5 @@
 %CSVの読み取り
-M =csvread('csvs/210215153946_LSM_result_recipro700.csv');
+M =csvread('csvs/210215192102_LSM_result_demo.csv');
 Times = M(1:4:end,1);
 Xs = M(2:4:end,:);
 Ys = M(3:4:end,:);
@@ -15,6 +15,11 @@ LSM_rpms = M(1:4:end,8);
 LSM_laserplane_nml = M(1:4:end,9:11);
 refpts = M(1:4:end,12:13);
 LSM_rotmode = M(1:4:end,14);
+%グラフの軸の範囲の指定
+rangeon = 1;
+xranges = [-2000 2000];
+yranges = [-2500 2000];
+zranges = [0 1000];
 
 %点群の距離ごとに色を指定
 Ac = 1500;
@@ -32,6 +37,7 @@ dirs = refpts - ref_center;
 rads = atan2(dirs(:,2),dirs(:,1));
 
 %デバッグ:時空間分解能計算
+Modes = [];
 difftime = [];
 Pointcnt = [];
 Ranges = [];
@@ -39,6 +45,8 @@ Timeold = 0;
 drads = 0;
 
 %出力図の相フレーム数の指定
+%0ならば自動で出力の時間を変える
+%それ以外なら指定の出力フレーム数
 framenum = 0;
 
 
@@ -66,22 +74,26 @@ for i=2:size(Times,1)
                 Zsp = Zs(idold:i,:);
                 ColorMatsp = ColorMat(idold:i,:);
                 scatter3(Xsp(Xsp~=0),Ysp(Xsp~=0),Zsp(Xsp~=0),[], colormap(ColorMatsp(Xsp~=0),:));
-                xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
-                ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
-                zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
-            %     xlim([-2000 1000]);
-            %     ylim([-1500 1000]);
-            %     zlim([-0 2000]);
+                if rangeon == 1
+                    xlim(xranges);
+                    ylim(yranges);
+                    zlim(zranges);
+                else
+                    xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
+                    ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
+                    zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
+                end
                 title(['Time[s]: ',num2str(Times(i,1))]);
                 daspect([1 1 1]);
                 frame =getframe(gcf);
                 writeVideo(v,frame);
-                imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid),'.png')));
-                saveas(gcf,imgfile);
+                imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid))));
+                print(gcf,'-painters',imgfile,'-dpdf');
                 dirid = dirid +1;
                 hold off
                 idold = i;
                 %時空間分解能計算
+                Modes = [Modes;"ReciprLR"];
                 Pointcnt = [Pointcnt;sum(sum(Xsp~=0))];
                 difftime =[difftime;Times(i)-Timeold];
                 Ranges = [Ranges; drads];
@@ -96,19 +108,26 @@ for i=2:size(Times,1)
                     Zsp = Zs(idold:i,:);
                     ColorMatsp = ColorMat(idold:i,:);
                     scatter3(Xsp(Xsp~=0),Ysp(Xsp~=0),Zsp(Xsp~=0),[], colormap(ColorMatsp(Xsp~=0),:));
-                    xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
-                    ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
-                    zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
+                    if rangeon == 1
+                        xlim(xranges);
+                        ylim(yranges);
+                        zlim(zranges);
+                    else
+                        xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
+                        ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
+                        zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
+                    end
                     title(['Time[s]: ',num2str(Times(i,1))]);
                     daspect([1 1 1]);
                     frame =getframe(gcf);
                     writeVideo(v,frame);
-                    imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid),'.png')));
-                    saveas(gcf,imgfile);
+                    imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid))));
+                    print(gcf,'-painters',imgfile,'-dpdf');
                     dirid = dirid +1;
                     hold off
                     idold = i;
                     %時空間分解能計算
+                    Modes = [Modes;"Rotate-R"];
                     Pointcnt = [Pointcnt;sum(sum(Xsp~=0))];
                     difftime =[difftime;Times(i)-Timeold];
                     Ranges = [Ranges; drads];
@@ -122,19 +141,26 @@ for i=2:size(Times,1)
                     Zsp = Zs(idold:i,:);
                     ColorMatsp = ColorMat(idold:i,:);
                     scatter3(Xsp(Xsp~=0),Ysp(Xsp~=0),Zsp(Xsp~=0),[], colormap(ColorMatsp(Xsp~=0),:));
-                    xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
-                    ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
-                    zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
+                    if rangeon == 1
+                        xlim(xranges);
+                        ylim(yranges);
+                        zlim(zranges);
+                    else
+                        xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
+                        ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
+                        zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
+                    end
                     title(['Time[s]: ',num2str(Times(i,1))]);
                     daspect([1 1 1]);
                     frame =getframe(gcf);
                     writeVideo(v,frame);
-                    imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid),'.png')));
-                    saveas(gcf,imgfile);
+                    imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid))));
+                    print(gcf,'-painters',imgfile,'-dpdf');
                     dirid = dirid +1;
                     hold off
                     idold = i;
                     %時空間分解能計算
+                    Modes = [Modes;"Rotate-L"];
                     Pointcnt = [Pointcnt;sum(sum(Xsp~=0))];
                     difftime =[difftime;Times(i)-Timeold];
                     Ranges = [Ranges; drads];
@@ -150,18 +176,21 @@ for i=2:size(Times,1)
             Zsp = Zs(idold:i,:);
             ColorMatsp = ColorMat(idold:i,:);
             scatter3(Xsp(Xsp~=0),Ysp(Xsp~=0),Zsp(Xsp~=0),[], colormap(ColorMatsp(Xsp~=0),:));
-            xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
-            ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
-            zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
-            xlim([-500 500]);
-            ylim([-2500 -1400]);
-            zlim([0 1000]);
+            if rangeon == 1
+                xlim(xranges);
+                ylim(yranges);
+                zlim(zranges);
+            else
+                xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
+                ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
+                zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
+            end
             title(['Time[s]: ',num2str(Times(i,1))]);
             daspect([1 1 1]);
             frame =getframe(gcf);
             writeVideo(v,frame);
-            imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid),'.png')));
-            saveas(gcf,imgfile);
+            imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid))));
+            print(gcf,'-painters',imgfile,'-dpdf');
             dirid = dirid +1;
             hold off
             idold = i;

@@ -83,7 +83,7 @@ cv::Rect roi_ref;
 cv::Rect roi_laser;
 vector<double> rps;
 const float mono_thr = 240.0;
-const cv::Scalar color_thr_min(0, 0, 150);
+const cv::Scalar color_thr_min(0, 0, 165);
 const cv::Scalar color_thr_max(256, 256, 256);
 const cv::Scalar color_ref_thr_min(0, 0, 220);
 const cv::Scalar color_ref_thr_max(256, 256, 256);
