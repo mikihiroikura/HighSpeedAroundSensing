@@ -1,5 +1,5 @@
 %CSVの読み取り
-M =csvread('csvs/210210183407_LSM_result_axis600_localsensing.csv');
+M =csvread('csvs/210215153946_LSM_result_recipro700.csv');
 Times = M(1:4:end,1);
 Xs = M(2:4:end,:);
 Ys = M(3:4:end,:);
@@ -38,6 +38,9 @@ Ranges = [];
 Timeold = 0;
 drads = 0;
 
+%出力図の相フレーム数の指定
+framenum = 0;
+
 
 %動画と画像の保存先指定
 format = 'yyyymmddHHMM';
@@ -55,8 +58,93 @@ for i=2:size(Times,1)
         drads =drads + abs(rads(i)-rads(i-1));
     end
     %ここから計測モードによってどれだけHold onするか決める
-    if LSM_rotmode(i) == 1.0%局所領域計測時
-        if LSM_rotdir(i) ~= LSM_rotdir(i-1)%回転方向が変化したとき
+    if framenum == 0
+        if LSM_rotmode(i) == 1.0%局所領域計測時
+            if LSM_rotdir(i) ~= LSM_rotdir(i-1)%回転方向が変化したとき
+                Xsp = Xs(idold:i,:);
+                Ysp = Ys(idold:i,:);
+                Zsp = Zs(idold:i,:);
+                ColorMatsp = ColorMat(idold:i,:);
+                scatter3(Xsp(Xsp~=0),Ysp(Xsp~=0),Zsp(Xsp~=0),[], colormap(ColorMatsp(Xsp~=0),:));
+                xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
+                ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
+                zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
+            %     xlim([-2000 1000]);
+            %     ylim([-1500 1000]);
+            %     zlim([-0 2000]);
+                title(['Time[s]: ',num2str(Times(i,1))]);
+                daspect([1 1 1]);
+                frame =getframe(gcf);
+                writeVideo(v,frame);
+                imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid),'.png')));
+                saveas(gcf,imgfile);
+                dirid = dirid +1;
+                hold off
+                idold = i;
+                %時空間分解能計算
+                Pointcnt = [Pointcnt;sum(sum(Xsp~=0))];
+                difftime =[difftime;Times(i)-Timeold];
+                Ranges = [Ranges; drads];
+                drads = 0;
+                Timeold = Times(i);
+            end
+        else%全周計測時
+            if LSM_rotdir(i) == 0%右回転
+                if rads(i) > 0 && rads(i-1) < 0 %方向ベクトルが+X軸を超えた時
+                    Xsp = Xs(idold:i,:);
+                    Ysp = Ys(idold:i,:);
+                    Zsp = Zs(idold:i,:);
+                    ColorMatsp = ColorMat(idold:i,:);
+                    scatter3(Xsp(Xsp~=0),Ysp(Xsp~=0),Zsp(Xsp~=0),[], colormap(ColorMatsp(Xsp~=0),:));
+                    xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
+                    ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
+                    zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
+                    title(['Time[s]: ',num2str(Times(i,1))]);
+                    daspect([1 1 1]);
+                    frame =getframe(gcf);
+                    writeVideo(v,frame);
+                    imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid),'.png')));
+                    saveas(gcf,imgfile);
+                    dirid = dirid +1;
+                    hold off
+                    idold = i;
+                    %時空間分解能計算
+                    Pointcnt = [Pointcnt;sum(sum(Xsp~=0))];
+                    difftime =[difftime;Times(i)-Timeold];
+                    Ranges = [Ranges; drads];
+                    drads = 0;
+                    Timeold = Times(i);
+                end
+            else%左回転
+                if rads(i) < 0 && rads(i-1) > 0 %方向ベクトルが+X軸を超えた時
+                    Xsp = Xs(idold:i,:);
+                    Ysp = Ys(idold:i,:);
+                    Zsp = Zs(idold:i,:);
+                    ColorMatsp = ColorMat(idold:i,:);
+                    scatter3(Xsp(Xsp~=0),Ysp(Xsp~=0),Zsp(Xsp~=0),[], colormap(ColorMatsp(Xsp~=0),:));
+                    xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
+                    ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
+                    zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
+                    title(['Time[s]: ',num2str(Times(i,1))]);
+                    daspect([1 1 1]);
+                    frame =getframe(gcf);
+                    writeVideo(v,frame);
+                    imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid),'.png')));
+                    saveas(gcf,imgfile);
+                    dirid = dirid +1;
+                    hold off
+                    idold = i;
+                    %時空間分解能計算
+                    Pointcnt = [Pointcnt;sum(sum(Xsp~=0))];
+                    difftime =[difftime;Times(i)-Timeold];
+                    Ranges = [Ranges; drads];
+                    drads = 0;
+                    Timeold = Times(i);
+                end
+            end
+        end
+    else
+        if mod(i,framenum) == 0
             Xsp = Xs(idold:i,:);
             Ysp = Ys(idold:i,:);
             Zsp = Zs(idold:i,:);
@@ -65,9 +153,9 @@ for i=2:size(Times,1)
             xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
             ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
             zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
-        %     xlim([-2000 1000]);
-        %     ylim([-1500 1000]);
-        %     zlim([-0 2000]);
+            xlim([-500 500]);
+            ylim([-2500 -1400]);
+            zlim([0 1000]);
             title(['Time[s]: ',num2str(Times(i,1))]);
             daspect([1 1 1]);
             frame =getframe(gcf);
@@ -77,66 +165,6 @@ for i=2:size(Times,1)
             dirid = dirid +1;
             hold off
             idold = i;
-            %時空間分解能計算
-            Pointcnt = [Pointcnt;sum(sum(Xsp~=0))];
-            difftime =[difftime;Times(i)-Timeold];
-            Ranges = [Ranges; drads];
-            drads = 0;
-            Timeold = Times(i);
-        end
-    else%全周計測時
-        if LSM_rotdir(i) == 0%右回転
-            if rads(i) > 0 && rads(i-1) < 0 %方向ベクトルが+X軸を超えた時
-                Xsp = Xs(idold:i,:);
-                Ysp = Ys(idold:i,:);
-                Zsp = Zs(idold:i,:);
-                ColorMatsp = ColorMat(idold:i,:);
-                scatter3(Xsp(Xsp~=0),Ysp(Xsp~=0),Zsp(Xsp~=0),[], colormap(ColorMatsp(Xsp~=0),:));
-                xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
-                ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
-                zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
-                title(['Time[s]: ',num2str(Times(i,1))]);
-                daspect([1 1 1]);
-                frame =getframe(gcf);
-                writeVideo(v,frame);
-                imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid),'.png')));
-                saveas(gcf,imgfile);
-                dirid = dirid +1;
-                hold off
-                idold = i;
-                %時空間分解能計算
-                Pointcnt = [Pointcnt;sum(sum(Xsp~=0))];
-                difftime =[difftime;Times(i)-Timeold];
-                Ranges = [Ranges; drads];
-                drads = 0;
-                Timeold = Times(i);
-            end
-        else%左回転
-            if rads(i) < 0 && rads(i-1) > 0 %方向ベクトルが+X軸を超えた時
-                Xsp = Xs(idold:i,:);
-                Ysp = Ys(idold:i,:);
-                Zsp = Zs(idold:i,:);
-                ColorMatsp = ColorMat(idold:i,:);
-                scatter3(Xsp(Xsp~=0),Ysp(Xsp~=0),Zsp(Xsp~=0),[], colormap(ColorMatsp(Xsp~=0),:));
-                xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
-                ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
-                zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
-                title(['Time[s]: ',num2str(Times(i,1))]);
-                daspect([1 1 1]);
-                frame =getframe(gcf);
-                writeVideo(v,frame);
-                imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid),'.png')));
-                saveas(gcf,imgfile);
-                dirid = dirid +1;
-                hold off
-                idold = i;
-                %時空間分解能計算
-                Pointcnt = [Pointcnt;sum(sum(Xsp~=0))];
-                difftime =[difftime;Times(i)-Timeold];
-                Ranges = [Ranges; drads];
-                drads = 0;
-                Timeold = Times(i);
-            end
         end
     end
 
@@ -144,4 +172,23 @@ end
 close(v);
 
 %デバッグ
-%空間分解能の計算
+% idold = 1800;
+% i= 1900;
+% f = figure;
+% Xsp = Xs(idold:i,:);
+% Ysp = Ys(idold:i,:);
+% Zsp = Zs(idold:i,:);
+% ColorMatsp = ColorMat(idold:i,:);
+% scatter3(Xsp(Xsp~=0),Ysp(Xsp~=0),Zsp(Xsp~=0),[], colormap(ColorMatsp(Xsp~=0),:));
+% xlim([min(min(Xs(Xs~=0))) max(max(Xs(Xs~=0)))]);
+% ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
+% zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
+% title(['Time[s]: ',num2str(Times(i,1))]);
+% view(180,0)
+% ax = gca;
+% ax.ZDir = 'reverse'
+
+%時空間分解能計算
+% sum(Pointcnt(10:end))/(size(Pointcnt,1)-10);
+% sum(Ranges(10:end))/(size(Ranges,1)-10);
+% sum(difftime(10:end))/(size(difftime,1)-10);

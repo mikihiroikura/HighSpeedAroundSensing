@@ -65,7 +65,7 @@ const int rotaterpm = 500, reciprorpm = 200;
 int rpm = rotaterpm;
 const double Dc = danger_area * 1000, Ac = safe_area * 1000; //局所領域計測範囲切り替えの距離
 const int Nc = 20; //一つのラインレーザからAc以下の距離の点群の最小個数
-const int Cc = 5; //Dc以下の距離の点群の個数Nc以上の最小連続回数
+const int Cc = 3; //Dc以下の距離の点群の個数Nc以上の最小連続回数
 const int dangerthr = 10;//危険領域の判定点数の閾値
 int alertcnt = 0, dangercnt = 0, objcnt = 0, nonobjcnt = 0, totaldanger = 0;
 int reciprocntdown = 3;
@@ -85,6 +85,8 @@ vector<double> rps;
 const float mono_thr = 240.0;
 const cv::Scalar color_thr_min(0, 0, 150);
 const cv::Scalar color_thr_max(256, 256, 256);
+const cv::Scalar color_ref_thr_min(0, 0, 220);
+const cv::Scalar color_ref_thr_max(256, 256, 256);
 vector<cv::Point> refpts;
 const int colorstep = width * 3, colorelem = 3;
 const int monostep = width, monoelem = 1;
@@ -125,14 +127,15 @@ using namespace std;
 namespace fs = std::filesystem;
 
 //DEFINE群
-#define SAVE_LOGS_
-#define SAVE_IMGS_
+//#define SAVE_LOGS_
+//#define SAVE_IMGS_
+//#define MOVE_AXISROBOT_
 #define OUT_COLOR_
 //#define OUT_MONO_
 #define AUTONOMOUS_SENSING_
 //#define SHOW_PROCESSING_TIME_
 #define SHOW_IMGS_OPENGL_
-//#define MOVE_AXISROBOT_
+
 
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
@@ -184,7 +187,7 @@ int main() {
 	swap(lsm.stretch_mat[1], lsm.stretch_mat[2]);
 	for (size_t i = 0; i < 2; i++) { fscanf(fcam, "%lf,", &lsm.distortion[i]); }
 	fclose(fcam);
-	flaser = fopen("202101070034_laserinterpolparam.csv", "r");
+	flaser = fopen("202102121909_laserinterpolparam.csv", "r");
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pa[i]); }
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pb[i]); }
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pc[i]); }
@@ -655,7 +658,7 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 		//参照面の輝度重心の検出
 		lsm->in_img(roi_ref).copyTo(lsm->ref_arc, lsm->mask_refarc(roi_ref));
 #ifdef OUT_COLOR_
-		cv::inRange(lsm->ref_arc, color_thr_min, color_thr_max, lsm->ref_arc_ranged);
+		cv::inRange(lsm->ref_arc, color_ref_thr_min, color_ref_thr_max, lsm->ref_arc_ranged);
 		cv::findNonZero(lsm->ref_arc_ranged, refpts);
 		refmass = 0, refmomx = 0, refmomy = 0;
 		if (refpts.size() != 0)
