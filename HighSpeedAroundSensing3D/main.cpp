@@ -83,7 +83,7 @@ cv::Rect roi_ref;
 cv::Rect roi_laser;
 vector<double> rps;
 const float mono_thr = 240.0;
-const cv::Scalar color_thr_min(0, 0, 165);
+const cv::Scalar color_thr_min(0, 0, 200);
 const cv::Scalar color_thr_max(256, 256, 256);
 const cv::Scalar color_ref_thr_min(0, 0, 220);
 const cv::Scalar color_ref_thr_max(256, 256, 256);
@@ -127,9 +127,9 @@ using namespace std;
 namespace fs = std::filesystem;
 
 //DEFINEŒQ
-//#define SAVE_LOGS_
-//#define SAVE_IMGS_
-//#define MOVE_AXISROBOT_
+#define SAVE_LOGS_
+#define SAVE_IMGS_
+#define MOVE_AXISROBOT_
 #define OUT_COLOR_
 //#define OUT_MONO_
 #define AUTONOMOUS_SENSING_
@@ -187,7 +187,7 @@ int main() {
 	swap(lsm.stretch_mat[1], lsm.stretch_mat[2]);
 	for (size_t i = 0; i < 2; i++) { fscanf(fcam, "%lf,", &lsm.distortion[i]); }
 	fclose(fcam);
-	flaser = fopen("202102121909_laserinterpolparam.csv", "r");
+	flaser = fopen("202102171155_laserinterpolparam.csv", "r");
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pa[i]); }
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pb[i]); }
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pc[i]); }

@@ -1,5 +1,5 @@
 %CSVの読み取り
-M =csvread('csvs/210215192102_LSM_result_demo.csv');
+M =csvread('csvs/210217132019_LSM_result_demo.csv');
 Times = M(1:4:end,1);
 Xs = M(2:4:end,:);
 Ys = M(3:4:end,:);
@@ -17,8 +17,8 @@ refpts = M(1:4:end,12:13);
 LSM_rotmode = M(1:4:end,14);
 %グラフの軸の範囲の指定
 rangeon = 1;
-xranges = [-2000 2000];
-yranges = [-2500 2000];
+xranges = [-2000 1500];
+yranges = [-2500 1000];
 zranges = [0 1000];
 
 %点群の距離ごとに色を指定
@@ -85,6 +85,9 @@ for i=2:size(Times,1)
                 end
                 title(['Time[s]: ',num2str(Times(i,1))]);
                 daspect([1 1 1]);
+                ax = gca;
+                ax.ZDir = 'reverse';
+                ax.YDir = 'reverse';
                 frame =getframe(gcf);
                 writeVideo(v,frame);
                 imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid))));
@@ -119,6 +122,9 @@ for i=2:size(Times,1)
                     end
                     title(['Time[s]: ',num2str(Times(i,1))]);
                     daspect([1 1 1]);
+                    ax = gca;
+                    ax.ZDir = 'reverse';
+                    ax.YDir = 'reverse';
                     frame =getframe(gcf);
                     writeVideo(v,frame);
                     imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid))));
@@ -152,6 +158,9 @@ for i=2:size(Times,1)
                     end
                     title(['Time[s]: ',num2str(Times(i,1))]);
                     daspect([1 1 1]);
+                    ax = gca;
+                    ax.ZDir = 'reverse';
+                    ax.YDir = 'reverse';
                     frame =getframe(gcf);
                     writeVideo(v,frame);
                     imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid))));
@@ -187,6 +196,9 @@ for i=2:size(Times,1)
             end
             title(['Time[s]: ',num2str(Times(i,1))]);
             daspect([1 1 1]);
+            ax = gca;
+            ax.ZDir = 'reverse';
+            ax.YDir = 'reverse';
             frame =getframe(gcf);
             writeVideo(v,frame);
             imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid))));
