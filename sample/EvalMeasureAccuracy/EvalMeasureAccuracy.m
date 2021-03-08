@@ -1,5 +1,5 @@
 %% 各種パラメータ
-csvname = 'csvs/210217132019_LSM_result_demo_iros2021.csv';%保存した点群のCSV
+csvname = 'csvs/210308135100_LSM_result.csv';%保存した点群のCSV
 videoname = 'videos/--.mp4';%チェッカーボード検出のための動画
 squareSize = 32;
 load fishparams.mat fisheyeParams;
