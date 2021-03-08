@@ -41,6 +41,7 @@ private:
 	static int offsetx;
 	static int offsety;
 	static float exposuretime;
+	const char* acquisition_mode;
 	
 
 public:
@@ -56,6 +57,7 @@ public:
 	void stop();
 
 	void captureFrame(void* data);
+	void captureFrame(uint8_t* data, int num);
 
 	void setParam(const paramTypeCamera::paramInt& pT, const int param);
 	void setParam(const paramTypeCamera::paramFloat& pT, const float param);
@@ -63,6 +65,7 @@ public:
 	void setParam(const paramTypeKAYACoaXpress::paramInt& pT, const int param);
 	void setParam(const paramTypeKAYACoaXpress::paramFloat& pT, const float param);
 	void setParam(const paramTypeKAYACoaXpress::CaptureType& pt);
+	void setParam(const paramTypeKAYACoaXpress::AcquisitionMode& pt, int id);
 
 	int getParam(const paramTypeCamera::paramInt& pT);
 	float getParam(const paramTypeCamera::paramFloat& pT);
@@ -70,6 +73,7 @@ public:
 	int getParam(const paramTypeKAYACoaXpress::paramInt& pT);
 	float getParam(const paramTypeKAYACoaXpress::paramFloat& pT);
 	const char* getParam(const paramTypeKAYACoaXpress::CaptureType& pT);
+	const char* getParam(const paramTypeKAYACoaXpress::AcquisitionMode& pT);
 
 	void kayacoaxpressMessage(std::string str);
 
