@@ -1,10 +1,12 @@
 %% 各種パラメータ
 csvname = 'csvs/210308135100_LSM_result.csv';%保存した点群のCSV
-videoname = 'videos/--.mp4';%チェッカーボード検出のための動画
+videoname = 'videos/202103081413_video.mp4';%チェッカーボード検出のための動画
 squareSize = 32;
 load fishparams.mat fisheyeParams;
 maxcnt = 3;
+fish_step = 10;
 evalnums = 10000;%評価に使う点数の合計
+norm = -0.001;
 
 
 %% チェッカーボードの検出
@@ -20,7 +22,7 @@ TransVec = zeros(size(imagePoints,3), 3);
 for i=1:size(imagePoints,3)
     [R,t] = extrinsics(imagePoints(:,:,i),worldPoints,fisheyeParams.Intrinsics);
     newworldPoints = [imagePoints(:,:,i), zeros(size(imagePoints,1),1)];
-    cameraPoints = newworldPoints * R + T;
+    cameraPoints = newworldPoints * R + t;
     Checker_cameraPoints = [Checker_cameraPoints;cameraPoints];
 end
 %平面最適化で式を計算
@@ -63,6 +65,15 @@ for cnt = 1:maxcnt
     end
 end
 
+%% チェッカーボードの出力
+f = figure;
+scatter3(Checker_cameraPoints(:,1),Checker_cameraPoints(:,2),Checker_cameraPoints(:,3));
+hold on
+graphX = linspace(min(Checker_cameraPoints(:,1)),max(Checker_cameraPoints(:,1)),500);
+graphY = linspace(min(Checker_cameraPoints(:,2)),max(Checker_cameraPoints(:,2)),500);
+[gX,gY] = meshgrid(graphX,graphY);
+gZ = -opt_planeparams(1)/opt_planeparams(3)*gX-opt_planeparams(2)/opt_planeparams(3)*gY+1/opt_planeparams(3);
+mesh(gX,gY,gZ);
 
 %% CSVの読み取り
 M =csvread(csvname);
