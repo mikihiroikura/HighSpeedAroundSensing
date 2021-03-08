@@ -90,6 +90,13 @@ Y_eval = Y(idx);
 Z_eval = Z(idx);
 
 %% 評価
-dist_eval = abs(1-(opt_planeparams(1).*X_eval(:)+opt_planeparams(2) ...
+dist_eval = (1-(opt_planeparams(1).*X_eval(:)+opt_planeparams(2) ...
         .*Y_eval(:)+opt_planeparams(3).*Z_eval(:))) ...
         ./(opt_planeparams(1)^2+opt_planeparams(2)^2+opt_planeparams(3)^2)^0.5;
+    
+%% 評価のグラフ表示
+dist_eval_nooutlier = dist_eval > -500 & dist_eval < 500;
+figure;
+colormap jet;
+scatter3(X_eval(dist_eval_nooutlier), Y_eval(dist_eval_nooutlier), Z_eval(dist_eval_nooutlier), ...
+[], dist_eval(dist_eval_nooutlier));
