@@ -61,7 +61,7 @@ const int gearratio = 1000;
 const int rotpulse = 432000 / gearratio;
 #define READBUFFERSIZE 256
 long long detectfailcnt = 0;
-const int rotaterpm = 500, reciprorpm = 200;
+const int rotaterpm = 100, reciprorpm = 200;
 int rpm = rotaterpm;
 const double Dc = danger_area * 1000, Ac = safe_area * 1000; //局所領域計測範囲切り替えの距離
 const int Nc = 20; //一つのラインレーザからAc以下の距離の点群の最小個数
@@ -129,10 +129,10 @@ namespace fs = std::filesystem;
 //DEFINE群
 #define SAVE_LOGS_
 #define SAVE_IMGS_
-#define MOVE_AXISROBOT_
+//#define MOVE_AXISROBOT_
 #define OUT_COLOR_
 //#define OUT_MONO_
-#define AUTONOMOUS_SENSING_
+//#define AUTONOMOUS_SENSING_
 //#define SHOW_PROCESSING_TIME_
 #define SHOW_IMGS_OPENGL_
 
