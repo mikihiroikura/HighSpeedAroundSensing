@@ -128,7 +128,7 @@ namespace fs = std::filesystem;
 
 //DEFINEŒQ
 #define SAVE_LOGS_
-#define SAVE_IMGS_
+//#define SAVE_IMGS_
 //#define MOVE_AXISROBOT_
 #define OUT_COLOR_
 //#define OUT_MONO_
