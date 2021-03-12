@@ -137,13 +137,13 @@ function linelaser_calibration_part_rgb(linelaser_file_no,Opt, plane, refs)
         %結果の保存
         All_planeparams(k,:) = opt_planeparams;
         All_PointsID = [0;All_PointsCnts(1)];
-        for i = 2:23
+        for i = 2:size(linelaser_file_num,2)
             All_PointsID = [All_PointsID;All_PointsCnts(i)+All_PointsID(i)];
         end
         All_cameraPoints(1+All_PointsID(k):All_PointsID(k+1),:) = [];
         if k==1
             All_cameraPoints = vertcat(OnePlane_cameraPoints, All_cameraPoints);
-        elseif k==23
+        elseif k==size(linelaser_file_num,2)
             All_cameraPoints = vertcat(All_cameraPoints, OnePlane_cameraPoints);
         else
             All_cameraPoints = vertcat(vertcat(All_cameraPoints(1:All_PointsID(k),:), OnePlane_cameraPoints), All_cameraPoints(All_PointsID(k)+1:end,:));
@@ -183,7 +183,7 @@ function linelaser_calibration_part_rgb(linelaser_file_no,Opt, plane, refs)
             RefPoints = [momxref/massref, momyref/massref];
         end
         %結果の保存
-        All_refPoints(k,:) = RefPoints;
+        All_refPoints(k,:) = RefPoints-1;
         save linelaserparams.mat All_planeparams All_refPoints ref_center ref_radi All_cameraPoints All_fvals All_PointsCnts
     end
 

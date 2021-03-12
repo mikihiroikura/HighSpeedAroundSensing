@@ -61,7 +61,7 @@ const int gearratio = 1000;
 const int rotpulse = 432000 / gearratio;
 #define READBUFFERSIZE 256
 long long detectfailcnt = 0;
-const int rotaterpm = 100, reciprorpm = 200;
+const int rotaterpm = 110, reciprorpm = 200;
 int rpm = rotaterpm;
 const double Dc = danger_area * 1000, Ac = safe_area * 1000; //局所領域計測範囲切り替えの距離
 const int Nc = 20; //一つのラインレーザからAc以下の距離の点群の最小個数
@@ -85,7 +85,7 @@ vector<double> rps;
 const float mono_thr = 240.0;
 const cv::Scalar color_thr_min(0, 0, 200);
 const cv::Scalar color_thr_max(256, 256, 256);
-const cv::Scalar color_ref_thr_min(0, 0, 220);
+const cv::Scalar color_ref_thr_min(0, 0, 100);
 const cv::Scalar color_ref_thr_max(256, 256, 256);
 vector<cv::Point> refpts;
 const int colorstep = width * 3, colorelem = 3;
@@ -181,13 +181,13 @@ int main() {
 
 	//レーザCalibrationの結果の呼び出し
 	FILE* fcam, * flaser;
-	fcam = fopen("202101070034_fisheyeparam.csv", "r");
+	fcam = fopen("202103092207_fisheyeparam.csv", "r");
 	for (size_t i = 0; i < 4; i++){ fscanf(fcam, "%lf,", &lsm.map_coefficient[i]); }
 	for (size_t i = 0; i < 4; i++) { fscanf(fcam, "%lf,", &lsm.stretch_mat[i]); }
 	swap(lsm.stretch_mat[1], lsm.stretch_mat[2]);
 	for (size_t i = 0; i < 2; i++) { fscanf(fcam, "%lf,", &lsm.distortion[i]); }
 	fclose(fcam);
-	flaser = fopen("202102171155_laserinterpolparam.csv", "r");
+	flaser = fopen("202103121753_laserinterpolparam.csv", "r");
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pa[i]); }
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pb[i]); }
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pc[i]); }

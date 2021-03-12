@@ -24,7 +24,7 @@ function fisheye_calibration_rgb()
     fprintf(fid,'\n');
     fprintf(fid,'%f,',fisheyeParams.Intrinsics.StretchMatrix);
     fprintf(fid,'\n');
-    fprintf(fid,'%f,',fisheyeParams.Intrinsics.DistortionCenter);
+    fprintf(fid,'%f,',fisheyeParams.Intrinsics.DistortionCenter-1);
     fprintf(fid,'\n');
     fprintf(fid,'%f,',fisheyeParams.RotationMatrices(:,:,1));
     fprintf(fid,'\n');

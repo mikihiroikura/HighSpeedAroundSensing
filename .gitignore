@@ -12,6 +12,10 @@
 *.fig
 sample/FisheyeLaserCalib/debug/
 sample/ShowLSMLogs/csvs/
+sample/EvalMeasureAccuracy/csvs/
+sample/EvalMeasureAccuracy/old/
+HighSpeedAroundSensing3D/old/
+sample/FisheyeLaserCalib/calib_result/
 util/lib
 
 # User-specific files

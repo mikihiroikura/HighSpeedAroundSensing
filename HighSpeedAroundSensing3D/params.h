@@ -42,10 +42,10 @@ struct LSM
 	float rp[2];
 	vector<cv::Point> bps;
 	vector<cv::Point> allbps;
-	vector<cv::Point2f> idpixs;
+	vector<cv::Point2d> idpixs;
 	vector<vector<double>> campts;
 	vector<bool> processflgs;
-	cv::Point bp;
+	cv::Point2d bp;
 };
 
 struct Logs

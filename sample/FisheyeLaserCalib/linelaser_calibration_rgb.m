@@ -130,7 +130,7 @@ function linelaser_calibration_rgb()
         end
 
         %レーザ輝点群を最小二乗法で一つの平面を出力
-        if k<=7 || k>=21
+        if k<=10 || k>=32
             norm = 0;
             maxcnt = 3;
         else
@@ -191,7 +191,7 @@ function linelaser_calibration_rgb()
         
         %一つの動画から得られる情報の保存
         All_planeparams = [All_planeparams;opt_planeparams];
-        All_refPoints = [All_refPoints;refPoint];
+        All_refPoints = [All_refPoints;refPoint-1];
         All_cameraPoints = [All_cameraPoints;OnePlane_cameraPoints];
         All_fvals = [All_fvals; min_fval];
         All_PointsCnts = [All_PointsCnts;size(OnePlane_cameraPoints,1)];
