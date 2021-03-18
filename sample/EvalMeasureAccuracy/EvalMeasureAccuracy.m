@@ -1,6 +1,6 @@
 %% 各種パラメータ
-csvname = 'csvs/rpm110_axis0_rev5.csv';%保存した点群のCSV
-videoname = 'videos/axis0.mp4';%チェッカーボード検出のための動画
+csvname = 'csvs/rpm110_axis500y.csv';%保存した点群のCSV
+videoname = 'videos/axis500y.mp4';%チェッカーボード検出のための動画
 squareSize = 32;
 load fishparams.mat fisheyeParams;
 maxcnt = 3;
@@ -75,13 +75,17 @@ s = mesh(gX,gY,gZ);
 daspect([1 1 1]);
 
 %% チェッカーボード範囲指定
-checkXmins = [-200, -200, -200];
-checkXmaxs = [100, 100, 100];
-checkZmins = [280, 300, 350];
-checkZmaxs = [480, 500, 550];
-checkid = 3;
+checkXmins = [-200, -200, -200, -10000];
+checkXmaxs = [100, 100, 100,0];
+checkYmins = [-10000, -10000, -10000,-150];
+checkYmaxs = [10000, 10000, 10000,100];
+checkZmins = [280, 300, 350,280];
+checkZmaxs = [480, 500, 550,480];
+checkid = 4;
 checkXmin = checkXmins(checkid);
 checkXmax = checkXmaxs(checkid);
+checkYmin = checkXmins(checkid);
+checkYmax = checkXmaxs(checkid);
 checkZmin = checkZmins(checkid);
 checkZmax = checkZmaxs(checkid);
 %% CSVの読み取り
@@ -91,7 +95,7 @@ Xs = M(2:4:end,:);
 Ys = M(3:4:end,:);
 Zs = M(4:4:end,:);
 refpts = M(1:4:end,12:13);
-onchecker_id = (Xs~=0) & (Xs > checkXmin) & (Xs < checkXmax) & (Zs > checkZmin) & (Zs < checkZmax);
+onchecker_id = (Xs~=0) & (Xs > checkXmin) & (Xs < checkXmax) & (Zs > checkZmin) & (Zs < checkZmax) & (Ys > checkYmin) & (Ys < checkYmax);
 X = reshape(Xs(onchecker_id), [size(Xs(onchecker_id),1), 1]);
 Y = reshape(Ys(onchecker_id), [size(Ys(onchecker_id),1), 1]);
 Z = reshape(Zs(onchecker_id), [size(Zs(onchecker_id),1), 1]);
@@ -107,6 +111,9 @@ Z_eval = Z(idx);
 Refs_eval = Refs(idx, :);
 
 %% 評価
+dist_fromcam = (1-(opt_planeparams(1)*0+opt_planeparams(2) ...
+        *0+opt_planeparams(3)*0)) ...
+        ./(opt_planeparams(1)^2+opt_planeparams(2)^2+opt_planeparams(3)^2)^0.5;
 dist_eval = (1-(opt_planeparams(1).*X_eval(:)+opt_planeparams(2) ...
         .*Y_eval(:)+opt_planeparams(3).*Z_eval(:))) ...
         ./(opt_planeparams(1)^2+opt_planeparams(2)^2+opt_planeparams(3)^2)^0.5;

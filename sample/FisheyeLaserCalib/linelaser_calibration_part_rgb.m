@@ -7,7 +7,7 @@ function linelaser_calibration_part_rgb(linelaser_file_no,Opt, plane, refs)
     %.matファイルから変数群の呼び出し  
     load fishparams.mat fisheyeParams
     load setup_rgb.mat linelaser_folder laser_step squareSize laser_time_margin ...
-    margin bright_r_thr ref_circle_radi ref_r_thr ref_arcwidth linelaser_file_num
+    margin bright_r_thr ref_circle_radi ref_r_thr ref_arcwidth linelaser_file_num ref_arcwidth_margin
     load linelaserparams.mat All_planeparams All_refPoints ref_center ref_radi All_cameraPoints All_fvals All_PointsCnts
 
     if plane
@@ -159,11 +159,11 @@ function linelaser_calibration_part_rgb(linelaser_file_no,Opt, plane, refs)
         oneFrame = read(vidObj,1);
         %円弧上のMask画像を作成する
         mask = zeros(size(oneFrame));
-        mask = insertShape(mask,'circle',[ref_center ref_radi-(ref_arcwidth/2)],'LineWidth',ref_arcwidth,'Color','white');
+        mask = insertShape(mask,'circle',[ref_center ref_radi-(ref_arcwidth/2)],'LineWidth',ref_arcwidth+ref_arcwidth_margin,'Color','white');
         mask = imbinarize(mask);
         mask = uint8(mask);
         %閾値処理
-        R = oneFrame(:,:,1)>bright_r_thr;
+        R = oneFrame(:,:,1)>ref_r_thr;
         oneFrame_thr = oneFrame.*uint8(R);
         Jref = oneFrame_thr.* mask;
         [Yr, Xr] = find(Jref(:,:,1) > ref_r_thr);

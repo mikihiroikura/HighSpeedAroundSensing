@@ -27,13 +27,26 @@ function make_setup_rgb()
     ref_circle_radi = [25 45];%参照面の円の検出する半径の範囲
     ref_r_thr = 100;%参照面の輝点閾値
     ref_arcwidth = 10;%参照面の円の検出する円弧の幅
+    ref_arcwidth_margin = 2;
     
     %ラインレーザの補間用変数
     %laserparams_interpolate()
     interpolate_outputfile = strcat('./calib_result/linelaser/',strcat(datestr(now,form),'_laserinterpolparam.csv'));
     
+    %参照面の式を導出する
+   refplane_dir = 'videos/refplane/202103161642_video.mp4';
+   ref_step = 10;
+   %ref_squareSize = 32;
+   ref_squareSize = 28.3;
+   %ref_diffs = [-482,-42.5,-302];
+   ref_diffs = [0,0,5];
+   ref_norm = 0;
+   ref_maxcnt = 3;
+    
+    
     save setup_rgb.mat video_dir fish_step squareSize fishparamfile ...
 linelaser_folder laser_step laser_time_margin margin bright_r_thr ref_circle_radi ref_r_thr ref_arcwidth...
-linelaser_file_num interpolate_outputfile %fishbright_dir fish_circle_radi
+linelaser_file_num interpolate_outputfile ref_arcwidth_margin ...
+refplane_dir ref_squareSize ref_diffs ref_norm ref_maxcnt ref_step
 end
 

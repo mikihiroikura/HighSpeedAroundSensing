@@ -19,7 +19,7 @@ struct LSM
 	//レーザ平面に関するパラメータ
 	double pa[10], pb[10], pc[10];
 	double ref_center[2];
-	double ref_radius, ref_arcwidth;
+	double ref_radius, ref_arcwidth, ref_arcwidth_margin;
 	double plane_nml[3];
 
 	//画像類
@@ -40,6 +40,7 @@ struct LSM
 	long long processcnt;
 	int buffersize;
 	float rp[2];
+	float theta;
 	vector<cv::Point> bps;
 	vector<cv::Point> allbps;
 	vector<cv::Point2d> idpixs;

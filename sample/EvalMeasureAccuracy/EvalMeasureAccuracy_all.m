@@ -1,5 +1,5 @@
 %各種パラメータ
-axes = [700 350 0];
+axes = [700 350];
 rpms = [10,110,210,310,410];
 videofolder = 'videos/';
 csvfolder = 'csvs/';

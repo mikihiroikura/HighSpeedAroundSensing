@@ -61,7 +61,7 @@ const int gearratio = 1000;
 const int rotpulse = 432000 / gearratio;
 #define READBUFFERSIZE 256
 long long detectfailcnt = 0;
-const int rotaterpm = 110, reciprorpm = 200;
+const int rotaterpm = 410, reciprorpm = 200;
 int rpm = rotaterpm;
 const double Dc = danger_area * 1000, Ac = safe_area * 1000; //局所領域計測範囲切り替えの距離
 const int Nc = 20; //一つのラインレーザからAc以下の距離の点群の最小個数
@@ -96,10 +96,11 @@ unsigned int r_calc;
 double lsmmass_r[rends - rstart] = { 0 }, lsmmomx_r[rends - rstart] = { 0 }, lsmmomy_r[rends - rstart] = { 0 };
 int roi_laser_minx = width, roi_laser_maxx = 0, roi_laser_miny = height, roi_laser_maxy = 0;
 const int roi_laser_margin = 30;
-cv::Point laser_pts(0, 0);
+cv::Point laser_pts(0, 0), ref_pts(0,0);
 int roi_laser_outcnt = 0;
 long long lsmcalcid = 0;
 int showglid = 0;
+int ref_step = 0;
 /// 単軸ロボットに関する変数
 RS232c axisrobot;
 #define READBUFFERSIZE 256
@@ -181,19 +182,20 @@ int main() {
 
 	//レーザCalibrationの結果の呼び出し
 	FILE* fcam, * flaser;
-	fcam = fopen("202103092207_fisheyeparam.csv", "r");
+	fcam = fopen("202103151940_fisheyeparam.csv", "r");
 	for (size_t i = 0; i < 4; i++){ fscanf(fcam, "%lf,", &lsm.map_coefficient[i]); }
 	for (size_t i = 0; i < 4; i++) { fscanf(fcam, "%lf,", &lsm.stretch_mat[i]); }
 	swap(lsm.stretch_mat[1], lsm.stretch_mat[2]);
 	for (size_t i = 0; i < 2; i++) { fscanf(fcam, "%lf,", &lsm.distortion[i]); }
 	fclose(fcam);
-	flaser = fopen("202103121753_laserinterpolparam.csv", "r");
+	flaser = fopen("202103151940_laserinterpolparam.csv", "r");
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pa[i]); }
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pb[i]); }
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pc[i]); }
 	for (size_t i = 0; i < 2; i++) { fscanf(flaser, "%lf,", &lsm.ref_center[i]); }
 	fscanf(flaser, "%lf,", &lsm.ref_radius);
 	fscanf(flaser, "%lf,", &lsm.ref_arcwidth);
+	fscanf(flaser, "%lf,", &lsm.ref_arcwidth_margin);
 	fclose(flaser);
 	lsm.det = 1 / (lsm.stretch_mat[0] - lsm.stretch_mat[1] * lsm.stretch_mat[2]);
 
@@ -210,8 +212,9 @@ int main() {
 
 	//マスク画像の生成
 	lsm.mask_refarc = zero.clone();
-	cv::circle(lsm.mask_refarc, cv::Point((int)lsm.ref_center[0], (int)lsm.ref_center[1]), (int)(lsm.ref_radius - lsm.ref_arcwidth / 2), cv::Scalar::all(255), (int)lsm.ref_arcwidth);
-	roi_ref = cv::Rect((int)(lsm.ref_center[0] - lsm.ref_radius), (int)(lsm.ref_center[1] - lsm.ref_radius), (int)(2 * lsm.ref_radius), (int)(2 * lsm.ref_radius));
+	cv::circle(lsm.mask_refarc, cv::Point((int)lsm.ref_center[0], (int)lsm.ref_center[1]), (int)(lsm.ref_radius - lsm.ref_arcwidth / 2), cv::Scalar::all(255), (int)(lsm.ref_arcwidth + lsm.ref_arcwidth_margin));
+	roi_ref = cv::Rect((int)(lsm.ref_center[0] - lsm.ref_radius - lsm.ref_arcwidth_margin/2), (int)(lsm.ref_center[1] - lsm.ref_radius - lsm.ref_arcwidth_margin / 2), (int)(2 * lsm.ref_radius+ lsm.ref_arcwidth_margin), (int)(2 * lsm.ref_radius + lsm.ref_arcwidth_margin));
+	ref_step = roi_ref.width * 3;
 	lsm.mask_lsm = zero.clone();
 	cv::circle(lsm.mask_lsm, cv::Point((int)width/2, (int)height/2), 430, cv::Scalar::all(255), -1);
 	cv::circle(lsm.mask_lsm, cv::Point((int)lsm.ref_center[0], (int)lsm.ref_center[1]), (int)(lsm.ref_radius)+20, cv::Scalar::all(0), -1);
@@ -666,12 +669,13 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 			lsm->ref_arc_src = lsm->ref_arc.ptr<uint8_t>(0);
 			for (size_t i = 0; i < refpts.size(); i++)
 			{
-				refmass += lsm->ref_arc_src[refpts[i].y * 66 * 3 + refpts[i].x * 3 + 2];
-				refmomx += (double)lsm->ref_arc_src[refpts[i].y * 66 * 3 + refpts[i].x * 3 + 2] * refpts[i].x;
-				refmomy += (double)lsm->ref_arc_src[refpts[i].y * 66 * 3 + refpts[i].x * 3 + 2] * refpts[i].y;
+				refmass += lsm->ref_arc_src[refpts[i].y * ref_step + refpts[i].x * 3 + 2];
+				refmomx += (double)lsm->ref_arc_src[refpts[i].y * ref_step + refpts[i].x * 3 + 2] * refpts[i].x;
+				refmomy += (double)lsm->ref_arc_src[refpts[i].y * ref_step + refpts[i].x * 3 + 2] * refpts[i].y;
 			}
 			lsm->rp[0] = refmomx / refmass + roi_ref.x;
 			lsm->rp[1] = refmomy / refmass + roi_ref.y;
+			lsm->theta = atan2f(lsm->rp[1] - lsm->ref_center[1], lsm->rp[0] - lsm->ref_center[0]);
 #endif // OUT_COLOR
 #ifdef OUT_MONO_
 			cv::threshold(lsm->ref_arc, lsm->ref_arc, mono_thr, 255.0, cv::THRESH_BINARY);
@@ -695,7 +699,15 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 				+ lsm->pc[4] * lsm->rp[0] * lsm->rp[1] + lsm->pc[5] * pow(lsm->rp[1], 2) + lsm->pc[6] * pow(lsm->rp[0], 3)
 				+ lsm->pc[7] * pow(lsm->rp[0], 2) * lsm->rp[1] + lsm->pc[8] * lsm->rp[0] * pow(lsm->rp[1], 2)
 				+ lsm->pc[9] * pow(lsm->rp[1], 3);
-
+			/*lsm->plane_nml[0] = lsm->pa[0] * pow(lsm->theta, 8) + lsm->pa[1] * pow(lsm->theta, 7) + lsm->pa[2] * pow(lsm->theta, 6) + lsm->pa[3] * pow(lsm->theta, 5)
+				+ lsm->pa[4] * pow(lsm->theta, 4) + lsm->pa[5] * pow(lsm->theta, 3) + lsm->pa[6] * pow(lsm->theta, 2)
+				+ lsm->pa[7] * pow(lsm->theta, 1) + lsm->pa[8];
+			lsm->plane_nml[1] = lsm->pb[0] * pow(lsm->theta, 8) + lsm->pb[1] * pow(lsm->theta, 7) + lsm->pb[2] * pow(lsm->theta, 6) + lsm->pb[3] * pow(lsm->theta, 5)
+				+ lsm->pb[4] * pow(lsm->theta, 4) + lsm->pb[5] * pow(lsm->theta, 3) + lsm->pb[6] * pow(lsm->theta, 2)
+				+ lsm->pb[7] * pow(lsm->theta, 1) + lsm->pb[8];
+			lsm->plane_nml[2] = lsm->pc[0] * pow(lsm->theta, 8) + lsm->pc[1] * pow(lsm->theta, 7) + lsm->pc[2] * pow(lsm->theta, 6) + lsm->pc[3] * pow(lsm->theta, 5)
+				+ lsm->pc[4] * pow(lsm->theta, 4) + lsm->pc[5] * pow(lsm->theta, 3) + lsm->pc[6] * pow(lsm->theta, 2)
+				+ lsm->pc[7] * pow(lsm->theta, 1) + lsm->pc[8];*/
 			//ラインレーザの輝点座標を検出
 			lsm->in_img.copyTo(lsm->lsm_laser, lsm->mask_lsm);
 			/*QueryPerformanceCounter(&lsmend);

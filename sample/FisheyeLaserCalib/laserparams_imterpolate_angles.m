@@ -3,7 +3,7 @@ function laserparams_imterpolate_angles()
     
     %平面Calibrationのパラメータを呼び出す
     load linelaserparams.mat All_planeparams All_refPoints ref_center ref_radi
-    load setup_rgb.mat interpolate_outputfile ref_arcwidth
+    load setup_rgb.mat interpolate_outputfile ref_arcwidth ref_arcwidth_margin
     
     %All_planeparamsをそれぞれの成分ごとに補完する
     xr = All_refPoints(:,1);
@@ -37,6 +37,8 @@ function laserparams_imterpolate_angles()
     fprintf(fid,'%f,',ref_radi);
     fprintf(fid,'\n');
     fprintf(fid,'%f,',ref_arcwidth);
+    fprintf(fid,'\n');
+    fprintf(fid,'%f,',ref_arcwidth_margin);
     fprintf(fid,'\n');
     fclose(fid);
 end

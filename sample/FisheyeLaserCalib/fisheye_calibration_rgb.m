@@ -11,12 +11,16 @@ function fisheye_calibration_rgb()
     [imagePoints,boardSize] = detectCheckerboardPoints(calibimg);
     worldPoints = generateCheckerboardPoints(boardSize, squareSize);
 
-    %Calibration
+    %MATLAB用のCalibration
     imageSize = [size(allFrame, 1), size(allFrame, 2)];
     fisheyeParams = estimateFisheyeParameters(imagePoints, worldPoints, imageSize);
 
     %Camera parameterの保存(MATLABプログラム用)
     save fishparams.mat fisheyeParams
+    
+    %C++用のCalibration
+    imagePoints = imagePoints - 1;
+    fisheyeParams = estimateFisheyeParameters(imagePoints, worldPoints, imageSize);
     
     %Camera parameterのCSVへの保存(C++のプログラム用)
     fid = fopen(fishparamfile,'w');
@@ -24,7 +28,7 @@ function fisheye_calibration_rgb()
     fprintf(fid,'\n');
     fprintf(fid,'%f,',fisheyeParams.Intrinsics.StretchMatrix);
     fprintf(fid,'\n');
-    fprintf(fid,'%f,',fisheyeParams.Intrinsics.DistortionCenter-1);
+    fprintf(fid,'%f,',fisheyeParams.Intrinsics.DistortionCenter);
     fprintf(fid,'\n');
     fprintf(fid,'%f,',fisheyeParams.RotationMatrices(:,:,1));
     fprintf(fid,'\n');
