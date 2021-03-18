@@ -675,7 +675,7 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 			}
 			lsm->rp[0] = refmomx / refmass + roi_ref.x;
 			lsm->rp[1] = refmomy / refmass + roi_ref.y;
-			lsm->theta = atan2f(lsm->rp[1] - lsm->ref_center[1], lsm->rp[0] - lsm->ref_center[0]);
+			//lsm->theta = atan2f(lsm->rp[1] - lsm->ref_center[1], lsm->rp[0] - lsm->ref_center[0]);
 #endif // OUT_COLOR
 #ifdef OUT_MONO_
 			cv::threshold(lsm->ref_arc, lsm->ref_arc, mono_thr, 255.0, cv::THRESH_BINARY);
