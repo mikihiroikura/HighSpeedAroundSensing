@@ -4,7 +4,7 @@ function linelaser_calibration_rgb()
     %.matファイルから変数群の呼び出し  
     load fishparams.mat fisheyeParams
     load setup_rgb.mat linelaser_folder laser_step squareSize laser_time_margin ...
-    margin bright_r_thr ref_circle_radi ref_r_thr ref_arcwidth linelaser_file_num
+    margin bright_r_thr ref_circle_radi ref_r_thr ref_arcwidth linelaser_file_num ref_arcwidth_margin
 
     %保存用の行列
     All_planeparams = [];
@@ -39,7 +39,7 @@ function linelaser_calibration_rgb()
     ref_radi = mean(All_radii,1);
     %円弧上のMask画像を作成する
     mask = zeros(size(img));
-    mask = insertShape(mask,'circle',[ref_center ref_radi-(ref_arcwidth/2)],'LineWidth',ref_arcwidth,'Color','white');
+    mask = insertShape(mask,'circle',[ref_center ref_radi-(ref_arcwidth/2)],'LineWidth',ref_arcwidth+ref_arcwidth_margin,'Color','white');
     mask = imbinarize(mask);
     mask = uint8(mask);
     
@@ -71,13 +71,13 @@ function linelaser_calibration_rgb()
         for i=1:size(detectedimgs, 4)
            J = detectedimgs(:,:,:,i);
            R = J(:,:,1)>bright_r_thr;
-           J = J.*uint8(R);
+           Jbp = J.*uint8(R);
 
            %レーザ点群取得
            rect = zeros(size(R));
            area =int16([min(imagePoints(:,:,i))-margin, max(imagePoints(:,:,i))-min(imagePoints(:,:,i))+2*margin]); % チェッカーボード周辺の矩形
-           rect(max(area(2),1):min(area(2)+area(4),size(J,2)),max(area(1),1):min(area(1)+area(3),size(J,1))) = 1;
-           Jtrim = J.*uint8(rect); % Trimming
+           rect(max(area(2),1):min(area(2)+area(4),size(Jbp,2)),max(area(1),1):min(area(1)+area(3),size(Jbp,1))) = 1;
+           Jtrim = Jbp.*uint8(rect); % Trimming
            
            %輝度重心の計算(サブピクセル単位)
            BrightPoints = [];
@@ -109,7 +109,9 @@ function linelaser_calibration_rgb()
                OnePlane_cameraPoints = [OnePlane_cameraPoints;cameraPoints];
            end
            %参照面にレーザ映る場所の輝点抽出
-           Jref = J.* mask;
+           Rref = J(:,:,1)>ref_r_thr;
+           Jref_thr = J(:,:,1).*uint8(Rref);
+           Jref = Jref_thr.* mask;
            [Yr, Xr] = find(Jref(:,:,1) > ref_r_thr);
            massref = 0;
            momxref = 0;
@@ -221,5 +223,6 @@ function linelaser_calibration_rgb()
 %         gZ = -All_planeparams(i,1)/All_planeparams(i,3)*gX-All_planeparams(i,2)/All_planeparams(i,3)*gY+1/All_planeparams(i,3);
 %         mesh(gX,gY,gZ);
 %     end
+%     daspect([1 1 1]);
     
 end

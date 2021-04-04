@@ -1,5 +1,5 @@
 %% 各種パラメータ
-csvname = 'csvs/rpm110_axis500y.csv';%保存した点群のCSV
+csvname = 'csvs/rpm10_axis500y.csv';%保存した点群のCSV
 videoname = 'videos/axis500y.mp4';%チェッカーボード検出のための動画
 squareSize = 32;
 load fishparams.mat fisheyeParams;
@@ -75,17 +75,17 @@ s = mesh(gX,gY,gZ);
 daspect([1 1 1]);
 
 %% チェッカーボード範囲指定
-checkXmins = [-200, -200, -200, -10000];
-checkXmaxs = [100, 100, 100,0];
-checkYmins = [-10000, -10000, -10000,-150];
-checkYmaxs = [10000, 10000, 10000,100];
-checkZmins = [280, 300, 350,280];
-checkZmaxs = [480, 500, 550,480];
-checkid = 4;
+checkXmins = [-50, -10000];
+checkXmaxs = [200, -700];
+checkYmins = [-10000,-220];
+checkYmaxs = [10000, 30];
+checkZmins = [280, 280];
+checkZmaxs = [480, 480];
+checkid = 2;
 checkXmin = checkXmins(checkid);
 checkXmax = checkXmaxs(checkid);
-checkYmin = checkXmins(checkid);
-checkYmax = checkXmaxs(checkid);
+checkYmin = checkYmins(checkid);
+checkYmax = checkYmaxs(checkid);
 checkZmin = checkZmins(checkid);
 checkZmax = checkZmaxs(checkid);
 %% CSVの読み取り

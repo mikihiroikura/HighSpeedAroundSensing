@@ -188,7 +188,7 @@ int main() {
 	swap(lsm.stretch_mat[1], lsm.stretch_mat[2]);
 	for (size_t i = 0; i < 2; i++) { fscanf(fcam, "%lf,", &lsm.distortion[i]); }
 	fclose(fcam);
-	flaser = fopen("202103151940_laserinterpolparam.csv", "r");
+	flaser = fopen("202103240126_laserinterpolparam.csv", "r");
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pa[i]); }
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pb[i]); }
 	for (size_t i = 0; i < 10; i++) { fscanf(flaser, "%lf,", &lsm.pc[i]); }
@@ -211,8 +211,10 @@ int main() {
 	lsm.in_img = zero.clone();
 
 	//ƒ}ƒXƒN‰æ‘œ‚Ì¶¬
-	lsm.mask_refarc = zero.clone();
-	cv::circle(lsm.mask_refarc, cv::Point((int)lsm.ref_center[0], (int)lsm.ref_center[1]), (int)(lsm.ref_radius - lsm.ref_arcwidth / 2), cv::Scalar::all(255), (int)(lsm.ref_arcwidth + lsm.ref_arcwidth_margin));
+	lsm.mask_refarc = cv::imread("mask_refarc.png");
+	cv::threshold(lsm.mask_refarc, lsm.mask_refarc, 0, 255, CV_THRESH_BINARY);
+	//lsm.mask_refarc = zero.clone();
+	//cv::circle(lsm.mask_refarc, cv::Point((int)lsm.ref_center[0], (int)lsm.ref_center[1]), (int)(lsm.ref_radius - lsm.ref_arcwidth / 2), cv::Scalar::all(255), (int)(lsm.ref_arcwidth + lsm.ref_arcwidth_margin));
 	roi_ref = cv::Rect((int)(lsm.ref_center[0] - lsm.ref_radius - lsm.ref_arcwidth_margin/2), (int)(lsm.ref_center[1] - lsm.ref_radius - lsm.ref_arcwidth_margin / 2), (int)(2 * lsm.ref_radius+ lsm.ref_arcwidth_margin), (int)(2 * lsm.ref_radius + lsm.ref_arcwidth_margin));
 	ref_step = roi_ref.width * 3;
 	lsm.mask_lsm = zero.clone();
@@ -736,6 +738,7 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 					laser_pts.x = pts.x + roi_laser.x;
 					laser_pts.y = pts.y + roi_laser.y;
 					r_calc = (unsigned int)hypot(laser_pts.x - lsm->ref_center[0], laser_pts.y - lsm->ref_center[1]);
+					//r_calc = (unsigned int)hypot(laser_pts.x - lsm->distortion[0], laser_pts.y - lsm->distortion[1]);
 					if (roi_laser_maxx < laser_pts.x) roi_laser_maxx = laser_pts.x;
 					if (roi_laser_minx > laser_pts.x) roi_laser_minx = laser_pts.x;
 					if (roi_laser_maxy < laser_pts.y) roi_laser_maxy = laser_pts.y;

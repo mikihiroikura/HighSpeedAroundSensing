@@ -37,13 +37,13 @@ function linelaser_calibration_part_rgb(linelaser_file_no,Opt, plane, refs)
         for i=1:size(detectedimgs, 4)
            J = detectedimgs(:,:,:,i);
            R = J(:,:,1)>bright_r_thr;
-           J = J.*uint8(R);
+           Jbp = J.*uint8(R);
 
            %レーザ点群取得
            rect = zeros(size(R));
            area =int16([min(imagePoints(:,:,i))-margin, max(imagePoints(:,:,i))-min(imagePoints(:,:,i))+2*margin]); % チェッカーボード周辺の矩形
-           rect(max(area(2),1):min(area(2)+area(4),size(J,2)),max(area(1),1):min(area(1)+area(3),size(J,1))) = 1;
-           Jtrim = J.*uint8(rect); % Trimming
+           rect(max(area(2),1):min(area(2)+area(4),size(Jbp,2)),max(area(1),1):min(area(1)+area(3),size(Jbp,1))) = 1;
+           Jtrim = Jbp.*uint8(rect); % Trimming
 
            %輝度重心の計算(サブピクセル単位)
            BrightPoints = [];
@@ -79,7 +79,7 @@ function linelaser_calibration_part_rgb(linelaser_file_no,Opt, plane, refs)
         end
 
         %レーザ輝点群を最小二乗法で一つの平面を出力
-        if k<=7 || k>=21
+        if k<=10 || k>=32
             norm = 0;
             maxcnt = 3;
         else
@@ -149,6 +149,7 @@ function linelaser_calibration_part_rgb(linelaser_file_no,Opt, plane, refs)
             All_cameraPoints = vertcat(vertcat(All_cameraPoints(1:All_PointsID(k),:), OnePlane_cameraPoints), All_cameraPoints(All_PointsID(k)+1:end,:));
         end
         All_PointsCnts(k) = size(OnePlane_cameraPoints,1);
+        All_fvals(k) = min_fval;
         save linelaserparams.mat All_planeparams All_refPoints ref_center ref_radi All_cameraPoints All_fvals All_PointsCnts
     end
     if refs

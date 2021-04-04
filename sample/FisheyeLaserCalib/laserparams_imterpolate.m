@@ -39,7 +39,12 @@ function laserparams_imterpolate()
 end
 
 %デバッグ
-%plot(sfs{1},[xr,yr], All_planeparams(:,1)); %%論文用の図はこれ
+% figure
+% plot(sfs{1},[xr,yr], All_planeparams(:,1));%%論文用の図はこれ
+% xlabel('u [px]','FontSize',12);
+% ylabel('v [px]','FontSize',12);
+% zlabel('\it \bf n_0','FontSize',12);
+
 %zlim([min(All_planeparams(:,1)) max(All_planeparams(:,1))])
 
 % 補間の確認

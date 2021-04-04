@@ -1,6 +1,7 @@
 %各種パラメータ
-axes = [700 350];
+axes = [700 500];
 rpms = [10,110,210,310,410];
+dirs = ['x', 'y'];
 videofolder = 'videos/';
 csvfolder = 'csvs/';
 squareSize = 32;
@@ -10,10 +11,12 @@ fish_step = 2;%チェッカーボード検出用の出力フレーム
 evalnums = 10000;%評価に使う点数の合計
 norm = -0.001;%最適化の際に初期値の決め方
 %チェッカーボード範囲指定
-checkXmin = [-200, -200, -200];
-checkXmax = [100, 100, 100];
-checkZmin = [280, 300, 350];
-checkZmax = [480, 500, 550];
+checkXmins = [-50, -10000];
+checkXmaxs = [200, -700];
+checkYmins = [-10000,-200];
+checkYmaxs = [10000, 50];
+checkZmins = [280, 280];
+checkZmaxs = [480, 480];
 %保存用配列
 all_planeparams = zeros(size(axes,2),3);%平面の式の保存
 dist_fromcams = zeros(size(axes,2),1);%カメラ原点から平面までの距離
@@ -26,7 +29,7 @@ Z_evals = zeros(evalnums, size(rpms,2),size(axes,2));
 
 %全てのパターンで解析
 for k = 1:size(axes,2)
-    videoname = strcat(strcat(strcat(videofolder, 'axis'),int2str(axes(k))),'.mp4');
+    videoname = strcat(strcat(strcat(strcat(videofolder, 'axis'),int2str(axes(k))),dirs(k)),'.mp4');
     %チェッカーボード検出
     vidObj = VideoReader(videoname);
     allFrame = read(vidObj); %すべてのFrameを読み取る
@@ -89,15 +92,15 @@ for k = 1:size(axes,2)
     
     %全てのRPMでの計測結果出力
     for j = 1:size(rpms,2)
-        csvname = strcat(strcat(strcat(strcat(strcat(csvfolder, 'rpm'),...
-             int2str(rpms(j))),'_axis'),int2str(axes(k))),'.csv');
+        csvname = strcat(strcat(strcat(strcat(strcat(strcat(csvfolder, 'rpm'),...
+             int2str(rpms(j))),'_axis'),int2str(axes(k))),dirs(k)),'.csv');
         M =csvread(csvname);
         Times = M(1:4:end,1);
         Xs = M(2:4:end,:);
         Ys = M(3:4:end,:);
         Zs = M(4:4:end,:);
         refpts = M(1:4:end,12:13);
-        onchecker_id = (Xs~=0) & (Xs > checkXmin(k)) & (Xs < checkXmax(k)) & (Zs > checkZmin(k)) & (Zs < checkZmax(k));
+        onchecker_id = (Xs~=0) & (Xs > checkXmins(k)) & (Xs < checkXmaxs(k)) & (Ys > checkYmins(k)) & (Ys < checkYmaxs(k)) & (Zs > checkZmins(k)) & (Zs < checkZmaxs(k));
         X = reshape(Xs(onchecker_id), [size(Xs(onchecker_id),1), 1]);
         Y = reshape(Ys(onchecker_id), [size(Ys(onchecker_id),1), 1]);
         Z = reshape(Zs(onchecker_id), [size(Zs(onchecker_id),1), 1]);
@@ -123,4 +126,30 @@ for k = 1:size(axes,2)
         dist_evals_means(k,j) = mean(dist_eval);
         dist_evals_stds(k,j) = std(dist_eval);
     end
-end    
+end
+
+%計測結果の保存
+format = 'yyyymmddHHMM';
+imgfolder = strcat('D:/Github_output/HighSpeedAroundSensing/EvalMeasureAccuracy/',datestr(now,format));
+mkdir(imgfolder);
+ax = 2;
+rpm = 1;
+for ax = 1:size(axes,2)
+    for rpm = 1:size(rpms,2)
+        imgfile = strcat(strcat(strcat(strcat(strcat(imgfolder, '/rpm'),...
+             int2str(rpms(rpm))),'_axis'),int2str(axes(ax))),dirs(ax));
+        figure;
+        colormap jet;
+        scatter3(X_evals(:,rpm,ax),Y_evals(:,rpm,ax),Z_evals(:,rpm,ax),[],dist_evals(:,rpm,ax));
+        daspect([1 1 1]);
+        colorbar;
+        xlabel('X [mm]','FontSize',12);
+        ylabel('Y [mm]','FontSize',12);
+        zlabel('Z [mm]','FontSize',12);
+        figax = gca;
+        figax.ZDir = 'reverse';
+        figax.YDir = 'reverse';
+        view(50,35)
+        print(gcf,'-painters',imgfile,'-dpdf');
+    end
+end

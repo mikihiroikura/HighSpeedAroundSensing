@@ -24,9 +24,9 @@ function make_setup_rgb()
     laser_time_margin = 4; % レーザがチェッカーボードに映っている時間
     margin = 30; % チェッカーボード周辺を抽出する際のマージン
     bright_r_thr = 200;%レーザ輝度の閾値
-    ref_circle_radi = [25 45];%参照面の円の検出する半径の範囲
+    ref_circle_radi = [50 80];%参照面の円の検出する半径の範囲
     ref_r_thr = 100;%参照面の輝点閾値
-    ref_arcwidth = 10;%参照面の円の検出する円弧の幅
+    ref_arcwidth = 6;%参照面の円の検出する円弧の幅
     ref_arcwidth_margin = 2;
     
     %ラインレーザの補間用変数
