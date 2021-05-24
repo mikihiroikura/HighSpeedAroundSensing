@@ -18,7 +18,6 @@ sample/EvalMeasureAccuracy/old/
 HighSpeedAroundSensing3D/old/
 sample/FisheyeLaserCalib/calib_result/
 util/lib
-a
 
 # User-specific files
 *.suo
