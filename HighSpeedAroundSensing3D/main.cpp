@@ -38,7 +38,7 @@ const int offsety = 92;
 /// âÊëúÇ…ä÷Ç∑ÇÈïœêî
 vector<cv::Mat> in_imgs;
 int in_imgs_saveid = 0;
-cv::Mat full, zero;
+cv::Mat full, zero, showimg;
 int takepicid = 0;
 /// éûä‘Ç…ä÷Ç∑ÇÈïœêî
 LARGE_INTEGER freq, start;
@@ -134,7 +134,7 @@ namespace fs = std::filesystem;
 #define OUT_COLOR_
 //#define OUT_MONO_
 //#define AUTONOMOUS_SENSING_
-//#define SHOW_PROCESSING_TIME_
+#define SHOW_PROCESSING_TIME_
 #define SHOW_IMGS_OPENGL_
 
 
@@ -322,7 +322,7 @@ int main() {
 		lsm_success = CalcLSM(&lsm, &logs, &log_lsm_cnt);
 		QueryPerformanceCounter(&lsmend);
 		lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-		while (lsmtime < 0.001)
+		while (lsmtime < 0.0005)
 		{
 			QueryPerformanceCounter(&lsmend);
 			lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
@@ -509,7 +509,7 @@ void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
 	{
 		QueryPerformanceCounter(&takestart);
 		takepicid = in_imgs_saveid % cyclebuffersize;
-		cam->captureFrame(in_imgs[takepicid].data);
+		cam->captureFrame2(in_imgs[takepicid].data);
 		lsm->processflgs[takepicid] = true;
 		in_imgs_saveid = (in_imgs_saveid+1)%cyclebuffersize;
 		QueryPerformanceCounter(&takeend);
@@ -547,7 +547,8 @@ void ShowAllLogs(bool* flg, double* pts, int* lsmshowid, cv::Mat* imglog) {
 		QueryPerformanceCounter(&showstart);
 
 		//OpenCVÇ≈âÊëúï\é¶
-		cv::imshow("img", in_imgs[(in_imgs_saveid - 2 + cyclebuffersize) % cyclebuffersize]);
+		cv::cvtColor(in_imgs[(in_imgs_saveid - 2 + cyclebuffersize) % cyclebuffersize], showimg, CV_RGB2BGR);
+		cv::imshow("img", showimg);
 		int key = cv::waitKey(1);
 		if (key == 'q') *flg = false;
 		

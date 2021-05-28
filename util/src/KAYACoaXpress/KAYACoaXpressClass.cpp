@@ -118,6 +118,7 @@ void kayacoaxpress::parameter_all_print_debug()
 	kayacoaxpressMessage("OffsetX : " + std::to_string(KYFG_GetCameraValueInt(cam_handle, "OffsetX")));
 	kayacoaxpressMessage("OffsetY : " + std::to_string(KYFG_GetCameraValueInt(cam_handle, "OffsetY")));
 	kayacoaxpressMessage("ExposureTime : " + std::to_string(KYFG_GetCameraValueFloat(cam_handle, "ExposureTime")));
+	kayacoaxpressMessage("PixelFormat :" + std::to_string(KYFG_GetGrabberValueEnum(fg_handle, "PixelFormat")));
 	kayacoaxpressMessage("CycleBufferSize : " + std::to_string(cycle_buffer_size));
 }
 
@@ -158,7 +159,7 @@ void kayacoaxpress::start()
 	cvt_img = cv::Mat(height, width, CV_8UC3, cv::Scalar::all(255));
 
 	//Callback関数のセット
-	status = KYFG_CameraCallbackRegister(cam_handle, Stream_callback_func, 0);
+	//status = KYFG_CameraCallbackRegister(cam_handle, Stream_callback_func, 0);
 	status = KYFG_StreamCreateAndAlloc(cam_handle, &stream_handle, cycle_buffer_size, 0);//Cyclic frame bufferのStreamの設定
 
 	//カメラの動作開始，Framesを0にすると連続して画像を取り続ける
@@ -176,27 +177,32 @@ void kayacoaxpress::captureFrame(void* data)
 	callno = KYFG_StreamGetFrameIndex(stream_handle) - 1;
 	if (callno < 0) callno += kayacoaxpress::cycle_buffer_size;
 	memcpy(data, cycle_buffer_imgs[callno].data, KYFG_StreamGetSize(stream_handle));
+}
 
-	//long long buffSize = 0;
-	//int buffIndex;
-	//void* buffData;
-	//buffSize = KYFG_StreamGetSize(stream_handle);			// get buffer size 1920x1080
-	//buffIndex = KYFG_StreamGetFrameIndex(stream_handle);
-	//buffData = KYFG_StreamGetPtr(stream_handle, buffIndex);		// get pointer of buffer data
-	//if (format_callback == "BayerGR8")
-	//{
-	//	memcpy(cvt_img.data, buffData, buffSize);
-	//	cv::cvtColor(cvt_img, cvt_img_after, CV_BGR2RGB);
-	//	memcpy(data, cvt_img_after.data, buffSize);
-	//}
-	//else if (format_callback == "Mono8")
-	//{
-	//	memcpy(data, buffData, buffSize);
-	//}
-	//else
-	//{
-	//	memcpy(data, buffData, buffSize);
-	//}
+void kayacoaxpress::captureFrame2(void* data)
+{
+	long long buffSize = 0;
+	int buffIndex;
+	void* buffData;
+	buffSize = KYFG_StreamGetSize(stream_handle);			// get buffer size 1920x1080
+	buffIndex = KYFG_StreamGetFrameIndex(stream_handle);
+	buffData = KYFG_StreamGetPtr(stream_handle, buffIndex);		// get pointer of buffer data
+	if (format_callback == "BayerGR8")
+	{
+		/*memcpy(cvt_img.data, buffData, buffSize);
+		cv::cvtColor(cvt_img, cvt_img_after, CV_BGR2RGB);
+		memcpy(data, cvt_img_after.data, buffSize);*/
+
+		memcpy(data, buffData, buffSize);
+	}
+	else if (format_callback == "Mono8")
+	{
+		memcpy(data, buffData, buffSize);
+	}
+	else
+	{
+		memcpy(data, buffData, buffSize);
+	}
 }
 
 void kayacoaxpress::captureFrame(uint8_t* data, int num)
@@ -209,27 +215,35 @@ void kayacoaxpress::captureFrame(uint8_t* data, int num)
 		if (outno < 0) outno += kayacoaxpress::cycle_buffer_size;
 		memcpy(data + KYFG_StreamGetSize(stream_handle) * i, cycle_buffer_imgs[outno].data, KYFG_StreamGetSize(stream_handle));
 	}
-		
-	//long long buffSize = 0;
-	//int buffIndex;
-	//void* buffData;
-	//buffSize = KYFG_StreamGetSize(stream_handle);			// get buffer size 1920x1080
-	//buffIndex = KYFG_StreamGetFrameIndex(stream_handle);
-	//buffData = KYFG_StreamGetPtr(stream_handle, buffIndex);		// get pointer of buffer data
-	//if (format_callback == "BayerGR8")
-	//{
-	//	memcpy(cvt_img.data, buffData, buffSize);
-	//	cv::cvtColor(cvt_img, cvt_img_after, CV_BGR2RGB);
-	//	memcpy(data, cvt_img_after.data, buffSize);
-	//}
-	//else if (format_callback == "Mono8")
-	//{
-	//	memcpy(data, buffData, buffSize);
-	//}
-	//else
-	//{
-	//	memcpy(data, buffData, buffSize);
-	//}
+}
+
+void kayacoaxpress::captureFrame2(uint8_t* data, int num) {
+	long long buffSize = 0;
+	int buffIndexInit, buffIndex;
+	void* buffData;
+	buffSize = KYFG_StreamGetSize(stream_handle);			// get buffer size 1920x1080
+	buffIndexInit = KYFG_StreamGetFrameIndex(stream_handle);
+	for (size_t i = 0; i < num; i++)
+	{
+		buffIndex = (buffIndexInit - i + cycle_buffer_size) % cycle_buffer_size;
+		buffData = KYFG_StreamGetPtr(stream_handle, buffIndex);		// get pointer of buffer data
+		if (format_callback == "BayerGR8")
+		{
+			/*memcpy(cvt_img.data, buffData, buffSize);
+			cv::cvtColor(cvt_img, cvt_img_after, CV_RGB2BGR);
+			memcpy(data + buffSize, cvt_img_after.data, buffSize);*/
+
+			memcpy(data + buffSize * i, buffData, buffSize);
+		}
+		else if (format_callback == "Mono8")
+		{
+			memcpy(data + buffSize * i, buffData, buffSize);
+		}
+		else
+		{
+			memcpy(data + buffSize * i, buffData, buffSize);
+		}
+	}	
 }
 
 void kayacoaxpress::setParam(const paramTypeCamera::paramInt& pT, const int param)
@@ -284,7 +298,7 @@ void kayacoaxpress::setParam(const paramTypeCamera::paramFloat& pT, const float 
 		else
 		{
 			kayacoaxpressMessage(" FPS : Max以上の設定値を与えているのでMaxに設定します");
-			fps = 1087.0;
+			fps = KYFG_GetCameraValueFloat(cam_handle, "pFrameRateRegMax");
 		}
 		KYFG_SetCameraValueFloat(cam_handle, "AcquisitionFrameRate", fps);
 		break;
@@ -367,11 +381,11 @@ void kayacoaxpress::setParam(const paramTypeKAYACoaXpress::paramFloat& pT, const
 	switch (pT)
 	{
 	case paramTypeKAYACoaXpress::paramFloat::ExposureTime:
-		if (KYFG_GetCameraValueInt(cam_handle, "pExposureTimeRegMax") >= param) exposuretime = param;
+		if (KYFG_GetCameraValueFloat(cam_handle, "pExposureTimeRegMax") >= param) exposuretime = param;
 		else
 		{
 			kayacoaxpressMessage(" EXPOSURETIME : Max以上の設定値を与えているのでMaxに設定します");
-			exposuretime = KYFG_GetCameraValueInt(cam_handle, "pExposureTimeRegMax");
+			exposuretime = KYFG_GetCameraValueFloat(cam_handle, "pExposureTimeRegMax");
 		}
 		KYFG_SetCameraValueFloat(cam_handle, "ExposureTime", exposuretime);
 		break;
