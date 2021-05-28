@@ -88,6 +88,8 @@ const cv::Scalar color_thr_max(256, 256, 256);
 const cv::Scalar color_ref_thr_min(0, 0, 100);
 const cv::Scalar color_ref_thr_max(256, 256, 256);
 vector<cv::Point> refpts;
+cv::Point refpts_retu[100];
+int refpts_cnt = 0;
 const int colorstep = width * 3, colorelem = 3;
 const int monostep = width, monoelem = 1;
 double refmass, refmomx, refmomy;
@@ -121,6 +123,12 @@ long long log_img_cnt = 0, log_lsm_cnt = 0;
 LARGE_INTEGER lsmstart, lsmend, takestart, takeend, arstart, arend, showstart, showend, mbedstart, mbedstop;
 double taketime = 0, lsmtime = 0, artime = 0, showtime = 0, mbedtime = 0;
 double lsmtime_a, lsmtime_b, lsmtime_c, lsmtime_d;
+
+//スレッドの処理時間設定
+double takepic_time = 0.001;
+double showlogs_time = 0.033;
+double lsmthread_time = 0.001;
+
 
 #pragma comment(lib,"KAYACoaXpressLib" LIB_EXT)
 #pragma warning(disable:4996)
@@ -322,7 +330,7 @@ int main() {
 		lsm_success = CalcLSM(&lsm, &logs, &log_lsm_cnt);
 		QueryPerformanceCounter(&lsmend);
 		lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-		while (lsmtime < 0.0005)
+		while (lsmtime < lsmthread_time)
 		{
 			QueryPerformanceCounter(&lsmend);
 			lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
@@ -514,7 +522,7 @@ void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
 		in_imgs_saveid = (in_imgs_saveid+1)%cyclebuffersize;
 		QueryPerformanceCounter(&takeend);
 		taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
-		while (taketime < 0.001)
+		while (taketime < takepic_time)
 		{
 			QueryPerformanceCounter(&takeend);
 			taketime = (double)(takeend.QuadPart - takestart.QuadPart) / freq.QuadPart;
@@ -563,7 +571,7 @@ void ShowAllLogs(bool* flg, double* pts, int* lsmshowid, cv::Mat* imglog) {
 
 		QueryPerformanceCounter(&showend);
 		showtime = (double)(showend.QuadPart - showstart.QuadPart) / freq.QuadPart;
-		while (showtime < 0.033)
+		while (showtime < showlogs_time)
 		{
 			QueryPerformanceCounter(&showend);
 			showtime = (double)(showend.QuadPart - showstart.QuadPart) / freq.QuadPart;
@@ -664,17 +672,30 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 		//参照面の輝度重心の検出
 		lsm->in_img(roi_ref).copyTo(lsm->ref_arc, lsm->mask_refarc(roi_ref));
 #ifdef OUT_COLOR_
-		cv::inRange(lsm->ref_arc, color_ref_thr_min, color_ref_thr_max, lsm->ref_arc_ranged);
-		cv::findNonZero(lsm->ref_arc_ranged, refpts);
-		refmass = 0, refmomx = 0, refmomy = 0;
-		if (refpts.size() != 0)
+		/*cv::inRange(lsm->ref_arc, color_ref_thr_min, color_ref_thr_max, lsm->ref_arc_ranged);
+		cv::findNonZero(lsm->ref_arc_ranged, refpts);*/
+		lsm->ref_arc_src = lsm->ref_arc.ptr<uint8_t>(0);
+		refpts_cnt = 0;
+		for (size_t i = 0; i < roi_ref.width; i++)
 		{
-			lsm->ref_arc_src = lsm->ref_arc.ptr<uint8_t>(0);
-			for (size_t i = 0; i < refpts.size(); i++)
+			for (size_t j = 0; j < roi_ref.height; j++)
 			{
-				refmass += lsm->ref_arc_src[refpts[i].y * ref_step + refpts[i].x * 3 + 2];
-				refmomx += (double)lsm->ref_arc_src[refpts[i].y * ref_step + refpts[i].x * 3 + 2] * refpts[i].x;
-				refmomy += (double)lsm->ref_arc_src[refpts[i].y * ref_step + refpts[i].x * 3 + 2] * refpts[i].y;
+				if ((uint8_t)lsm->ref_arc_src[j * roi_ref.width * 3 + i * 3] > color_ref_thr_min(2))
+				{
+					refpts_retu[refpts_cnt].x = (float)i;
+					refpts_retu[refpts_cnt].y = (float)j;
+					refpts_cnt++;
+				}
+			}
+		}
+		refmass = 0, refmomx = 0, refmomy = 0;
+		if (refpts_cnt!=0)
+		{
+			for (size_t i = 0; i < refpts_cnt; i++)
+			{
+				refmass += lsm->ref_arc_src[refpts_retu[i].y * ref_step + refpts_retu[i].x * 3];
+				refmomx += (double)lsm->ref_arc_src[refpts_retu[i].y * ref_step + refpts_retu[i].x * 3] * refpts_retu[i].x;
+				refmomy += (double)lsm->ref_arc_src[refpts_retu[i].y * ref_step + refpts_retu[i].x * 3] * refpts_retu[i].y;
 			}
 			lsm->rp[0] = refmomx / refmass + roi_ref.x;
 			lsm->rp[1] = refmomy / refmass + roi_ref.y;
@@ -717,27 +738,40 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 			lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 			std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 #ifdef OUT_COLOR_
-			cv::inRange(lsm->lsm_laser(roi_laser), color_thr_min, color_thr_max, lsm->lsm_laser_ranged);
+			//cv::inRange(lsm->lsm_laser(roi_laser), color_thr_min, color_thr_max, lsm->lsm_laser_ranged);
 			/*QueryPerformanceCounter(&lsmend);
 			lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 			std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
-			cv::findNonZero(lsm->lsm_laser_ranged, lsm->allbps);
+			/*cv::findNonZero(lsm->lsm_laser_ranged, lsm->allbps);*/
 			/*QueryPerformanceCounter(&lsmend);
 			lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 			std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
+			lsm->allbps_cnt = 0;
+			lsm->lsm_laser_src = lsm->lsm_laser.ptr<uint8_t>(0);
+			for (size_t i = roi_laser.x; i < roi_laser.x + roi_laser.width; i++)
+			{
+				for (size_t j = roi_laser.y; j < roi_laser.y + roi_laser.height; j++)
+				{
+					if ((uint8_t)lsm->lsm_laser_src[j * width * 3 + i * 3] > color_thr_min(2))
+					{
+						lsm->allbps_retu[lsm->allbps_cnt].x = (float)i;
+						lsm->allbps_retu[lsm->allbps_cnt].y = (float)j;
+						lsm->allbps_cnt++;
+					}
+				}
+			}
 #ifdef AUTONOMOUS_SENSING_
 			alertcnt = 0, dangercnt = 0;
 #endif // AUTONOMOUS_SENSING_
 			//ここで同心円状に輝度重心を取得
-			if (lsm->allbps.size() != 0)
+			if (lsm->allbps_cnt != 0)
 			{
 				roi_laser_outcnt = 0;
 				roi_laser_minx = width, roi_laser_maxx = 0, roi_laser_miny = height, roi_laser_maxy = 0;
-				lsm->lsm_laser_src = lsm->lsm_laser.ptr<uint8_t>(0);
-				for (const auto& pts : lsm->allbps)
+				for (size_t i = 0; i < lsm->allbps_cnt; i++)
 				{
-					laser_pts.x = pts.x + roi_laser.x;
-					laser_pts.y = pts.y + roi_laser.y;
+					laser_pts.x = lsm->allbps_retu[i].x;
+					laser_pts.y = lsm->allbps_retu[i].y;
 					r_calc = (unsigned int)hypot(laser_pts.x - lsm->ref_center[0], laser_pts.y - lsm->ref_center[1]);
 					//r_calc = (unsigned int)hypot(laser_pts.x - lsm->distortion[0], laser_pts.y - lsm->distortion[1]);
 					if (roi_laser_maxx < laser_pts.x) roi_laser_maxx = laser_pts.x;

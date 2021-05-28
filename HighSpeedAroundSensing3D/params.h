@@ -43,6 +43,8 @@ struct LSM
 	float theta;
 	vector<cv::Point> bps;
 	vector<cv::Point> allbps;
+	cv::Point allbps_retu[1000];
+	int allbps_cnt = 0;
 	vector<cv::Point2d> idpixs;
 	vector<vector<double>> campts;
 	vector<bool> processflgs;
