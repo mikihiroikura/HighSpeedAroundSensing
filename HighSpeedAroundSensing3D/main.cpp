@@ -87,8 +87,8 @@ const cv::Scalar color_thr_min(0, 0, 200);
 const cv::Scalar color_thr_max(256, 256, 256);
 const cv::Scalar color_ref_thr_min(0, 0, 100);
 const cv::Scalar color_ref_thr_max(256, 256, 256);
-vector<cv::Point> refpts;
-cv::Point refpts_retu[100];
+const int refpts_maxcnt = 200;
+cv::Point refpts[refpts_maxcnt];
 int refpts_cnt = 0;
 const int colorstep = width * 3, colorelem = 3;
 const int monostep = width, monoelem = 1;
@@ -255,7 +255,7 @@ int main() {
 	cout << "OK!" << endl;
 #endif // SAVE_LOGS_
 	std::cout << "Set Mat Cycle Buffer.......................";
-	for (size_t i = 0; i < cyclebuffersize; i++)
+	for (int i = 0; i < cyclebuffersize; i++)
 	{
 		in_imgs.push_back(zero.clone());
 		lsm.processflgs.push_back(false);
@@ -682,20 +682,21 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 			{
 				if ((uint8_t)lsm->ref_arc_src[j * roi_ref.width * 3 + i * 3] > color_ref_thr_min(2))
 				{
-					refpts_retu[refpts_cnt].x = (float)i;
-					refpts_retu[refpts_cnt].y = (float)j;
+					refpts[refpts_cnt].x = (float)i;
+					refpts[refpts_cnt].y = (float)j;
 					refpts_cnt++;
 				}
 			}
+			if (refpts_cnt > refpts_maxcnt) break;
 		}
 		refmass = 0, refmomx = 0, refmomy = 0;
 		if (refpts_cnt!=0)
 		{
 			for (size_t i = 0; i < refpts_cnt; i++)
 			{
-				refmass += lsm->ref_arc_src[refpts_retu[i].y * ref_step + refpts_retu[i].x * 3];
-				refmomx += (double)lsm->ref_arc_src[refpts_retu[i].y * ref_step + refpts_retu[i].x * 3] * refpts_retu[i].x;
-				refmomy += (double)lsm->ref_arc_src[refpts_retu[i].y * ref_step + refpts_retu[i].x * 3] * refpts_retu[i].y;
+				refmass += lsm->ref_arc_src[refpts[i].y * ref_step + refpts[i].x * 3];
+				refmomx += (double)lsm->ref_arc_src[refpts[i].y * ref_step + refpts[i].x * 3] * refpts[i].x;
+				refmomy += (double)lsm->ref_arc_src[refpts[i].y * ref_step + refpts[i].x * 3] * refpts[i].y;
 			}
 			lsm->rp[0] = refmomx / refmass + roi_ref.x;
 			lsm->rp[1] = refmomy / refmass + roi_ref.y;
@@ -748,17 +749,18 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 			std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 			lsm->allbps_cnt = 0;
 			lsm->lsm_laser_src = lsm->lsm_laser.ptr<uint8_t>(0);
-			for (size_t i = roi_laser.x; i < roi_laser.x + roi_laser.width; i++)
+			for (int i = roi_laser.x; i < roi_laser.x + roi_laser.width; i++)
 			{
-				for (size_t j = roi_laser.y; j < roi_laser.y + roi_laser.height; j++)
+				for (int j = roi_laser.y; j < roi_laser.y + roi_laser.height; j++)
 				{
 					if ((uint8_t)lsm->lsm_laser_src[j * width * 3 + i * 3] > color_thr_min(2))
 					{
-						lsm->allbps_retu[lsm->allbps_cnt].x = (float)i;
-						lsm->allbps_retu[lsm->allbps_cnt].y = (float)j;
+						lsm->allbps[lsm->allbps_cnt].x = (float)i;
+						lsm->allbps[lsm->allbps_cnt].y = (float)j;
 						lsm->allbps_cnt++;
 					}
 				}
+				if (lsm->allbps_cnt > lsm->allbps_maxcnt) break;
 			}
 #ifdef AUTONOMOUS_SENSING_
 			alertcnt = 0, dangercnt = 0;
@@ -770,8 +772,8 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 				roi_laser_minx = width, roi_laser_maxx = 0, roi_laser_miny = height, roi_laser_maxy = 0;
 				for (size_t i = 0; i < lsm->allbps_cnt; i++)
 				{
-					laser_pts.x = lsm->allbps_retu[i].x;
-					laser_pts.y = lsm->allbps_retu[i].y;
+					laser_pts.x = lsm->allbps[i].x;
+					laser_pts.y = lsm->allbps[i].y;
 					r_calc = (unsigned int)hypot(laser_pts.x - lsm->ref_center[0], laser_pts.y - lsm->ref_center[1]);
 					//r_calc = (unsigned int)hypot(laser_pts.x - lsm->distortion[0], laser_pts.y - lsm->distortion[1]);
 					if (roi_laser_maxx < laser_pts.x) roi_laser_maxx = laser_pts.x;
