@@ -31,8 +31,8 @@
 /// カメラパラメータ
 const int width = 896;
 const int height = 896;
-const float fps = 1000.0;
-const float exposuretime = 912.0;
+const float fps = 2000.0;
+const float exposuretime = 412.0;
 const int offsetx = 480;
 const int offsety = 92;
 /// 画像に関する変数
@@ -83,9 +83,9 @@ cv::Rect roi_ref;
 cv::Rect roi_laser;
 vector<double> rps;
 const float mono_thr = 240.0;
-const cv::Scalar color_thr_min(0, 0, 200);
+const cv::Scalar color_thr_min(0, 0, 150);
 const cv::Scalar color_thr_max(256, 256, 256);
-const cv::Scalar color_ref_thr_min(0, 0, 100);
+const cv::Scalar color_ref_thr_min(0, 0, 70);
 const cv::Scalar color_ref_thr_max(256, 256, 256);
 const int refpts_maxcnt = 200;
 cv::Point refpts[refpts_maxcnt];
@@ -97,7 +97,7 @@ cv::Point2f idpix;
 unsigned int r_calc;
 double lsmmass_r[rends - rstart] = { 0 }, lsmmomx_r[rends - rstart] = { 0 }, lsmmomy_r[rends - rstart] = { 0 };
 int roi_laser_minx = width, roi_laser_maxx = 0, roi_laser_miny = height, roi_laser_maxy = 0;
-const int roi_laser_margin = 30;
+const int roi_laser_margin = 15;
 cv::Point laser_pts(0, 0), ref_pts(0,0);
 int roi_laser_outcnt = 0;
 long long lsmcalcid = 0;
@@ -125,9 +125,9 @@ double taketime = 0, lsmtime = 0, artime = 0, showtime = 0, mbedtime = 0;
 double lsmtime_a, lsmtime_b, lsmtime_c, lsmtime_d;
 
 //スレッドの処理時間設定
-double takepic_time = 0.001;
+double takepic_time = 0.0005;
 double showlogs_time = 0.033;
-double lsmthread_time = 0.001;
+double lsmthread_time = 0.0005;
 
 
 #pragma comment(lib,"KAYACoaXpressLib" LIB_EXT)
@@ -336,6 +336,7 @@ int main() {
 			lsmtime = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
 		}
 #ifdef SHOW_PROCESSING_TIME_
+		std::cout << "CalcLSM() result: " << lsm_success << endl;
 		std::cout << "CalcLSM() time: " << lsmtime << endl;
 #endif // SHOW_PROCESSING_TIME_
 		
@@ -660,6 +661,7 @@ void SendDDMotorCommand(bool* flg) {
 //Mainループでの光切断法による形状計測
 int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 	//画像の格納
+	//QueryPerformanceCounter(&lsmstart);
 	lsmcalcid = (in_imgs_saveid - 1 + cyclebuffersize) % cyclebuffersize;
 	if (lsm->processflgs[lsmcalcid]){
 		memcpy(lsm->in_img.data, in_imgs[lsmcalcid].data, height * width * 3);
@@ -670,34 +672,26 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 	if (lsm->in_img.data!=NULL && (int)lsm->in_img.data[0]!=255)
 	{
 		//参照面の輝度重心の検出
+		//QueryPerformanceCounter(&lsmstart);
 		lsm->in_img(roi_ref).copyTo(lsm->ref_arc, lsm->mask_refarc(roi_ref));
 #ifdef OUT_COLOR_
-		/*cv::inRange(lsm->ref_arc, color_ref_thr_min, color_ref_thr_max, lsm->ref_arc_ranged);
-		cv::findNonZero(lsm->ref_arc_ranged, refpts);*/
 		lsm->ref_arc_src = lsm->ref_arc.ptr<uint8_t>(0);
-		refpts_cnt = 0;
+		refmass = 0, refmomx = 0, refmomy = 0;
 		for (size_t i = 0; i < roi_ref.width; i++)
 		{
 			for (size_t j = 0; j < roi_ref.height; j++)
 			{
 				if ((uint8_t)lsm->ref_arc_src[j * roi_ref.width * 3 + i * 3] > color_ref_thr_min(2))
 				{
-					refpts[refpts_cnt].x = (float)i;
-					refpts[refpts_cnt].y = (float)j;
-					refpts_cnt++;
+					refmass += (double)lsm->ref_arc_src[j * roi_ref.width * 3 + i * 3];
+					refmomx += (double)lsm->ref_arc_src[j * roi_ref.width * 3 + i * 3] * (double)i;
+					refmomy += (double)lsm->ref_arc_src[j * roi_ref.width * 3 + i * 3] * (double)j;
 				}
 			}
-			if (refpts_cnt > refpts_maxcnt) break;
 		}
-		refmass = 0, refmomx = 0, refmomy = 0;
-		if (refpts_cnt!=0)
+		if (refmass == 0) return 2;
+		else
 		{
-			for (size_t i = 0; i < refpts_cnt; i++)
-			{
-				refmass += lsm->ref_arc_src[refpts[i].y * ref_step + refpts[i].x * 3];
-				refmomx += (double)lsm->ref_arc_src[refpts[i].y * ref_step + refpts[i].x * 3] * refpts[i].x;
-				refmomy += (double)lsm->ref_arc_src[refpts[i].y * ref_step + refpts[i].x * 3] * refpts[i].y;
-			}
 			lsm->rp[0] = refmomx / refmass + roi_ref.x;
 			lsm->rp[1] = refmomy / refmass + roi_ref.y;
 			//lsm->theta = atan2f(lsm->rp[1] - lsm->ref_center[1], lsm->rp[0] - lsm->ref_center[0]);
@@ -735,19 +729,8 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 				+ lsm->pc[7] * pow(lsm->theta, 1) + lsm->pc[8];*/
 			//ラインレーザの輝点座標を検出
 			lsm->in_img.copyTo(lsm->lsm_laser, lsm->mask_lsm);
-			/*QueryPerformanceCounter(&lsmend);
-			lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-			std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
 #ifdef OUT_COLOR_
-			//cv::inRange(lsm->lsm_laser(roi_laser), color_thr_min, color_thr_max, lsm->lsm_laser_ranged);
-			/*QueryPerformanceCounter(&lsmend);
-			lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-			std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
-			/*cv::findNonZero(lsm->lsm_laser_ranged, lsm->allbps);*/
-			/*QueryPerformanceCounter(&lsmend);
-			lsmtime_c = (double)(lsmend.QuadPart - lsmstart.QuadPart) / freq.QuadPart;
-			std::cout << "CalcLSM() calclaserpts time: " << lsmtime_c - lsmtime_b << endl;*/
-			lsm->allbps_cnt = 0;
+			lsm->allbps_inroi = false;
 			lsm->lsm_laser_src = lsm->lsm_laser.ptr<uint8_t>(0);
 			for (int i = roi_laser.x; i < roi_laser.x + roi_laser.width; i++)
 			{
@@ -755,38 +738,33 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 				{
 					if ((uint8_t)lsm->lsm_laser_src[j * width * 3 + i * 3] > color_thr_min(2))
 					{
-						lsm->allbps[lsm->allbps_cnt].x = (float)i;
-						lsm->allbps[lsm->allbps_cnt].y = (float)j;
-						lsm->allbps_cnt++;
+						if (!lsm->allbps_inroi)
+						{
+							roi_laser_outcnt = 0;
+							roi_laser_minx = width, roi_laser_maxx = 0, roi_laser_miny = height, roi_laser_maxy = 0;
+						}
+						lsm->allbps_inroi = true;
+						r_calc = (unsigned int)hypot((float)i - lsm->ref_center[0], (float)j - lsm->ref_center[1]);
+						//r_calc = (unsigned int)hypot(laser_pts.x - lsm->distortion[0], laser_pts.y - lsm->distortion[1]);
+						if (roi_laser_maxx < i) roi_laser_maxx = i;
+						if (roi_laser_minx > i) roi_laser_minx = i;
+						if (roi_laser_maxy < j) roi_laser_maxy = j;
+						if (roi_laser_miny > j) roi_laser_miny = j;
+						if (r_calc < rends - rstart)
+						{
+							lsmmass_r[r_calc] += lsm->lsm_laser_src[j * colorstep + i * colorelem + 2];
+							lsmmomx_r[r_calc] += (double)lsm->lsm_laser_src[j * colorstep + i * colorelem + 2] * (double)i;
+							lsmmomy_r[r_calc] += (double)lsm->lsm_laser_src[j * colorstep + i * colorelem + 2] * (double)j;
+						}
 					}
 				}
-				if (lsm->allbps_cnt > lsm->allbps_maxcnt) break;
 			}
 #ifdef AUTONOMOUS_SENSING_
 			alertcnt = 0, dangercnt = 0;
 #endif // AUTONOMOUS_SENSING_
 			//ここで同心円状に輝度重心を取得
-			if (lsm->allbps_cnt != 0)
+			if (lsm->allbps_inroi)
 			{
-				roi_laser_outcnt = 0;
-				roi_laser_minx = width, roi_laser_maxx = 0, roi_laser_miny = height, roi_laser_maxy = 0;
-				for (size_t i = 0; i < lsm->allbps_cnt; i++)
-				{
-					laser_pts.x = lsm->allbps[i].x;
-					laser_pts.y = lsm->allbps[i].y;
-					r_calc = (unsigned int)hypot(laser_pts.x - lsm->ref_center[0], laser_pts.y - lsm->ref_center[1]);
-					//r_calc = (unsigned int)hypot(laser_pts.x - lsm->distortion[0], laser_pts.y - lsm->distortion[1]);
-					if (roi_laser_maxx < laser_pts.x) roi_laser_maxx = laser_pts.x;
-					if (roi_laser_minx > laser_pts.x) roi_laser_minx = laser_pts.x;
-					if (roi_laser_maxy < laser_pts.y) roi_laser_maxy = laser_pts.y;
-					if (roi_laser_miny > laser_pts.y) roi_laser_miny = laser_pts.y;
-					if (r_calc < rends - rstart)
-					{
-						lsmmass_r[r_calc] += lsm->lsm_laser_src[laser_pts.y * colorstep + laser_pts.x * colorelem + 2];
-						lsmmomx_r[r_calc] += (double)lsm->lsm_laser_src[laser_pts.y * colorstep + laser_pts.x * colorelem + 2] * laser_pts.x;
-						lsmmomy_r[r_calc] += (double)lsm->lsm_laser_src[laser_pts.y * colorstep + laser_pts.x * colorelem + 2] * laser_pts.y;
-					}
-				}
 				if (roi_laser_maxx > width - roi_laser_margin) roi_laser_maxx = width;
 				else roi_laser_maxx += roi_laser_margin;
 				if (roi_laser_minx < roi_laser_margin) roi_laser_minx = 0;
@@ -823,7 +801,6 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 						w = lsm->map_coefficient[0] + lsm->map_coefficient[1] * pow(phi, 2) +
 							lsm->map_coefficient[2] * pow(phi, 3) + lsm->map_coefficient[3] * pow(phi, 4);
 						lambda = 1 / (lsm->plane_nml[0] * u + lsm->plane_nml[1] * v + lsm->plane_nml[2] * w);
-						//*(pts + (long long)lsmcalcid * rs * 3 + (long long)rs * 3 + 1) = lambda * v + 100 * sin(lsm->processcnt * 0.0099);
 						*(logs->LSM_pts_cycle + lsmcalcid * (rends - rstart) * 3 + rs * 3 + 0) = lambda * u;
 						*(logs->LSM_pts_cycle + lsmcalcid * (rends - rstart) * 3 + rs * 3 + 1) = lambda * v;
 						*(logs->LSM_pts_cycle + lsmcalcid * (rends - rstart) * 3 + rs * 3 + 2) = lambda * w;
