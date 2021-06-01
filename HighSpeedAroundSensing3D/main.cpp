@@ -83,7 +83,7 @@ cv::Rect roi_ref;
 cv::Rect roi_laser;
 vector<double> rps;
 const float mono_thr = 240.0;
-const cv::Scalar color_thr_min(0, 0, 150);
+const cv::Scalar color_thr_min(0, 0, 200);
 const cv::Scalar color_thr_max(256, 256, 256);
 const cv::Scalar color_ref_thr_min(0, 0, 70);
 const cv::Scalar color_ref_thr_max(256, 256, 256);
@@ -742,8 +742,8 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 						{
 							roi_laser_outcnt = 0;
 							roi_laser_minx = width, roi_laser_maxx = 0, roi_laser_miny = height, roi_laser_maxy = 0;
+							lsm->allbps_inroi = true;
 						}
-						lsm->allbps_inroi = true;
 						r_calc = (unsigned int)hypot((float)i - lsm->ref_center[0], (float)j - lsm->ref_center[1]);
 						//r_calc = (unsigned int)hypot(laser_pts.x - lsm->distortion[0], laser_pts.y - lsm->distortion[1]);
 						if (roi_laser_maxx < i) roi_laser_maxx = i;
