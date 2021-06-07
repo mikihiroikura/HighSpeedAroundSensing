@@ -45,7 +45,7 @@ struct LSM
 	static const int allbps_maxcnt = 1000;
 	cv::Point allbps[allbps_maxcnt];
 	int allbps_cnt = 0;
-	bool allbps_inroi = false;
+	bool onebp_inroi = false;
 	vector<cv::Point2d> idpixs;
 	vector<vector<double>> campts;
 	vector<bool> processflgs;
