@@ -61,7 +61,7 @@ const int gearratio = 1000;
 const int rotpulse = 432000 / gearratio;
 #define READBUFFERSIZE 256
 long long detectfailcnt = 0;
-const int rotaterpm = 410, reciprorpm = 200;
+const int rotaterpm = 500, reciprorpm = 200;
 int rpm = rotaterpm;
 const double Dc = danger_area * 1000, Ac = safe_area * 1000; //局所領域計測範囲切り替えの距離
 const int Nc = 20; //一つのラインレーザからAc以下の距離の点群の最小個数
@@ -148,7 +148,6 @@ namespace fs = std::filesystem;
 
 //プロトタイプ宣言
 void TakePicture(kayacoaxpress* cam, bool* flg, LSM* lsm);
-void ShowLogs(bool* flg);
 void ShowAllLogs(bool* flg, double* pts, int* lsmshowid, cv::Mat* imglog);
 void DetectAR(bool* flg);
 void SendDDMotorCommand(bool* flg);
@@ -287,7 +286,11 @@ int main() {
 #endif // MOVE_AXISROBOT_
 
 	//MBEDのRS232接続
-	mbed.Connect("COM4", 115200, 8, NOPARITY, 0, 0, 0, 5000, 20000);
+	if (!mbed.Connect("COM3", 115200, 8, NOPARITY, 0, 0, 0, 5000, 20000))
+	{
+		std::cout << "MBED is not connected..." << endl;
+		return 0;
+	}
 	//動作開始のコマンド
 	snprintf(command, READBUFFERSIZE, "%c,%d,\r", rotdir, rpm);
 	mbed.Send(command);
@@ -533,20 +536,6 @@ void TakePicture(kayacoaxpress* cam, bool* flg, LSM *lsm) {
 #ifdef SHOW_PROCESSING_TIME_
 		std::cout << "TakePicture() time: " << taketime << endl;
 #endif // SHOW_PROCESSING_TIME_
-	}
-}
-
-//現在の画像を30fps程度で出力する
-void ShowLogs(bool* flg) {
-	while (*flg)
-	{
-		QueryPerformanceCounter(&showstart);
-		cv::imshow("img", in_imgs[(in_imgs_saveid - 2 + cyclebuffersize) % cyclebuffersize]);
-		int key = cv::waitKey(1);
-		if (key == 'q') *flg = false;
-		QueryPerformanceCounter(&showend);
-		showtime = (double)(showend.QuadPart - showstart.QuadPart) / freq.QuadPart;
-		std::cout << "ShowLogs() time: " << showtime << endl;
 	}
 }
 
