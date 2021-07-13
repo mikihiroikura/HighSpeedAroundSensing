@@ -1,5 +1,8 @@
+%AdjustSenseの計測結果を出力するプログラム
+%モードごとに色分けして点群を出力する
+
 %CSVの読み取り
-M =csvread('csvs/210217132019_LSM_result_demo.csv');
+M =csvread('csvs/210217132019_LSM_result_demo_iros2021.csv');
 Times = M(1:4:end,1);
 Xs = M(2:4:end,:);
 Ys = M(3:4:end,:);
@@ -83,11 +86,14 @@ for i=2:size(Times,1)
                     ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
                     zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
                 end
-                title(['Time[s]: ',num2str(Times(i,1))]);
                 daspect([1 1 1]);
                 ax = gca;
                 ax.ZDir = 'reverse';
                 ax.YDir = 'reverse';
+                ax.XAxis.FontSize = 15;
+                ax.ZAxis.FontSize = 15;
+                ax.YAxis.FontSize = 15;
+                title(['Time[s]: ',num2str(Times(i,1),'%.3f')], 'FontSize', 20);
                 frame =getframe(gcf);
                 writeVideo(v,frame);
                 imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid))));
@@ -120,11 +126,14 @@ for i=2:size(Times,1)
                         ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
                         zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
                     end
-                    title(['Time[s]: ',num2str(Times(i,1))]);
                     daspect([1 1 1]);
                     ax = gca;
                     ax.ZDir = 'reverse';
                     ax.YDir = 'reverse';
+                    ax.XAxis.FontSize = 15;
+                    ax.ZAxis.FontSize = 15;
+                    ax.YAxis.FontSize = 15;
+                    title(['Time[s]: ',num2str(Times(i,1),'%.3f')], 'FontSize', 20);
                     frame =getframe(gcf);
                     writeVideo(v,frame);
                     imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid))));
@@ -156,11 +165,14 @@ for i=2:size(Times,1)
                         ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
                         zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
                     end
-                    title(['Time[s]: ',num2str(Times(i,1))]);
                     daspect([1 1 1]);
                     ax = gca;
                     ax.ZDir = 'reverse';
                     ax.YDir = 'reverse';
+                    ax.XAxis.FontSize = 15;
+                    ax.ZAxis.FontSize = 15;
+                    ax.YAxis.FontSize = 15;
+                    title(['Time[s]: ',num2str(Times(i,1),'%.3f')], 'FontSize', 20);
                     frame =getframe(gcf);
                     writeVideo(v,frame);
                     imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid))));
@@ -194,11 +206,14 @@ for i=2:size(Times,1)
                 ylim([min(min(Ys(Ys~=0))) max(max(Ys(Ys~=0)))]);
                 zlim([min(min(Zs(Zs~=0))) max(max(Zs(Zs~=0)))]);
             end
-            title(['Time[s]: ',num2str(Times(i,1))]);
             daspect([1 1 1]);
             ax = gca;
             ax.ZDir = 'reverse';
             ax.YDir = 'reverse';
+            ax.XAxis.FontSize = 15;
+            ax.ZAxis.FontSize = 15;
+            ax.YAxis.FontSize = 15;
+            title(['Time[s]: ',num2str(Times(i,1),'%.3f')], 'FontSize', 20);
             frame =getframe(gcf);
             writeVideo(v,frame);
             imgfile = strcat(imgfolder,strcat('/frame_',strcat(sprintf("%03d",dirid))));

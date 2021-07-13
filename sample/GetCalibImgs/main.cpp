@@ -18,6 +18,10 @@ using namespace std;
 void TakePicture(kayacoaxpress* cam, bool* flg);
 
 cv::Mat in_img;
+vector<cv::Mat> save_img;
+
+//#define SAVE_VIDEO_
+#define SAVE_IMGS_
 
 int main() {
 	//カメラパラメータ
@@ -51,13 +55,16 @@ int main() {
 	time_t now = time(NULL);
 	struct tm* pnow = localtime(&now);
 	char buff[128];
+#ifdef SAVE_VIDEO_
 	sprintf(buff, "%04d%02d%02d%02d%02d_video.mp4", 1900 + pnow->tm_year, 1 + pnow->tm_mon, pnow->tm_mday, pnow->tm_hour, pnow->tm_min);
 	save_dir += buff;
-	cv::VideoWriter video(save_dir, cv::VideoWriter::fourcc('M', 'P', '4', 'V'), 30, cv::Size(cam.getParam(paramTypeCamera::paramInt::WIDTH), cam.getParam(paramTypeCamera::paramInt::HEIGHT)),true);
+	cv::VideoWriter video(save_dir, cv::VideoWriter::fourcc('M', 'P', '4', 'V'), 30, cv::Size(cam.getParam(paramTypeCamera::paramInt::WIDTH), cam.getParam(paramTypeCamera::paramInt::HEIGHT)), true);
 	if (!video.isOpened()) {
 		cout << "Video cannot be opened..." << endl;
 		return 1;
 	}
+#endif // SAVE_VIDEO_
+	
 
 	//カメラ起動
 	cam.start();
@@ -77,15 +84,33 @@ int main() {
 		int key = cv::waitKey(33);
 		if (key == 'q') break;
 
+#ifdef SAVE_VIDEO_
 		//VideoCapture
 		if (key == 's') videocapflg = true;
 		if (key == 'f') videocapflg = false;
 		if (videocapflg) video.write(in_img.clone());
+#endif // SAVE_VIDEO_
+#ifdef SAVE_IMGS_
+		if (key == 's') save_img.push_back(in_img.clone());
+#endif // SAVE_IMGS_
 	}
+
+
 	flg = false;
 	if (thr.joinable()) thr.join();
 
+#ifdef SAVE_VIDEO_
 	video.release();
+#endif // SAVE_VIDEO_
+#ifdef SAVE_IMGS_
+	for (size_t i = 0; i < save_img.size(); i++)
+	{
+		sprintf(buff, "%04d%02d%02d%02d%02d_img%02d.png", 1900 + pnow->tm_year, 1 + pnow->tm_mon, pnow->tm_mday, pnow->tm_hour, pnow->tm_min, (int)i);
+		cv::imwrite(save_dir + buff, save_img[i]);
+	}
+#endif // SAVE_IMGS_
+
+	
 
 	cam.stop();
 	cam.disconnect();
@@ -96,6 +121,6 @@ int main() {
 void TakePicture(kayacoaxpress* cam, bool* flg) {
 	while (*flg)
 	{
-		cam->captureFrame(in_img.data);
+		cam->captureFrame2(in_img.data);
 	}
 }

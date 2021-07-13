@@ -31,8 +31,8 @@
 /// カメラパラメータ
 const int width = 896;
 const int height = 896;
-const float fps = 2000.0;
-const float exposuretime = 412.0;
+const float fps = 1000.0;
+const float exposuretime = 912.0;
 const int offsetx = 480;
 const int offsety = 92;
 /// 画像に関する変数
@@ -125,9 +125,9 @@ double taketime = 0, lsmtime = 0, artime = 0, showtime = 0, mbedtime = 0;
 double lsmtime_a, lsmtime_b, lsmtime_c, lsmtime_d;
 
 //スレッドの処理時間設定
-double takepic_time = 0.0005;
+double takepic_time = 0.001;
 double showlogs_time = 0.033;
-double lsmthread_time = 0.0005;
+double lsmthread_time = 0.001;
 
 
 #pragma comment(lib,"KAYACoaXpressLib" LIB_EXT)

@@ -18,6 +18,7 @@ sample/EvalMeasureAccuracy/old/
 HighSpeedAroundSensing3D/old/
 sample/FisheyeLaserCalib/calib_result/
 util/lib
+sample/ShowVelodyne/data/
 
 # User-specific files
 *.suo
