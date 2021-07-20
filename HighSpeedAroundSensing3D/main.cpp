@@ -61,7 +61,7 @@ const int gearratio = 1000;
 const int rotpulse = 432000 / gearratio;
 #define READBUFFERSIZE 256
 long long detectfailcnt = 0;
-const int rotaterpm = 500, reciprorpm = 200;
+const int rotaterpm = 510, reciprorpm = 210;
 int rpm = rotaterpm;
 const double Dc = danger_area * 1000, Ac = safe_area * 1000; //局所領域計測範囲切り替えの距離
 const int Nc = 20; //一つのラインレーザからAc以下の距離の点群の最小個数
@@ -85,7 +85,7 @@ vector<double> rps;
 const float mono_thr = 240.0;
 const cv::Scalar color_thr_min(0, 0, 200);
 const cv::Scalar color_thr_max(256, 256, 256);
-const cv::Scalar color_ref_thr_min(0, 0, 70);
+const cv::Scalar color_ref_thr_min(0, 0, 100);
 const cv::Scalar color_ref_thr_max(256, 256, 256);
 const int refpts_maxcnt = 200;
 cv::Point refpts[refpts_maxcnt];
@@ -97,7 +97,7 @@ cv::Point2f idpix;
 unsigned int r_calc;
 double lsmmass_r[rends - rstart] = { 0 }, lsmmomx_r[rends - rstart] = { 0 }, lsmmomy_r[rends - rstart] = { 0 };
 int roi_laser_minx = width, roi_laser_maxx = 0, roi_laser_miny = height, roi_laser_maxy = 0;
-const int roi_laser_margin = 15;
+const int roi_laser_margin = 30;
 cv::Point laser_pts(0, 0), ref_pts(0,0);
 int roi_laser_outcnt = 0;
 long long lsmcalcid = 0;
@@ -136,14 +136,14 @@ using namespace std;
 namespace fs = std::filesystem;
 
 //DEFINE群
-//#define SAVE_LOGS_
+#define SAVE_LOGS_
 //#define SAVE_IMGS_
 //#define MOVE_AXISROBOT_
 #define OUT_COLOR_
 //#define OUT_MONO_
-//#define AUTONOMOUS_SENSING_
-#define SHOW_PROCESSING_TIME_
-#define SHOW_IMGS_OPENGL_
+#define AUTONOMOUS_SENSING_
+//#define SHOW_PROCESSING_TIME_
+//#define SHOW_IMGS_OPENGL_
 
 
 //プロトタイプ宣言
@@ -733,7 +733,7 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 			{
 				for (int j = roi_laser.y; j < roi_laser.y + roi_laser.height; j++)
 				{
-					if ((uint8_t)lsm->lsm_laser_src[j * width * 3 + i * 3] > color_thr_min(2))
+					if ((uint8_t)lsm->lsm_laser_src[j * colorstep + i * colorelem] > color_thr_min(2))
 					{
 						if (!lsm->onebp_inroi)
 						{
@@ -749,9 +749,9 @@ int CalcLSM(LSM* lsm, Logs* logs, long long* logid) {
 						if (roi_laser_miny > j) roi_laser_miny = j;
 						if (r_calc < rends - rstart)
 						{
-							lsmmass_r[r_calc] += lsm->lsm_laser_src[j * colorstep + i * colorelem + 2];
-							lsmmomx_r[r_calc] += (double)lsm->lsm_laser_src[j * colorstep + i * colorelem + 2] * (double)i;
-							lsmmomy_r[r_calc] += (double)lsm->lsm_laser_src[j * colorstep + i * colorelem + 2] * (double)j;
+							lsmmass_r[r_calc] += lsm->lsm_laser_src[j * colorstep + i * colorelem];
+							lsmmomx_r[r_calc] += (double)lsm->lsm_laser_src[j * colorstep + i * colorelem] * (double)i;
+							lsmmomy_r[r_calc] += (double)lsm->lsm_laser_src[j * colorstep + i * colorelem] * (double)j;
 						}
 					}
 				}
