@@ -1,10 +1,10 @@
 %チェッカーボード周囲のLIDAR取得点群の空間分解能計算
 
-Filename = 'data\evaluation\LIDAR\2021-07-20-15-23-31_Velodyne-HDL-32-Data.pcap';
+Filename = 'data\evaluation\LIDAR\2021-08-03-21-02-32_Velodyne-HDL-32-Data_thesiscand.pcap';
 velodyne = velodyneFileReader(Filename,'HDL32E');
-checkerRanges = [-0.7, -0.4;
-                0.4, 0.8;
-                -0.2, 0.1];%チェッカーボード板のある範囲を指定する
+checkerRanges = [-0.55, -0.4;
+                0.6, 0.8;
+                -0.1, 0.1];%チェッカーボード板のある範囲を指定する
 
 totalptcnt = 0;
 for i = 1:velodyne.NumberOfFrames
@@ -19,7 +19,7 @@ end
 meanptcnt = totalptcnt / velodyne.NumberOfFrames;
 
 %空間分解能の計算
-meanptcnt/((checkerRanges(2,2)-checkerRanges(2,1)) * (checkerRanges(3,2)-checkerRanges(3,1))) / 10000
+spatioresol = meanptcnt/((checkerRanges(2,2)-checkerRanges(2,1)) * (checkerRanges(3,2)-checkerRanges(3,1))) / 10000;
 
 %計測精度の評価
 pcobj = readFrame(velodyne, int8(velodyne.NumberOfFrames/2));
@@ -31,7 +31,7 @@ pcobj.Location(:,:,2) > checkerRanges(2,1) & pcobj.Location(:,:,2) < checkerRang
 pcobj.Location(:,:,3) > checkerRanges(3,1) & pcobj.Location(:,:,3) < checkerRanges(3,2);
 Checker_cameraPoints = double([X(id), Y(id),Z(id)]);
 maxcnt = 3;
-norms = -0.001;
+norms = -0.00;
 %平面最適化で式を計算
 func = @(param)calcplane_func(param, Checker_cameraPoints);
 min_fval = 1e+20;
@@ -49,12 +49,34 @@ for cnt = 1:maxcnt
         end
     end
 end
+%外れている輝点を取り除く 閾値10
+dist = abs(1-(opt_planeparams(1).*Checker_cameraPoints(:,1)+opt_planeparams(2) ...
+        .*Checker_cameraPoints(:,2)+opt_planeparams(3).*Checker_cameraPoints(:,3))) ...
+        ./(opt_planeparams(1)^2+opt_planeparams(2)^2+opt_planeparams(3)^2)^0.5;
+Opt_Checker_cameraPoints = Checker_cameraPoints(dist<10,:);
+%閾値以下のレーザ輝点群を最小二乗法で一つの平面を再出力
+func = @(param)calcplane_func(param, Opt_Checker_cameraPoints);
+opt_min_fval = 1e+20;
+for cnt = 1:maxcnt
+    x0 = -rand(1,3)*norms;%0.001
+    options = optimset('Display','iter','PlotFcns',@optimplotfval,'MaxFunEvals',1000);
+    [planeparams,fval,exitflag,output] = fminsearch(func,x0,options);
+    if exitflag==1&&fval<3000
+        opt_planeparams = planeparams;
+        break;
+    elseif exitflag==1
+        if opt_min_fval > fval
+            opt_min_fval = fval;
+            opt_planeparams = planeparams;
+        end
+    end
+end
 %平面との距離[mm]
 dists = (opt_planeparams(1).*Checker_cameraPoints(:,1) + opt_planeparams(2).*Checker_cameraPoints(:,2) ...
     + opt_planeparams(3).*Checker_cameraPoints(:,3) - 1)./norm(opt_planeparams)*1000;
 mean(dists)
 std(dists)
-
+spatioresol
 %% LIDAR点群と平面の出力
 f = figure;
 scatter3(Checker_cameraPoints(:,1),Checker_cameraPoints(:,2),Checker_cameraPoints(:,3));

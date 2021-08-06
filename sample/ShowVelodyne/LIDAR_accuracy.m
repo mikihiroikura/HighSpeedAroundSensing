@@ -5,16 +5,16 @@
 lidardir = 'data\calibration\LIDAR\';
 
 %LIDARの点群取得
-i=8;
+i=2;
 lidarname = strcat(lidardir, strcat(num2str(i), '.pcap'));
 velodyne = velodyneFileReader(lidarname,'HDL32E');
 pcobj = readFrame(velodyne, int8(velodyne.NumberOfFrames/2));
 X = pcobj.Location(:,:,1);
 Y = pcobj.Location(:,:,2);
 Z = pcobj.Location(:,:,3);
-cb_area = [0.8 1.2;
-        0.2 0.7;
-        -0.3 0.5];%CBの範囲指定
+cb_area = [-0.8 -0.6;
+        -0.08 0.1;
+        -0.1 0.15];%CBの範囲指定
 id = pcobj.Location(:,:,1) > cb_area(1,1) & pcobj.Location(:,:,1) < cb_area(1,2) & ...
 pcobj.Location(:,:,2) > cb_area(2,1) & pcobj.Location(:,:,2) < cb_area(2,2) & ...
 pcobj.Location(:,:,3) > cb_area(3,1) & pcobj.Location(:,:,3) < cb_area(3,2);

@@ -20,7 +20,7 @@ extern void drawGL_one(double* pts, int* lsmshowid);
 extern void finishGL();
 extern void initGL();
 
-const double safe_area = 0.81, danger_area = 0.81, zero_area = 0.01;
+const double safe_area = 1.2, danger_area = 0.1, zero_area = 0.01;
 const int rstart = 104, rends = 432;
 
 //•\¦‚µ‚½‚¢î•ñ

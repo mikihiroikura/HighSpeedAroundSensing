@@ -1,9 +1,9 @@
 %% 各種パラメータ
-csvname = 'data\evaluation\Camera\210720203351_LSM_result_recipro.csv';%保存した点群のCSV
-imgname = 'data\evaluation\Checkerboard\202107201431_img00.png';%チェッカーボード検出のための動画
-squareSize = 32;
+csvname = 'data\evaluation\Camera\210803201447_LSM_result_recipro_thesiscand.csv';%保存した点群のCSV
+imgname = 'data\evaluation\Checkerboard\202108031923_img00.png';%チェッカーボード検出のための動画
+squareSize = 28.3;
 fish_step = 2;
-evalnums = 1000;%評価に使う点数の合計
+evalnums = 10000;%評価に使う点数の合計
 %カメラパラメータ読み取り
 camparamdir = '202103151940_fisheyeparam.csv';
 Mfish = csvread(camparamdir);
@@ -79,12 +79,12 @@ s = mesh(gX,gY,gZ);
 daspect([1 1 1]);
 
 %% チェッカーボード範囲指定
-checkXmins = [-150, -10000];
-checkXmaxs = [100, -700];
+checkXmins = [-50, -10000];
+checkXmaxs = [50, -700];
 checkYmins = [-10000,-220];
 checkYmaxs = [10000, 30];
-checkZmins = [350, 280];
-checkZmaxs = [550, 480];
+checkZmins = [380, 280];
+checkZmaxs = [450, 480];
 checkid = 1;
 checkXmin = checkXmins(checkid);
 checkXmax = checkXmaxs(checkid);
@@ -137,6 +137,27 @@ daspect([1 1 1]);
 mean(dist_eval)
 std(dist_eval)
 
+%% 計測点群の平面フィッティング
+PointEvals = [X_eval, Y_eval, Z_eval];
+planeparams_measured = planefitting_func(PointEvals);
+%% 平面フィッティング結果による計測精度評価
+dist_eval_measured = (1-(planeparams_measured(1).*X_eval(:)+planeparams_measured(2) ...
+        .*Y_eval(:)+planeparams_measured(3).*Z_eval(:))) ...
+        ./(planeparams_measured(1)^2+planeparams_measured(2)^2+planeparams_measured(3)^2)^0.5;
+mean(dist_eval_measured)
+std(dist_eval_measured)
+%% 平面フィッティング結果の出力
+f = figure;
+scatter3(PointEvals(:,1),PointEvals(:,2),PointEvals(:,3));
+hold on
+graphX = linspace(min(PointEvals(:,1)),max(PointEvals(:,1)),50);
+graphY = linspace(min(PointEvals(:,2)),max(PointEvals(:,2)),50);
+[gX,gY] = meshgrid(graphX,graphY);
+gZ = -planeparams_measured(1)/planeparams_measured(3)*gX-planeparams_measured(2)/planeparams_measured(3)*gY+1/planeparams_measured(3);
+s = mesh(gX,gY,gZ);
+xlim([checkXmin checkXmax]);
+zlim([checkZmin checkZmax]);
+daspect([1 1 1]);
 %% 時空間分解能と計測範囲評価
 ref_center = [445.068326,404.6309];
 LSM_rotdir = M(1:4:end,2);
@@ -244,7 +265,7 @@ for i=2:size(Times,1)
 end
 
 %% 時空間分解能計測範囲計算
-setid = Ranges<1.1 & Ranges > 0.8;
+setid = Ranges > 0.8 & Ranges < 1.2;
 measuredarea = sum(Ranges(setid))/sum(setid)*180/pi
 spatialresol = sum(Pointcntoncb(setid))/sum(setid)/((checkXmax-checkXmin)* (checkZmax-checkZmin)/100)
 tempresol = 1/(sum(difftime(setid))/sum(setid))

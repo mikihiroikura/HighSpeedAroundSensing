@@ -61,7 +61,7 @@ const int gearratio = 1000;
 const int rotpulse = 432000 / gearratio;
 #define READBUFFERSIZE 256
 long long detectfailcnt = 0;
-const int rotaterpm = 510, reciprorpm = 210;
+const int rotaterpm = 500, reciprorpm = 200;
 int rpm = rotaterpm;
 const double Dc = danger_area * 1000, Ac = safe_area * 1000; //局所領域計測範囲切り替えの距離
 const int Nc = 20; //一つのラインレーザからAc以下の距離の点群の最小個数
