@@ -1,7 +1,7 @@
 %%% VelodyneのPCAPファイルから指定連続Indexの点群を図で表示する
 %% ファイルの指定,ボードの範囲指定,Index指定
 
-Filename = 'data\evaluation\LIDAR\2021-10-11-16-46-11_Velodyne-HDL-32-Data.pcap';
+Filename = 'data\evaluation\LIDAR\2021-10-11-16-46-11_Velodyne-HDL-32-Data_thesiscand.pcap';
 velodyne = velodyneFileReader(Filename,'HDL32E');
 boardRanges = [-0.9 -0.75;
                 0.1 0.7;
@@ -81,7 +81,8 @@ scatter3(X(id_show)*1000,Y(id_show)*1000,Z(id_show)*1000,[], dists*1000,'o','fil
 daspect([1 1 1]);
 xlim(boardRanges(1,:)*1000);
 ylim(boardRanges(2,:)*1000);
-zlim(boardRanges(3,:)*1000);
+zlim(boardRanges(3,:));
+%zlim([-200 200]);きれいに表示するために自分で設定
 view(80,10);
 Clim = [-30 30];
 ax = gca;
@@ -93,6 +94,12 @@ ax.YAxis.Visible = 'off';
 ax.ZAxis.Visible = 'off';
 ax.CLim = Clim;
 title(['Time[s]: ',num2str((index-startid)*0.1,'%.3f')], 'FontSize', 20);
+%% Colorbarの設置
+c = colorbar('southoutside');
+ax.CLim = Clim;
+c.FontSize = 12;
+c.Label.String = '[mm]';
+c.Label.Position = [Clim(2)+2.5 -0.25 0];
 %% 点群をPDFに保存
 imgfile = strcat(imgfolder,strcat('/planefitted_frame_',strcat(sprintf("%03d",index))));
 print(gcf,'-painters',imgfile,'-dpdf');
