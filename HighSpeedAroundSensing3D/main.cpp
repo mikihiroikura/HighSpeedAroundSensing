@@ -109,7 +109,7 @@ RS232c axisrobot;
 char replybuf[READBUFFERSIZE];
 char axisrobmodes[][10] = { "@SRVO", "@START", "@ORG" };
 char axisrobcommand[READBUFFERSIZE] = "";
-const int initaxisstart = 0, initaxisend = 600;
+const int initaxisstart = 0, initaxisend = 700;
 const int posunits = 100, speedunits = 10;
 
 /// ログに関する変数
@@ -138,7 +138,8 @@ namespace fs = std::filesystem;
 //DEFINE群
 #define SAVE_LOGS_
 //#define SAVE_IMGS_
-//#define MOVE_AXISROBOT_
+#define MOVE_AXISROBOT_
+//#define AXISROBOT_RANDOM_
 #define OUT_COLOR_
 //#define OUT_MONO_
 #define AUTONOMOUS_SENSING_
@@ -265,7 +266,7 @@ int main() {
 	//単軸ロボットとの通信確保
 #ifdef MOVE_AXISROBOT_
 	std::cout << "Set commection to AXIS ROBOT...............";
-	if (!axisrobot.Connect("COM6", 38400, 8, ODDPARITY, 0, 0, 0, 20000, 20000)) {
+	if (!axisrobot.Connect("COM5", 38400, 8, ODDPARITY, 0, 0, 0, 20000, 20000)) {
 		cout << "No connect" << endl;
 		return 1;
 	}
@@ -935,7 +936,7 @@ void Read_Reply_toEND(RS232c* robot) {
 
 void ControlAxisRobot(RS232c* robot, bool* flg){
 	srand(time(NULL));
-	int axisspeed = 100;
+	int axisspeed = 50;
 	int axisposition = 200000;
 	int initaxispos = 600;
 	char controlcommand[READBUFFERSIZE];
@@ -945,8 +946,14 @@ void ControlAxisRobot(RS232c* robot, bool* flg){
 		if (initaxispos == initaxisend) initaxispos = initaxisstart;
 		else if (initaxispos == initaxisstart) initaxispos = initaxisend;
 		else initaxispos = initaxisstart;
-		axisposition = (initaxispos + rand() % posunits+ 1) * 100; //0~100 or 600~700
+#ifdef AXISROBOT_RANDOM_
+		axisposition = (initaxispos + rand() % posunits + 1) * 100; //0~100 or 600~700
 		axisspeed = (rand() % speedunits + 1) * 10; //10~100で10刻み
+#endif // AXISROBOT_RANDOM_
+#ifndef AXISROBOT_RANDOM_
+		axisposition = initaxispos * 100; //0~100 or 600~700
+#endif // !AXISROBOT_RANDOM_
+
 
 		//コマンド送信
 		snprintf(controlcommand, READBUFFERSIZE, "@S_17.1=%d\r\n", axisspeed);

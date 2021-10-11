@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
 	double maintime = 0;
 	bool comresult;
 
-	if (!axisrobot.Connect("COM6", 38400, 8, ODDPARITY, 0, 0, 0, 20000, 20000)) {
+	if (!axisrobot.Connect("COM5", 38400, 8, ODDPARITY, 0, 0, 0, 20000, 20000)) {
 		cout << "No connect" << endl;
 		return 1;
 	}
@@ -71,17 +71,24 @@ int main(int argc, char* argv[]) {
 	//}
 
 	srand(time(NULL));
-	int axisspeed = 100;
+	int axisspeed = 50;
 	int axisposition = 200000;
-	int initaxispos = 600;
+	int initaxispos = 700;
 	char controlcommand[READBUFFERSIZE];
 	//位置と速度のランダム設定
 	for (size_t i = 0; i < 11; i++)
 	{
-		if (initaxispos == 600) initaxispos = 0;
-		else if (initaxispos == 0) initaxispos = 600;
+		if (initaxispos == 700) initaxispos = 0;
+		else if (initaxispos == 0) initaxispos = 700;
+#ifdef AXISROBOT_RANDOM_
 		axisposition = (initaxispos + rand() % 100 + 1) * 100; //0~100 or 600~700
 		axisspeed = (rand() % 10 + 1) * 10; //10~100で10刻み
+#endif // AXISROBOT_RANDOM_
+#ifndef AXISROBOT_RANDOM_
+		axisposition = initaxispos * 100; //0~100 or 600~700
+#endif // !AXISROBOT_RANDOM_
+
+		
 
 		//コマンド送信
 		snprintf(controlcommand, READBUFFERSIZE, "@S_17.1=%d\r\n", axisspeed);
